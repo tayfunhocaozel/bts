@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BTS — Bireysel Takip Sistemi</title>
+<style>
+  :root {
+    --navy:   #1B3A6B;
+    --blue:   #2563EB;
+    --light:  #EFF6FF;
+    --accent: #DBEAFE;
+    --green:  #16a34a;
+    --red:    #dc2626;
+    --yellow: #ca8a04;
+    --gray:   #6B7280;
+    --border: #E5E7EB;
+    --white:  #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f1f5f9; min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header { background: var(--navy); color: white; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .header-title { font-size: 18px; font-weight: bold; letter-spacing: 0.5px; }
+  .header-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+  .logout-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; }
+
+  /* ── LOGIN ── */
+  #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .login-card { background: white; border-radius: 16px; padding: 32px 28px; width: 100%; max-width: 380px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+  .login-logo { text-align: center; margin-bottom: 24px; }
+  .login-logo .logo-text { font-size: 48px; font-weight: 900; color: var(--blue); line-height: 1; }
+  .login-logo .logo-sub { font-size: 13px; color: var(--gray); margin-top: 4px; }
+  .login-tabs { display: flex; background: #f1f5f9; border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+  .login-tab { flex: 1; text-align: center; padding: 8px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--gray); font-weight: 500; transition: all 0.2s; }
+  .login-tab.active { background: white; color: var(--navy); font-weight: bold; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  .login-form { display: none; }
+  .login-form.active { display: block; }
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: var(--navy); font-weight: 600; margin-bottom: 6px; }
+  input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 15px; outline: none; transition: border 0.2s; }
+  input:focus { border-color: var(--blue); }
+  .btn-primary { width: 100%; padding: 13px; background: var(--blue); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-primary:active { background: #1e40af; }
+  .error-msg { background: #FEE2E2; color: #991b1b; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+
+  /* ── NAV ── */
+  .nav { background: white; border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; position: sticky; top: 52px; z-index: 99; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-item { flex-shrink: 0; padding: 12px 18px; font-size: 13px; font-weight: 600; color: var(--gray); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .nav-item.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .nav-item .nav-icon { margin-right: 5px; }
+
+  /* ── CONTENT ── */
+  #appScreen { display: none; }
+  .page { display: none; padding: 16px; max-width: 700px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* ── CARDS ── */
+  .card { background: white; border-radius: 14px; padding: 18px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .card-title { font-size: 15px; font-weight: bold; color: var(--navy); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-title .icon { font-size: 18px; }
+
+  /* ── SELECT ── */
+  select { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; background: white; color: #111827; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+  select:focus { border-color: var(--blue); }
+  textarea { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; resize: vertical; min-height: 80px; font-family: Arial; }
+  textarea:focus { border-color: var(--blue); }
+
+  /* ── KAZANIM SEÇİCİ ── */
+  .kazanim-list { max-height: 220px; overflow-y: auto; border: 1.5px solid var(--border); border-radius: 10px; }
+  .kazanim-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.15s; }
+  .kazanim-item:last-child { border-bottom: none; }
+  .kazanim-item:hover { background: var(--light); }
+  .kazanim-item input[type="checkbox"] { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--blue); flex-shrink: 0; }
+  .kazanim-item label { font-size: 13px; color: #374151; cursor: pointer; line-height: 1.4; }
+  .kazanim-kod { font-size: 11px; color: var(--blue); font-weight: bold; display: block; margin-bottom: 2px; }
+
+  /* ── ÖDEV TABLOSU ── */
+  .odev-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .odev-table th { background: var(--navy); color: white; padding: 10px 8px; text-align: left; font-weight: 600; font-size: 12px; }
+  .odev-table td { padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .odev-table tr:last-child td { border-bottom: none; }
+  .odev-table tr:nth-child(even) td { background: #f9fafb; }
+  .odev-table select, .odev-table input[type="text"] { padding: 7px 10px; font-size: 13px; border-radius: 7px; }
+  .odev-table input[type="text"] { width: 100%; min-width: 80px; }
+  .add-row-btn { background: var(--light); border: 1.5px dashed var(--blue); color: var(--blue); padding: 10px; border-radius: 10px; width: 100%; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 10px; transition: background 0.2s; }
+  .add-row-btn:hover { background: var(--accent); }
+  .del-row-btn { background: #FEE2E2; border: none; color: var(--red); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+
+  /* ── BADGE ── */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .badge-green  { background: #D1FAE5; color: #065f46; }
+  .badge-yellow { background: #FEF9C3; color: #713f12; }
+  .badge-red    { background: #FEE2E2; color: #991b1b; }
+  .badge-gray   { background: #F3F4F6; color: #374151; }
+
+  /* ── RAPOR ── */
+  .rapor-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .rapor-row:last-child { border-bottom: none; }
+  .rapor-konu { flex: 1; font-size: 14px; font-weight: 500; color: #111827; }
+  .rapor-bar-wrap { width: 100px; background: #E5E7EB; border-radius: 20px; height: 8px; overflow: hidden; }
+  .rapor-bar { height: 8px; border-radius: 20px; transition: width 0.5s; }
+  .rapor-pct { font-size: 13px; font-weight: bold; width: 38px; text-align: right; }
+
+  /* ── ÖDEV SONUÇ FORM ── */
+  .sonuc-form { background: var(--light); border-radius: 10px; padding: 14px; margin-top: 8px; display: none; }
+  .sonuc-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .sonuc-input-wrap label { font-size: 11px; color: var(--gray); margin-bottom: 4px; }
+  .sonuc-input-wrap input { padding: 9px; text-align: center; font-size: 16px; font-weight: bold; }
+
+  /* ── STAT CARDS ── */
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-card { background: white; border-radius: 12px; padding: 14px 10px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .stat-val { font-size: 24px; font-weight: 900; color: var(--navy); }
+  .stat-lbl { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+  /* ── LOADING ── */
+  .loading { text-align: center; padding: 30px; color: var(--gray); font-size: 14px; }
+  .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #111827; color: white; padding: 12px 24px; border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+
+  /* ── OGRENCI SEÇ ── */
+  .ogrenci-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); border: 1.5px solid var(--blue); border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 12px; }
+
+  /* ── GÜNAYI ── */
+  .gun-select { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
+  .gun-btn { padding: 8px 4px; border: 1.5px solid var(--border); border-radius: 8px; background: white; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; color: var(--gray); transition: all 0.15s; }
+  .gun-btn.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+  /* ── WELCOME ── */
+  .welcome { background: linear-gradient(135deg, var(--navy), var(--blue)); color: white; border-radius: 14px; padding: 20px; margin-bottom: 14px; }
+  .welcome h2 { font-size: 20px; margin-bottom: 4px; }
+  .welcome p { font-size: 13px; opacity: 0.8; }
+
+  @media (max-width: 400px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .odev-table { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-text">BTS</div>
+      <div class="logo-sub">Bireysel Takip Sistemi</div>
+    </div>
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="switchTab('ogretmen')">👨‍🏫 Öğretmen</div>
+      <div class="login-tab" onclick="switchTab('ogrenci')">🎓 Öğrenci</div>
+      <div class="login-tab" onclick="switchTab('veli')">👨‍👩‍👧 Veli</div>
+    </div>
+
+    <div class="login-form active" id="form-ogretmen">
+      <div class="form-group">
+        <label>Şifre</label>
+        <input type="password" id="ogr-sifre" placeholder="Öğretmen şifresi" onkeydown="if(event.key==='Enter') doLogin('ogretmen')">
+      </div>
+      <button class="btn-primary" onclick="doLogin('ogretmen')">Giriş Yap</button>
+    </div>
+
+    <div class="login-form" id="form-ogrenci">
+      <div class="form-group">
+        <label>TC Kimlik Numarası</label>
+        <input type="number" id="ogr-tc" placeholder="11 haneli TC kimlik no" onkeydown="if(event.key==='Enter') doLogin('ogrenci')">
+      </div>
+      <button class="btn-primary" onclick="doLogin('ogrenci')">Giriş Yap</button>
+    </div>
+
+    <div class="login-form" id="form-veli">
+      <div class="form-group">
+        <label>Kayıtlı Telefon Numarası</label>
+        <input type="number" id="veli-tel" placeholder="05xxxxxxxxx" onkeydown="if(event.key==='Enter') doLogin('veli')">
+      </div>
+      <button class="btn-primary" onclick="doLogin('veli')">Giriş Yap</button>
+    </div>
+
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ APP -->
+<div id="appScreen">
+  <div class="header">
+    <div>
+      <div class="header-title">📚 BTS</div>
+      <div class="header-sub" id="headerSub">Bireysel Takip Sistemi</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Çıkış</button>
+  </div>
+
+  <div class="nav" id="mainNav"></div>
+
+  <!-- ÖĞRETMEN: Ana Sayfa -->
+  <div class="page" id="page-anasayfa">
+    <div class="welcome">
+      <h2>Hoş geldin! 👋</h2>
+      <p>Tayfun Hoca — Matematik Öğretmeni</p>
+    </div>
+    <div class="stats" id="statsArea">
+      <div class="stat-card"><div class="stat-val" id="statOgrenci">-</div><div class="stat-lbl">Aktif Öğrenci</div></div>
+      <div class="stat-card"><div class="stat-val" id="statOdev">-</div><div class="stat-lbl">Bekleyen Ödev</div></div>
+      <div class="stat-card"><div class="stat-val" id="statDers">-</div><div class="stat-lbl">Bu Ay Ders</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">⚡</span> Hızlı İşlem</div>
+      <button class="btn-primary" style="margin-bottom:10px" onclick="goPage('ders')">➕ Ders Kaydet</button>
+      <button class="btn-primary" style="background:var(--green)" onclick="goPage('odev')">📋 Haftalık Ödev Gir</button>
+    </div>
+  </div>
+
+  <!-- ÖĞRETMEN: Ders Kaydet -->
+  <div class="page" id="page-ders">
+    <div class="card">
+      <div class="card-title"><span class="icon">📖</span> Ders Kaydet</div>
+
+      <div class="form-group">
+        <label>Öğrenci</label>
+        <select id="ders-ogrenci" onchange="loadKazanimForDers()">
+          <option value="">— Öğrenci seç —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Konu</label>
+        <select id="ders-konu" onchange="filterKazanims()">
+          <option value="">— Önce öğrenci seçin —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>İşlenen Kazanımlar <span style="color:var(--gray);font-weight:400">(birden fazla seçebilirsin)</span></label>
+        <div class="kazanim-list" id="kazanimList">
+          <div class="loading">Önce öğrenci ve konu seçin</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Ders Görüşü</label>
+        <textarea id="ders-gorus" placeholder="Bu ders hakkında notun..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Sonraki Ders Hatırlatma</label>
+        <textarea id="ders-hatirlatma" placeholder="Bir sonraki derse not..." style="min-height:60px"></textarea>
+      </div>
+
+      <button class="btn-primary" onclick="dersSave()">💾 Dersi Kaydet</button>
+    </div>
+  </div>
+
+  <!-- ÖĞRETMEN: Haftalık Ödev -->
+  <div class="page" id="page-odev">
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> Haftalık Ödev Planı</div>
+
+      <div class="form-group">
+        <label>Öğrenci</label>
+        <select id="odev-ogrenci">
+          <option value="">— Öğrenci seç —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Ödev Listesi</label>
+        <div style="overflow-x:auto">
+          <table class="odev-table" id="odevTable">
+            <thead>
+              <tr>
+                <th>Gün</th>
+                <th>Konu/Kazanım</th>
+                <th>Kaynak</th>
+                <th>Detay</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="odevBody"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addOdevRow()">+ Satır Ekle</button>
+      </div>
+
+      <button class="btn-primary" onclick="odevSave()">💾 Tümünü Kaydet</button>
+    </div>
+  </div>
+
+  <!-- ÖĞRETMEN: Öğrenci Raporu -->
+  <div class="page" id="page-rapor">
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> Öğrenci Raporu</div>
+      <div class="form-group">
+        <label>Öğrenci</label>
+        <select id="rapor-ogrenci" onchange="loadRapor()">
+          <option value="">— Öğrenci seç —</option>
+        </select>
+      </div>
+    </div>
+    <div id="raporContent"></div>
+  </div>
+
+  <!-- ÖĞRENCİ: Ödevlerim -->
+  <div class="page" id="page-odevlerim">
+    <div id="odevlerimContent"></div>
+  </div>
+
+  <!-- VELİ: Rapor -->
+  <div class="page" id="page-velirапор">
+    <div id="veliRaporContent"></div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const API = 'https://script.google.com/macros/s/AKfycbxLt2vd65QcfXlK5Cm2VOu0_kyiBfp4wJ6bx-tDeGnfrZVgFhpxDSiz9QPs599PhlGy/exec';
+
+// ── STATE ─────────────────────────────────────────────────────
+let state = { rol: null, user: null, ogrenciler: [], kazanimlar: [], kaynaklar: [] };
+
+// ── API CALL ──────────────────────────────────────────────────
+async function api(params) {
+  const url = API + '?' + new URLSearchParams(params);
+  const res = await fetch(url);
+  return res.json();
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.login-tab').forEach((t,i) => t.classList.toggle('active', ['ogretmen','ogrenci','veli'][i] === tab));
+  document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+  document.getElementById('form-' + tab).classList.add('active');
+  document.getElementById('loginError').style.display = 'none';
+}
+
+async function doLogin(rol) {
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  let params = { action: 'login' };
+
+  if (rol === 'ogretmen') params.sifre = document.getElementById('ogr-sifre').value;
+  else if (rol === 'ogrenci') params.tc = document.getElementById('ogr-tc').value;
+  else params.tel = document.getElementById('veli-tel').value;
+
+  showToast('Giriş yapılıyor...');
+  try {
+    const res = await api(params);
+    if (res.error) { errEl.textContent = res.error; errEl.style.display = 'block'; return; }
+    state.rol = res.rol;
+    state.user = res;
+    initApp();
+  } catch(e) {
+    errEl.textContent = 'Bağlantı hatası. Tekrar dene.';
+    errEl.style.display = 'block';
+  }
+}
+
+// ── INIT APP ──────────────────────────────────────────────────
+async function initApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+
+  const sub = state.rol === 'ogretmen' ? 'Öğretmen Paneli' :
+              state.rol === 'ogrenci'  ? state.user.ad :
+              state.user.ogrAd + ' — Veli';
+  document.getElementById('headerSub').textContent = sub;
+
+  buildNav();
+
+  if (state.rol === 'ogretmen') {
+    await loadMasterData();
+    fillOgrenciSelects();
+    fillOdevKaynaklar();
+    addOdevRow();
+    loadStats();
+    goPage('anasayfa');
+  } else if (state.rol === 'ogrenci') {
+    goPage('odevlerim');
+    loadOdevlerim();
+  } else {
+    goPage('velirапор');
+    loadVeliRapor();
+  }
+}
+
+function buildNav() {
+  const nav = document.getElementById('mainNav');
+  nav.innerHTML = '';
+  const items = state.rol === 'ogretmen' ? [
+    { id: 'anasayfa', icon: '🏠', label: 'Ana Sayfa' },
+    { id: 'ders',     icon: '📖', label: 'Ders Kaydet' },
+    { id: 'odev',     icon: '📋', label: 'Ödev Gir' },
+    { id: 'rapor',    icon: '📊', label: 'Rapor' },
+  ] : state.rol === 'ogrenci' ? [
+    { id: 'odevlerim', icon: '📝', label: 'Ödevlerim' },
+  ] : [
+    { id: 'velirапор', icon: '📊', label: 'Rapor' },
+  ];
+
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'nav-item';
+    el.innerHTML = `<span class="nav-icon">${item.icon}</span>${item.label}`;
+    el.onclick = () => goPage(item.id);
+    el.dataset.page = item.id;
+    nav.appendChild(el);
+  });
+}
+
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === id));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+}
+
+// ── MASTER DATA ───────────────────────────────────────────────
+async function loadMasterData() {
+  const [o, k, ky] = await Promise.all([
+    api({ action: 'getOgrenci' }),
+    api({ action: 'getKazanim' }),
+    api({ action: 'getKaynak' }),
+  ]);
+  state.ogrenciler = o.data || [];
+  state.kazanimlar = k.data || [];
+  state.kaynaklar  = ky.data || [];
+}
+
+async function loadStats() {
+  document.getElementById('statOgrenci').textContent = state.ogrenciler.length;
+  const odevRes = await api({ action: 'getOdev' });
+  const bekleyen = (odevRes.data || []).filter(o => o.durum === 'Bekliyor').length;
+  document.getElementById('statOdev').textContent = bekleyen;
+  document.getElementById('statDers').textContent = '—';
+}
+
+function fillOgrenciSelects() {
+  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Öğrenci seç —</option>';
+    state.ogrenciler.forEach(o => {
+      sel.innerHTML += `<option value="${o.id}" data-sinif="${o.sinif}">${o.ad} (${o.sinif})</option>`;
+    });
+  });
+}
+
+function fillOdevKaynaklar() {
+  state._kaynakSelectHTML = '<option value="">— Kaynak —</option>' +
+    state.kaynaklar.map(k => `<option value="${k.ad}">${k.ad}</option>`).join('');
+}
+
+// ── DERS KAYDET ───────────────────────────────────────────────
+function loadKazanimForDers() {
+  const sel = document.getElementById('ders-ogrenci');
+  const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
+  const konuSel = document.getElementById('ders-konu');
+  konuSel.innerHTML = '<option value="">— Konu seç —</option>';
+
+  const konular = [...new Set(
+    state.kazanimlar.filter(k => !sinif || k.sinif === sinif).map(k => k.konu)
+  )];
+  konular.forEach(k => konuSel.innerHTML += `<option value="${k}">${k}</option>`);
+  document.getElementById('kazanimList').innerHTML = '<div class="loading">Konu seçin</div>';
+}
+
+function filterKazanims() {
+  const konu = document.getElementById('ders-konu').value;
+  const list = document.getElementById('kazanimList');
+  if (!konu) { list.innerHTML = '<div class="loading">Konu seçin</div>'; return; }
+
+  const filtered = state.kazanimlar.filter(k => k.konu === konu);
+  if (!filtered.length) { list.innerHTML = '<div class="loading">Kazanım bulunamadı</div>'; return; }
+
+  list.innerHTML = filtered.map(k => `
+    <div class="kazanim-item" onclick="toggleKazanim(this)">
+      <input type="checkbox" value="${k.kod}" id="kaz_${k.kod}">
+      <label for="kaz_${k.kod}">
+        <span class="kazanim-kod">${k.kod}</span>
+        ${k.aciklama}
+      </label>
+    </div>`).join('');
+}
+
+function toggleKazanim(el) {
+  const cb = el.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+}
+
+async function dersSave() {
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const konu      = document.getElementById('ders-konu').value;
+  const gorus     = document.getElementById('ders-gorus').value;
+  const hatirlatma = document.getElementById('ders-hatirlatma').value;
+  const kazanimlar = [...document.querySelectorAll('#kazanimList input:checked')].map(c => c.value);
+
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+  if (!konu)      { showToast('⚠️ Konu seçin'); return; }
+  if (!kazanimlar.length) { showToast('⚠️ En az bir kazanım seçin'); return; }
+
+  showToast('Kaydediliyor...');
+  const res = await api({ action: 'dersSave', ogrenciId, konu, kazanimlar: JSON.stringify(kazanimlar), gorus, hatirlatma });
+  if (res.success) {
+    showToast('✅ Ders kaydedildi!');
+    document.getElementById('ders-gorus').value = '';
+    document.getElementById('ders-hatirlatma').value = '';
+    document.getElementById('kazanimList').innerHTML = '<div class="loading">Konu seçin</div>';
+    document.getElementById('ders-konu').value = '';
+  } else {
+    showToast('❌ Hata: ' + (res.error || 'Bilinmeyen'));
+  }
+}
+
+// ── ÖDEV KAYDET ───────────────────────────────────────────────
+const GUNLER = ['PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CUMA','CUMARTESİ','PAZAR'];
+
+function addOdevRow() {
+  const tbody = document.getElementById('odevBody');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>
+      <select style="min-width:100px">
+        ${GUNLER.map(g => `<option>${g}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="text" placeholder="Konu / Kazanım" style="min-width:120px"></td>
+    <td>
+      <select style="min-width:110px">${state._kaynakSelectHTML || ''}</select>
+    </td>
+    <td><input type="text" placeholder="sy. 10-15" style="min-width:80px"></td>
+    <td><button class="del-row-btn" onclick="this.closest('tr').remove()">×</button></td>`;
+  tbody.appendChild(row);
+}
+
+async function odevSave() {
+  const ogrenciId = document.getElementById('odev-ogrenci').value;
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+
+  const rows = document.querySelectorAll('#odevBody tr');
+  if (!rows.length) { showToast('⚠️ En az bir ödev satırı ekleyin'); return; }
+
+  const odevler = [];
+  let valid = true;
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    const gun   = cells[0].querySelector('select').value;
+    const konu  = cells[1].querySelector('input').value.trim();
+    const kaynak = cells[2].querySelector('select').value;
+    const detay = cells[3].querySelector('input').value.trim();
+    if (!konu) { valid = false; return; }
+    odevler.push({ gun, konu, kaynak, detay });
+  });
+
+  if (!valid) { showToast('⚠️ Boş konu alanı var'); return; }
+
+  showToast('Kaydediliyor...');
+  const res = await api({ action: 'odevSave', ogrenciId, odevler: JSON.stringify(odevler) });
+  if (res.success) {
+    showToast(`✅ ${res.count} ödev kaydedildi!`);
+    document.getElementById('odevBody').innerHTML = '';
+    addOdevRow();
+  } else {
+    showToast('❌ Hata: ' + (res.error || 'Bilinmeyen'));
+  }
+}
+
+// ── RAPOR ─────────────────────────────────────────────────────
+async function loadRapor() {
+  const ogrenciId = document.getElementById('rapor-ogrenci').value;
+  if (!ogrenciId) return;
+  const content = document.getElementById('raporContent');
+  content.innerHTML = '<div class="loading"><span class="spinner"></span>Yükleniyor...</div>';
+
+  const res = await api({ action: 'getRapor', ogrenciId });
+  const data = res.data || [];
+
+  if (!data.length) {
+    content.innerHTML = '<div class="card"><div class="loading">Henüz tamamlanan ödev yok.</div></div>';
+    return;
+  }
+
+  const ogr = state.ogrenciler.find(o => o.id === ogrenciId);
+  let html = `<div class="card">
+    <div class="card-title"><span class="icon">📊</span> ${ogr?.ad || ''} — Konu Bazlı Başarı</div>`;
+
+  data.sort((a,b) => b.basari - a.basari).forEach(r => {
+    const pct   = r.basari;
+    const color = pct >= 80 ? '#16a34a' : pct >= 60 ? '#ca8a04' : '#dc2626';
+    const badge = pct >= 80 ? 'badge-green' : pct >= 60 ? 'badge-yellow' : 'badge-red';
+    html += `
+      <div class="rapor-row">
+        <div class="rapor-konu">${r.konu}</div>
+        <div class="rapor-bar-wrap"><div class="rapor-bar" style="width:${pct}%;background:${color}"></div></div>
+        <div class="rapor-pct" style="color:${color}">${pct}%</div>
+        <span class="badge ${badge}">${pct >= 80 ? '✅' : pct >= 60 ? '⚠️' : '❌'}</span>
+      </div>`;
+  });
+
+  const topToplam = data.reduce((s,r) => s + r.toplam, 0);
+  const topDogru  = data.reduce((s,r) => s + r.dogru,  0);
+  const genelPct  = topToplam > 0 ? Math.round(topDogru / topToplam * 100) : 0;
+
+  html += `</div>
+  <div class="stats">
+    <div class="stat-card"><div class="stat-val">${topToplam}</div><div class="stat-lbl">Toplam Soru</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${topDogru}</div><div class="stat-lbl">Doğru</div></div>
+    <div class="stat-card"><div class="stat-val">${genelPct}%</div><div class="stat-lbl">Genel Başarı</div></div>
+  </div>`;
+
+  content.innerHTML = html;
+}
+
+// ── ÖĞRENCİ: ÖDEVLERİM ───────────────────────────────────────
+async function loadOdevlerim() {
+  const content = document.getElementById('odevlerimContent');
+  content.innerHTML = '<div class="loading"><span class="spinner"></span>Yükleniyor...</div>';
+
+  const res = await api({ action: 'getOdev', ogrenciId: state.user.id });
+  const odevler = res.data || [];
+
+  if (!odevler.length) {
+    content.innerHTML = '<div class="card"><div class="loading">Henüz ödevin yok.</div></div>';
+    return;
+  }
+
+  const bekleyen  = odevler.filter(o => o.durum === 'Bekliyor');
+  const tamamlanan = odevler.filter(o => o.durum === 'Tamamlandı');
+
+  let html = `<div class="stats">
+    <div class="stat-card"><div class="stat-val">${bekleyen.length}</div><div class="stat-lbl">Bekleyen</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${tamamlanan.length}</div><div class="stat-lbl">Tamamlanan</div></div>
+    <div class="stat-card"><div class="stat-val">${odevler.length}</div><div class="stat-lbl">Toplam</div></div>
+  </div>`;
+
+  if (bekleyen.length) {
+    html += `<div class="card"><div class="card-title"><span class="icon">⏳</span> Bekleyen Ödevler</div>`;
+    bekleyen.forEach(o => {
+      html += `
+        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:600;font-size:14px">${o.konu}</div>
+              <div style="font-size:12px;color:var(--gray);margin-top:2px">${o.gun} — ${o.kaynak} — ${o.detay}</div>
+            </div>
+            <button class="btn-primary" style="width:auto;padding:7px 14px;font-size:13px" onclick="toggleSonucForm('${o.id}')">Sonuç Gir</button>
+          </div>
+          <div class="sonuc-form" id="sonuc-${o.id}">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px">Sonuçları gir:</div>
+            <div class="sonuc-inputs">
+              <div class="sonuc-input-wrap">
+                <label>✅ Doğru</label>
+                <input type="number" id="d-${o.id}" min="0" placeholder="0" style="border:2px solid #16a34a">
+              </div>
+              <div class="sonuc-input-wrap">
+                <label>❌ Yanlış</label>
+                <input type="number" id="y-${o.id}" min="0" placeholder="0" style="border:2px solid #dc2626">
+              </div>
+              <div class="sonuc-input-wrap">
+                <label>⬜ Boş</label>
+                <input type="number" id="b-${o.id}" min="0" placeholder="0" style="border:2px solid var(--border)">
+              </div>
+            </div>
+            <button class="btn-primary" style="margin-top:12px" onclick="submitSonuc('${o.id}')">💾 Kaydet</button>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  }
+
+  if (tamamlanan.length) {
+    html += `<div class="card"><div class="card-title"><span class="icon">✅</span> Tamamlananlar</div>`;
+    tamamlanan.forEach(o => {
+      const pct = o.toplam > 0 ? Math.round(o.dogru / o.toplam * 100) : 0;
+      const badge = pct >= 80 ? 'badge-green' : pct >= 60 ? 'badge-yellow' : 'badge-red';
+      html += `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-weight:600;font-size:14px">${o.konu}</div>
+            <div style="font-size:12px;color:var(--gray)">${o.gun} — ${o.kaynak}</div>
+            <div style="font-size:12px;margin-top:3px">✅${o.dogru} ❌${o.yanlis} ⬜${o.bos}</div>
+          </div>
+          <span class="badge ${badge}">${pct}%</span>
+        </div>`;
+    });
+    html += '</div>';
+  }
+
+  content.innerHTML = html;
+}
+
+function toggleSonucForm(id) {
+  const form = document.getElementById('sonuc-' + id);
+  form.style.display = form.style.display === 'block' ? 'none' : 'block';
+}
+
+async function submitSonuc(odevId) {
+  const dogru  = document.getElementById('d-' + odevId).value || 0;
+  const yanlis = document.getElementById('y-' + odevId).value || 0;
+  const bos    = document.getElementById('b-' + odevId).value || 0;
+
+  showToast('Kaydediliyor...');
+  const res = await api({ action: 'odevSonuc', odevId, dogru, yanlis, bos });
+  if (res.success) {
+    showToast('✅ Sonuç kaydedildi!');
+    loadOdevlerim();
+  } else {
+    showToast('❌ Hata: ' + (res.error || ''));
+  }
+}
+
+// ── VELİ RAPOR ────────────────────────────────────────────────
+async function loadVeliRapor() {
+  const content = document.getElementById('veliRaporContent');
+  content.innerHTML = '<div class="loading"><span class="spinner"></span>Yükleniyor...</div>';
+
+  const res = await api({ action: 'getRapor', ogrenciId: state.user.ogrId });
+  const data = res.data || [];
+
+  let html = `<div class="card">
+    <div class="card-title"><span class="icon">👨‍👩‍👧</span> ${state.user.ogrAd} — Performans Raporu</div>`;
+
+  if (!data.length) {
+    html += '<div class="loading">Henüz tamamlanan ödev yok.</div></div>';
+    content.innerHTML = html;
+    return;
+  }
+
+  data.sort((a,b) => b.basari - a.basari).forEach(r => {
+    const pct   = r.basari;
+    const color = pct >= 80 ? '#16a34a' : pct >= 60 ? '#ca8a04' : '#dc2626';
+    html += `
+      <div class="rapor-row">
+        <div class="rapor-konu">${r.konu}</div>
+        <div class="rapor-bar-wrap"><div class="rapor-bar" style="width:${pct}%;background:${color}"></div></div>
+        <div class="rapor-pct" style="color:${color}">${pct}%</div>
+      </div>`;
+  });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function logout() {
+  state = { rol: null, user: null, ogrenciler: [], kazanimlar: [], kaynaklar: [] };
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('ogr-sifre').value = '';
+  document.getElementById('ogr-tc').value = '';
+  document.getElementById('veli-tel').value = '';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

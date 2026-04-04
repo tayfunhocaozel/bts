@@ -462,15 +462,19 @@ function fillOdevKaynaklar() {
 }
 
 // ── DERS KAYDET ───────────────────────────────────────────────
-function loadKazanimForDers() {
+async function loadKazanimForDers() {
   const sel = document.getElementById('ders-ogrenci');
   const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
   const konuSel = document.getElementById('ders-konu');
   konuSel.innerHTML = '<option value="">— Konu seç —</option>';
 
-  const konular = [...new Set(
-    state.kazanimlar.filter(k => !sinif || k.sinif === sinif).map(k => k.konu)
-  )];
+  if (!sinif) return;
+
+  // Sınıfa göre kazanımları API'den çek
+  const res = await api({ action: 'getKazanim', sinif: sinif });
+  state.kazanimlar = res.data || [];
+
+  const konular = [...new Set(state.kazanimlar.map(k => k.konu))];
   konular.forEach(k => konuSel.innerHTML += `<option value="${k}">${k}</option>`);
   document.getElementById('kazanimList').innerHTML = '<div class="loading">Konu seçin</div>';
 }

@@ -205,16 +205,114 @@
     <div class="welcome">
       <h2>Hoş geldin! 👋</h2>
       <p>Tayfun Hoca — Matematik Öğretmeni</p>
+      <div style="margin-top:12px;font-size:13px;opacity:0.85" id="welcomeDate"></div>
     </div>
+
     <div class="stats" id="statsArea">
-      <div class="stat-card"><div class="stat-val" id="statOgrenci">-</div><div class="stat-lbl">Aktif Öğrenci</div></div>
-      <div class="stat-card"><div class="stat-val" id="statOdev">-</div><div class="stat-lbl">Bekleyen Ödev</div></div>
-      <div class="stat-card"><div class="stat-val" id="statDers">-</div><div class="stat-lbl">Bu Ay Ders</div></div>
+      <div class="stat-card">
+        <div class="stat-val" id="statOgrenci"><span class="spinner"></span></div>
+        <div class="stat-lbl">Aktif Öğrenci</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statOdev"><span class="spinner"></span></div>
+        <div class="stat-lbl">Bekleyen Ödev</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="statDers"><span class="spinner"></span></div>
+        <div class="stat-lbl">Bu Ay Ders</div>
+      </div>
     </div>
+
+    <!-- Sınıf dağılımı -->
+    <div class="card" id="sinifDagilimCard">
+      <div class="card-title"><span class="icon">🏫</span> Sınıf Dağılımı</div>
+      <div id="sinifDagilim" class="loading">Yükleniyor...</div>
+    </div>
+
+    <!-- Bekleyen ödevler -->
+    <div class="card" id="bekleyenCard">
+      <div class="card-title"><span class="icon">⏳</span> Bekleyen Ödevler</div>
+      <div id="bekleyenList" class="loading">Yükleniyor...</div>
+    </div>
+
     <div class="card">
       <div class="card-title"><span class="icon">⚡</span> Hızlı İşlem</div>
-      <button class="btn-primary" style="margin-bottom:10px" onclick="goPage('ders')">➕ Ders Kaydet</button>
-      <button class="btn-primary" style="background:var(--green)" onclick="goPage('odev')">📋 Haftalık Ödev Gir</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn-primary" onclick="goPage('ders')">📖 Ders Kaydet</button>
+        <button class="btn-primary" style="background:var(--green)" onclick="goPage('odev')">📋 Ödev Gir</button>
+        <button class="btn-primary" style="background:var(--navy)" onclick="goPage('ogrenciler')">👥 Öğrenciler</button>
+        <button class="btn-primary" style="background:#7c3aed" onclick="goPage('rapor')">📊 Rapor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÖĞRETMEN: Öğrenci Yönetimi -->
+  <div class="page" id="page-ogrenciler">
+    <div class="card">
+      <div class="card-title"><span class="icon">👥</span> Öğrenci Listesi</div>
+
+      <!-- Filtre -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <select id="filtre-sinif" onchange="filterOgrenciler()" style="flex:1;min-width:120px">
+          <option value="">Tüm Sınıflar</option>
+          <option>5. Sınıf</option>
+          <option>6. Sınıf</option>
+          <option>7. Sınıf</option>
+          <option>8. Sınıf</option>
+        </select>
+        <input type="text" id="filtre-ad" placeholder="🔍 Ad ara..." oninput="filterOgrenciler()" style="flex:2;min-width:140px;padding:10px 14px">
+      </div>
+
+      <div id="ogrenciListesi" class="loading">Yükleniyor...</div>
+    </div>
+
+    <!-- Öğrenci Ekle -->
+    <div class="card">
+      <div class="card-title"><span class="icon">➕</span> Yeni Öğrenci Ekle</div>
+      <div class="form-group">
+        <label>Ad Soyad</label>
+        <input type="text" id="yeni-ad" placeholder="Ali Yılmaz">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label>Sınıf</label>
+          <select id="yeni-sinif">
+            <option>5. Sınıf</option>
+            <option>6. Sınıf</option>
+            <option>7. Sınıf</option>
+            <option>8. Sınıf</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Şube</label>
+          <input type="text" id="yeni-sube" placeholder="A">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Okul</label>
+        <input type="text" id="yeni-okul" placeholder="Okul adı">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label>TC Kimlik No</label>
+          <input type="number" id="yeni-tc" placeholder="12345678901">
+        </div>
+        <div class="form-group">
+          <label>Okul No</label>
+          <input type="number" id="yeni-okulno" placeholder="145">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label>Veli Adı</label>
+          <input type="text" id="yeni-veli" placeholder="Ahmet Yılmaz">
+        </div>
+        <div class="form-group">
+          <label>Veli Telefonu</label>
+          <input type="number" id="yeni-tel" placeholder="5051234567">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="ogrenciEkle()">💾 Öğrenci Kaydet</button>
     </div>
   </div>
 
@@ -265,9 +363,13 @@
 
       <div class="form-group">
         <label>Öğrenci</label>
-        <select id="odev-ogrenci">
+        <select id="odev-ogrenci" onchange="loadOdevKaynaklar()">
           <option value="">— Öğrenci seç —</option>
         </select>
+      </div>
+
+      <div id="odev-kaynak-uyari" style="display:none;background:#FEF9C3;border:1px solid #FDE047;border-radius:8px;padding:10px 14px;font-size:13px;color:#713f12;margin-bottom:12px">
+        ⚠️ Bu öğrenciye henüz kaynak atanmamış. <a href="#" onclick="goPage('kaynaklar');return false" style="color:var(--blue);font-weight:600">Kaynak Yönetimi</a>'nden atayabilirsin.
       </div>
 
       <div class="form-group">
@@ -290,6 +392,76 @@
       </div>
 
       <button class="btn-primary" onclick="odevSave()">💾 Tümünü Kaydet</button>
+    </div>
+  </div>
+
+  <!-- ÖĞRETMEN: Kaynak Yönetimi -->
+  <div class="page" id="page-kaynaklar">
+
+    <!-- Genel Havuz -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📚</span> Genel Kaynak Havuzu</div>
+      <div id="genelKaynakList" class="loading">Yükleniyor...</div>
+    </div>
+
+    <!-- Yeni Kaynak Ekle -->
+    <div class="card">
+      <div class="card-title"><span class="icon">➕</span> Havuza Kaynak Ekle</div>
+      <div class="form-group">
+        <label>Kaynak Adı</label>
+        <input type="text" id="k-ad" placeholder="Master Matematik">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label>Yayın Evi / Yazar</label>
+          <input type="text" id="k-yayinevi" placeholder="Okyanus Yayınları">
+        </div>
+        <div class="form-group">
+          <label>Sınıf</label>
+          <select id="k-sinif">
+            <option>5. Sınıf</option>
+            <option>6. Sınıf</option>
+            <option>7. Sınıf</option>
+            <option selected>8. Sınıf</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label>Zorluk Derecesi</label>
+          <select id="k-zorluk">
+            <option>Kolay</option>
+            <option selected>Orta</option>
+            <option>Zor</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Konu Sayısı</label>
+          <input type="number" id="k-konu" placeholder="12">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="kaynakEkle()">💾 Havuza Ekle</button>
+    </div>
+
+    <!-- Öğrenciye Kaynak Ata -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🔗</span> Öğrenciye Kaynak Ata</div>
+      <div class="form-group">
+        <label>Öğrenci</label>
+        <select id="ata-ogrenci" onchange="loadOgrenciKaynaklar()">
+          <option value="">— Öğrenci seç —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Kaynak</label>
+        <select id="ata-kaynak">
+          <option value="">— Kaynak seç —</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="kaynakAta()">🔗 Ata</button>
+
+      <!-- Öğrencinin mevcut kaynakları -->
+      <div id="ogrenciKaynakList" style="margin-top:16px"></div>
     </div>
   </div>
 
@@ -398,10 +570,12 @@ function buildNav() {
   const nav = document.getElementById('mainNav');
   nav.innerHTML = '';
   const items = state.rol === 'ogretmen' ? [
-    { id: 'anasayfa', icon: '🏠', label: 'Ana Sayfa' },
-    { id: 'ders',     icon: '📖', label: 'Ders Kaydet' },
-    { id: 'odev',     icon: '📋', label: 'Ödev Gir' },
-    { id: 'rapor',    icon: '📊', label: 'Rapor' },
+    { id: 'anasayfa',   icon: '🏠', label: 'Ana Sayfa' },
+    { id: 'ders',       icon: '📖', label: 'Ders Kaydet' },
+    { id: 'odev',       icon: '📋', label: 'Ödev Gir' },
+    { id: 'ogrenciler', icon: '👥', label: 'Öğrenciler' },
+    { id: 'kaynaklar',  icon: '📚', label: 'Kaynaklar' },
+    { id: 'rapor',      icon: '📊', label: 'Rapor' },
   ] : state.rol === 'ogrenci' ? [
     { id: 'odevlerim', icon: '📝', label: 'Ödevlerim' },
   ] : [
@@ -438,11 +612,138 @@ async function loadMasterData() {
 }
 
 async function loadStats() {
+  // Tarih
+  const now = new Date();
+  document.getElementById('welcomeDate').textContent =
+    now.toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // Öğrenci sayısı
   document.getElementById('statOgrenci').textContent = state.ogrenciler.length;
-  const odevRes = await api({ action: 'getOdev' });
-  const bekleyen = (odevRes.data || []).filter(o => o.durum === 'Bekliyor').length;
-  document.getElementById('statOdev').textContent = bekleyen;
-  document.getElementById('statDers').textContent = '—';
+
+  // Sınıf dağılımı
+  const sinifMap = {};
+  state.ogrenciler.forEach(o => {
+    sinifMap[o.sinif] = (sinifMap[o.sinif] || 0) + 1;
+  });
+  const sinifHTML = Object.entries(sinifMap).sort().map(([s,n]) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;font-size:14px;width:90px">${s}</div>
+      <div style="flex:1;background:#E5E7EB;border-radius:20px;height:8px;overflow:hidden">
+        <div style="width:${Math.round(n/state.ogrenciler.length*100)}%;background:var(--blue);height:8px;border-radius:20px"></div>
+      </div>
+      <div style="font-size:13px;font-weight:bold;color:var(--blue);width:30px;text-align:right">${n}</div>
+    </div>`).join('');
+  document.getElementById('sinifDagilim').innerHTML = sinifHTML || '<div class="loading">Veri yok</div>';
+
+  // Ödev istatistikleri
+  try {
+    const odevRes = await api({ action: 'getOdev' });
+    const tumOdevler = odevRes.data || [];
+    const bekleyen = tumOdevler.filter(o => o.durum === 'Bekliyor');
+    document.getElementById('statOdev').textContent = bekleyen.length;
+
+    // Bu ay ders sayısı
+    const dersRes = await api({ action: 'getDers' });
+    const buAy = (dersRes.data || []).filter(d => {
+      const t = new Date(d.tarih);
+      return t.getMonth() === now.getMonth() && t.getFullYear() === now.getFullYear();
+    });
+    document.getElementById('statDers').textContent = buAy.length;
+
+    // Bekleyen ödev listesi
+    if (bekleyen.length === 0) {
+      document.getElementById('bekleyenList').innerHTML = '<div style="color:var(--green);font-size:14px;padding:8px 0">✅ Bekleyen ödev yok!</div>';
+    } else {
+      const bekleyenHTML = bekleyen.slice(0,5).map(o => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:13px;font-weight:600">${o.konu}</div>
+            <div style="font-size:11px;color:var(--gray)">${o.gun} — ${o.kaynak}</div>
+          </div>
+          <span class="badge badge-yellow">${o.durum}</span>
+        </div>`).join('');
+      document.getElementById('bekleyenList').innerHTML = bekleyenHTML +
+        (bekleyen.length > 5 ? `<div style="font-size:12px;color:var(--gray);padding-top:8px">+${bekleyen.length-5} daha...</div>` : '');
+    }
+  } catch(e) {
+    document.getElementById('statOdev').textContent = '—';
+    document.getElementById('statDers').textContent = '—';
+    document.getElementById('bekleyenList').innerHTML = '<div class="loading">Yüklenemedi</div>';
+  }
+
+  // Öğrenci listesini yükle
+  renderOgrenciListesi();
+}
+
+// ── ÖĞRENCİ YÖNETİMİ ─────────────────────────────────────────
+function renderOgrenciListesi() {
+  const filtreSinif = document.getElementById('filtre-sinif')?.value || '';
+  const filtreAd    = (document.getElementById('filtre-ad')?.value || '').toLowerCase();
+
+  const filtered = state.ogrenciler.filter(o => {
+    const sinifMatch = !filtreSinif || o.sinif.toLowerCase().includes(filtreSinif.toLowerCase());
+    const adMatch    = !filtreAd || o.ad.toLowerCase().includes(filtreAd);
+    return sinifMatch && adMatch;
+  });
+
+  if (!filtered.length) {
+    document.getElementById('ogrenciListesi').innerHTML = '<div class="loading">Öğrenci bulunamadı</div>';
+    return;
+  }
+
+  const html = filtered.map(o => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:bold;color:var(--navy);font-size:14px;flex-shrink:0">
+        ${o.ad.charAt(0)}
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${o.ad}</div>
+        <div style="font-size:12px;color:var(--gray)">${o.sinif} — ${o.id}</div>
+      </div>
+      <button onclick="goRaporFor('${o.id}')" style="background:var(--light);border:1px solid var(--blue);color:var(--blue);padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600">Rapor</button>
+    </div>`).join('');
+
+  document.getElementById('ogrenciListesi').innerHTML = html;
+}
+
+function filterOgrenciler() { renderOgrenciListesi(); }
+
+function goRaporFor(ogrenciId) {
+  goPage('rapor');
+  document.getElementById('rapor-ogrenci').value = ogrenciId;
+  loadRapor();
+}
+
+async function ogrenciEkle() {
+  const ad     = document.getElementById('yeni-ad').value.trim();
+  const sinif  = document.getElementById('yeni-sinif').value;
+  const sube   = document.getElementById('yeni-sube').value.trim();
+  const okul   = document.getElementById('yeni-okul').value.trim();
+  const tc     = document.getElementById('yeni-tc').value.trim();
+  const okulno = document.getElementById('yeni-okulno').value.trim();
+  const veli   = document.getElementById('yeni-veli').value.trim();
+  const tel    = document.getElementById('yeni-tel').value.trim();
+
+  if (!ad)  { showToast('⚠️ Ad Soyad zorunlu'); return; }
+  if (!tc)  { showToast('⚠️ TC Kimlik No zorunlu'); return; }
+
+  showToast('Kaydediliyor...');
+  const res = await api({ action: 'ogrenciEkle', ad, sinif, sube, okul, tc, okulno, veli, tel });
+  if (res.success) {
+    showToast('✅ Öğrenci eklendi!');
+    // Listeyi güncelle
+    const ogrRes = await api({ action: 'getOgrenci' });
+    state.ogrenciler = ogrRes.data || [];
+    fillOgrenciSelects();
+    renderOgrenciListesi();
+    document.getElementById('statOgrenci').textContent = state.ogrenciler.length;
+    // Formu temizle
+    ['yeni-ad','yeni-sube','yeni-okul','yeni-tc','yeni-okulno','yeni-veli','yeni-tel'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  } else {
+    showToast('❌ Hata: ' + (res.error || 'Bilinmeyen'));
+  }
 }
 
 function fillOgrenciSelects() {
@@ -457,24 +758,179 @@ function fillOgrenciSelects() {
 }
 
 function fillOdevKaynaklar() {
-  state._kaynakSelectHTML = '<option value="">— Kaynak —</option>' +
-    state.kaynaklar.map(k => `<option value="${k.ad}">${k.ad}</option>`).join('');
+  // Genel kaynak select için (kaynak atama ekranı)
+  const ataSel = document.getElementById('ata-kaynak');
+  if (ataSel) {
+    ataSel.innerHTML = '<option value="">— Kaynak seç —</option>' +
+      state.kaynaklar.map(k => `<option value="${k.ad}" data-zorluk="${k.zorluk}" data-konu="${k.konuSayisi}">${k.ad} (${k.sinif})</option>`).join('');
+  }
+  // Ata öğrenci select
+  const ataOgr = document.getElementById('ata-ogrenci');
+  if (ataOgr) {
+    ataOgr.innerHTML = '<option value="">— Öğrenci seç —</option>' +
+      state.ogrenciler.map(o => `<option value="${o.id}">${o.ad} (${o.sinif})</option>`).join('');
+  }
+  // Genel havuz listesi
+  renderGenelKaynaklar();
+}
+
+function renderGenelKaynaklar() {
+  const el = document.getElementById('genelKaynakList');
+  if (!el) return;
+  if (!state.kaynaklar.length) {
+    el.innerHTML = '<div class="loading">Henüz kaynak eklenmemiş</div>';
+    return;
+  }
+  el.innerHTML = state.kaynaklar.map(k => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${k.ad}</div>
+        <div style="font-size:12px;color:var(--gray)">${k.yayinevi} — ${k.sinif}</div>
+      </div>
+      <span class="badge ${k.zorluk==='Kolay'?'badge-green':k.zorluk==='Zor'?'badge-red':'badge-yellow'}">${k.zorluk||'—'}</span>
+      <span style="font-size:12px;color:var(--gray)">${k.konuSayisi||'—'} konu</span>
+    </div>`).join('');
+}
+
+// Ödev girerken öğrencinin kendi kaynaklarını yükle
+async function loadOdevKaynaklar() {
+  const ogrenciId = document.getElementById('odev-ogrenci').value;
+  const uyari = document.getElementById('odev-kaynak-uyari');
+  if (!ogrenciId) return;
+
+  const res = await api({ action: 'getOgrenciKaynak', ogrenciId });
+  const kaynaklar = res.data || [];
+  state._odevKaynaklar = kaynaklar;
+
+  if (!kaynaklar.length) {
+    uyari.style.display = 'block';
+  } else {
+    uyari.style.display = 'none';
+  }
+
+  // Mevcut satırların kaynak dropdown'larını güncelle
+  document.querySelectorAll('#odevBody .kaynak-select').forEach(sel => {
+    const val = sel.value;
+    sel.innerHTML = kaynakSelectHTML();
+    sel.value = val;
+  });
+}
+
+function kaynakSelectHTML() {
+  const kaynaklar = state._odevKaynaklar || [];
+  if (!kaynaklar.length) return '<option value="">— Önce kaynak ata —</option>';
+  return '<option value="">— Kaynak —</option>' +
+    kaynaklar.map(k => `<option value="${k.ad}">${k.ad}</option>`).join('');
+}
+
+// ── KAYNAK YÖNETİMİ ───────────────────────────────────────────
+async function kaynakEkle() {
+  const ad       = document.getElementById('k-ad').value.trim();
+  const yayinevi = document.getElementById('k-yayinevi').value.trim();
+  const sinif    = document.getElementById('k-sinif').value;
+  const zorluk   = document.getElementById('k-zorluk').value;
+  const konuSayisi = document.getElementById('k-konu').value;
+
+  if (!ad) { showToast('⚠️ Kaynak adı zorunlu'); return; }
+
+  showToast('Ekleniyor...');
+  const res = await api({ action: 'kaynakEkle', ad, yayinevi, sinif, zorluk, konuSayisi });
+  if (res.success) {
+    showToast('✅ Kaynak eklendi!');
+    // Listeyi güncelle
+    const kyRes = await api({ action: 'getKaynak' });
+    state.kaynaklar = kyRes.data || [];
+    fillOdevKaynaklar();
+    document.getElementById('k-ad').value = '';
+    document.getElementById('k-yayinevi').value = '';
+    document.getElementById('k-konu').value = '';
+  } else {
+    showToast('❌ ' + (res.error || 'Hata'));
+  }
+}
+
+async function loadOgrenciKaynaklar() {
+  const ogrenciId = document.getElementById('ata-ogrenci').value;
+  const el = document.getElementById('ogrenciKaynakList');
+  if (!ogrenciId) { el.innerHTML = ''; return; }
+
+  el.innerHTML = '<div class="loading">Yükleniyor...</div>';
+  const res = await api({ action: 'getOgrenciKaynak', ogrenciId });
+  const kaynaklar = res.data || [];
+
+  if (!kaynaklar.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--gray);padding:8px 0">Bu öğrenciye henüz kaynak atanmamış.</div>';
+    return;
+  }
+
+  el.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px">Atanmış Kaynaklar:</div>' +
+    kaynaklar.map(k => `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${k.ad}</div>
+          <div style="font-size:11px;color:var(--gray)">${k.islenenKonu}/${k.konuSayisi} konu — %${k.ilerleme} ilerleme</div>
+          <div style="background:#E5E7EB;border-radius:20px;height:6px;margin-top:4px;overflow:hidden">
+            <div style="width:${k.ilerleme}%;background:var(--blue);height:6px;border-radius:20px"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" min="0" max="${k.konuSayisi}" value="${k.islenenKonu}" 
+            style="width:50px;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:center"
+            onchange="kaynakGuncelle('${k.id}', this.value)">
+          <button onclick="kaynakSil('${k.id}')" style="background:#FEE2E2;border:none;color:var(--red);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px">×</button>
+        </div>
+      </div>`).join('');
+}
+
+async function kaynakAta() {
+  const ogrenciId = document.getElementById('ata-ogrenci').value;
+  const kaynakSel = document.getElementById('ata-kaynak');
+  const kaynakAd  = kaynakSel.value;
+  const opt = kaynakSel.options[kaynakSel.selectedIndex];
+
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+  if (!kaynakAd)  { showToast('⚠️ Kaynak seçin'); return; }
+
+  const zorluk    = opt?.dataset.zorluk || '';
+  const konuSayisi = opt?.dataset.konu || 0;
+
+  showToast('Atanıyor...');
+  const res = await api({ action: 'ogrenciKaynakAta', ogrenciId, kaynakAd, zorluk, konuSayisi });
+  if (res.success) {
+    showToast('✅ Kaynak atandı!');
+    loadOgrenciKaynaklar();
+  } else {
+    showToast('❌ ' + (res.error || 'Hata'));
+  }
+}
+
+async function kaynakGuncelle(kayitId, islenenKonu) {
+  const res = await api({ action: 'ogrenciKaynakGuncelle', kayitId, islenenKonu });
+  if (res.success) showToast('✅ Güncellendi');
+  else showToast('❌ ' + (res.error || 'Hata'));
+}
+
+async function kaynakSil(kayitId) {
+  if (!confirm('Bu kaynağı öğrenciden kaldırmak istediğine emin misin?')) return;
+  const res = await api({ action: 'ogrenciKaynakSil', kayitId });
+  if (res.success) {
+    showToast('✅ Kaldırıldı');
+    loadOgrenciKaynaklar();
+  } else {
+    showToast('❌ ' + (res.error || 'Hata'));
+  }
 }
 
 // ── DERS KAYDET ───────────────────────────────────────────────
-async function loadKazanimForDers() {
+function loadKazanimForDers() {
   const sel = document.getElementById('ders-ogrenci');
   const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
   const konuSel = document.getElementById('ders-konu');
   konuSel.innerHTML = '<option value="">— Konu seç —</option>';
 
-  if (!sinif) return;
-
-  // Sınıfa göre kazanımları API'den çek
-  const res = await api({ action: 'getKazanim', sinif: sinif });
-  state.kazanimlar = res.data || [];
-
-  const konular = [...new Set(state.kazanimlar.map(k => k.konu))];
+  const konular = [...new Set(
+    state.kazanimlar.filter(k => !sinif || k.sinif === sinif).map(k => k.konu)
+  )];
   konular.forEach(k => konuSel.innerHTML += `<option value="${k}">${k}</option>`);
   document.getElementById('kazanimList').innerHTML = '<div class="loading">Konu seçin</div>';
 }
@@ -540,7 +996,7 @@ function addOdevRow() {
     </td>
     <td><input type="text" placeholder="Konu / Kazanım" style="min-width:120px"></td>
     <td>
-      <select style="min-width:110px">${state._kaynakSelectHTML || ''}</select>
+      <select class="kaynak-select" style="min-width:110px">${kaynakSelectHTML()}</select>
     </td>
     <td><input type="text" placeholder="sy. 10-15" style="min-width:80px"></td>
     <td><button class="del-row-btn" onclick="this.closest('tr').remove()">×</button></td>`;

@@ -468,9 +468,60 @@
     <div id="raporContent"></div>
   </div>
 
-  <!-- ÖĞRENCİ: Ödevlerim -->
+  <!-- ÖĞRENCİ: Dashboard -->
   <div class="page" id="page-odevlerim">
-    <div id="odevlerimContent"></div>
+
+    <!-- Hoş geldin banner -->
+    <div style="background:linear-gradient(135deg,#1B3A6B,#2563EB);border-radius:16px;padding:20px;margin-bottom:14px;color:white">
+      <div style="font-size:13px;opacity:0.8;margin-bottom:4px">Hoş geldin 👋</div>
+      <div style="font-size:22px;font-weight:900" id="ogr-welcome-ad">—</div>
+      <div style="font-size:13px;opacity:0.75;margin-top:4px" id="ogr-welcome-sinif">—</div>
+    </div>
+
+    <!-- Tab navigasyon -->
+    <div style="display:flex;background:white;border-radius:12px;padding:4px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+      <button onclick="ogrTab('odevler')" id="tab-odevler"
+        style="flex:1;padding:10px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:var(--blue);color:white;transition:all 0.2s">
+        📋 Ödevlerim
+      </button>
+      <button onclick="ogrTab('basari')" id="tab-basari"
+        style="flex:1;padding:10px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--gray);transition:all 0.2s">
+        📊 Başarım
+      </button>
+    </div>
+
+    <!-- ÖDEVLER sekmesi -->
+    <div id="ogr-tab-odevler">
+      <!-- İstatistik özeti -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px" id="ogr-stats">
+        <div style="background:white;border-radius:12px;padding:14px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+          <div style="font-size:26px;font-weight:900;color:#dc2626" id="ogr-stat-bekleyen">—</div>
+          <div style="font-size:11px;color:var(--gray);margin-top:2px">Bekleyen</div>
+        </div>
+        <div style="background:white;border-radius:12px;padding:14px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+          <div style="font-size:26px;font-weight:900;color:#16a34a" id="ogr-stat-tamamlanan">—</div>
+          <div style="font-size:11px;color:var(--gray);margin-top:2px">Tamamlanan</div>
+        </div>
+        <div style="background:white;border-radius:12px;padding:14px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+          <div style="font-size:26px;font-weight:900;color:var(--blue)" id="ogr-stat-basari">—</div>
+          <div style="font-size:11px;color:var(--gray);margin-top:2px">Genel Başarı</div>
+        </div>
+      </div>
+
+      <!-- Bekleyen ödevler -->
+      <div id="ogr-bekleyen-bolum"></div>
+
+      <!-- Tamamlanan ödevler -->
+      <div id="ogr-tamamlanan-bolum"></div>
+    </div>
+
+    <!-- BAŞARI sekmesi -->
+    <div id="ogr-tab-basari" style="display:none">
+      <div id="ogr-basari-content">
+        <div class="loading"><span class="spinner"></span>Yükleniyor...</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- VELİ: Rapor -->
@@ -1131,81 +1182,131 @@ async function loadRapor() {
 }
 
 // ── ÖĞRENCI: ÖDEVLERİM ───────────────────────────────────────
+// ── ÖĞRENCİ DASHBOARD ────────────────────────────────────────
+function ogrTab(tab) {
+  document.getElementById('ogr-tab-odevler').style.display = tab === 'odevler' ? 'block' : 'none';
+  document.getElementById('ogr-tab-basari').style.display  = tab === 'basari'  ? 'block' : 'none';
+  document.getElementById('tab-odevler').style.background  = tab === 'odevler' ? 'var(--blue)' : 'transparent';
+  document.getElementById('tab-odevler').style.color       = tab === 'odevler' ? 'white' : 'var(--gray)';
+  document.getElementById('tab-basari').style.background   = tab === 'basari'  ? 'var(--blue)' : 'transparent';
+  document.getElementById('tab-basari').style.color        = tab === 'basari'  ? 'white' : 'var(--gray)';
+  if (tab === 'basari') loadOgrBasari();
+}
+
 async function loadOdevlerim() {
-  const content = document.getElementById('odevlerimContent');
-  content.innerHTML = '<div class="loading"><span class="spinner"></span>Yükleniyor...</div>';
+  document.getElementById('ogr-welcome-ad').textContent    = state.user.ad || '—';
+  document.getElementById('ogr-welcome-sinif').textContent = state.user.sinif || '—';
 
   const res = await api({ action: 'getOdev', ogrenciId: state.user.id });
   const odevler = res.data || [];
 
-  if (!odevler.length) {
-    content.innerHTML = '<div class="card"><div class="loading">Henüz ödevin yok.</div></div>';
-    return;
-  }
+  const bekleyen   = odevler.filter(o => String(o.durum).trim() === 'Bekliyor');
+  const tamamlanan = odevler.filter(o => String(o.durum).trim() === 'Tamamlandı');
 
-  const bekleyen  = odevler.filter(o => o.durum === 'Bekliyor');
-  const tamamlanan = odevler.filter(o => o.durum === 'Tamamlandı');
+  document.getElementById('ogr-stat-bekleyen').textContent   = bekleyen.length;
+  document.getElementById('ogr-stat-tamamlanan').textContent = tamamlanan.length;
 
-  let html = `<div class="stats">
-    <div class="stat-card"><div class="stat-val">${bekleyen.length}</div><div class="stat-lbl">Bekleyen</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:var(--green)">${tamamlanan.length}</div><div class="stat-lbl">Tamamlanan</div></div>
-    <div class="stat-card"><div class="stat-val">${odevler.length}</div><div class="stat-lbl">Toplam</div></div>
-  </div>`;
+  const topDogru  = tamamlanan.reduce((s,o) => s + (Number(o.dogru)||0), 0);
+  const topToplam = tamamlanan.reduce((s,o) => s + (Number(o.toplam)||0), 0);
+  const genelPct  = topToplam > 0 ? Math.round(topDogru/topToplam*100) : 0;
+  document.getElementById('ogr-stat-basari').textContent = topToplam > 0 ? '%' + genelPct : '—';
 
-  if (bekleyen.length) {
-    html += `<div class="card"><div class="card-title"><span class="icon">⏳</span> Bekleyen Ödevler</div>`;
+  // Bekleyen
+  const bekBolum = document.getElementById('ogr-bekleyen-bolum');
+  if (!bekleyen.length) {
+    bekBolum.innerHTML = `<div style="background:white;border-radius:14px;padding:24px;text-align:center;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+      <div style="font-size:44px;margin-bottom:10px">🎉</div>
+      <div style="font-weight:700;color:var(--green);font-size:15px">Tüm ödevlerin tamamlandı!</div>
+      <div style="font-size:13px;color:var(--gray);margin-top:4px">Harika iş çıkardın.</div>
+    </div>`;
+  } else {
+    let html = `<div style="background:white;border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+      <div style="font-size:15px;font-weight:700;color:#dc2626;margin-bottom:14px">⏳ Bekleyen Ödevler (${bekleyen.length})</div>`;
     bekleyen.forEach(o => {
-      html += `
-        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center">
+      html += `<div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+        <div style="padding:12px 14px;display:flex;align-items:flex-start;gap:12px;cursor:pointer" onclick="toggleSonucForm('${o.id}')">
+          <div style="width:10px;height:10px;border-radius:50%;background:#dc2626;margin-top:5px;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:14px">${o.konu}</div>
+            <div style="font-size:12px;color:var(--gray);margin-top:3px">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}${o.detay?' &nbsp;•&nbsp; 📄 '+o.detay:''}</div>
+          </div>
+          <div style="font-size:11px;font-weight:600;color:var(--blue);white-space:nowrap;padding-top:2px">Sonuç Gir ▼</div>
+        </div>
+        <div class="sonuc-form" id="sonuc-${o.id}" style="background:var(--light);border-top:1.5px solid var(--border);padding:14px">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px">📝 Sonuçlarını gir:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
             <div>
-              <div style="font-weight:600;font-size:14px">${o.konu}</div>
-              <div style="font-size:12px;color:var(--gray);margin-top:2px">${o.gun} — ${o.kaynak} — ${o.detay}</div>
+              <div style="font-size:11px;font-weight:700;color:#16a34a;margin-bottom:6px;text-align:center">✅ DOĞRU</div>
+              <input type="number" id="d-${o.id}" min="0" placeholder="0" oninput="updateSonucPreview('${o.id}')"
+                style="width:100%;padding:12px;text-align:center;font-size:22px;font-weight:900;border:2.5px solid #16a34a;border-radius:10px;outline:none;color:#16a34a">
             </div>
-            <button class="btn-primary" style="width:auto;padding:7px 14px;font-size:13px" onclick="toggleSonucForm('${o.id}')">Sonuç Gir</button>
-          </div>
-          <div class="sonuc-form" id="sonuc-${o.id}">
-            <div style="font-size:13px;font-weight:600;margin-bottom:8px">Sonuçları gir:</div>
-            <div class="sonuc-inputs">
-              <div class="sonuc-input-wrap">
-                <label>✅ Doğru</label>
-                <input type="number" id="d-${o.id}" min="0" placeholder="0" style="border:2px solid #16a34a">
-              </div>
-              <div class="sonuc-input-wrap">
-                <label>❌ Yanlış</label>
-                <input type="number" id="y-${o.id}" min="0" placeholder="0" style="border:2px solid #dc2626">
-              </div>
-              <div class="sonuc-input-wrap">
-                <label>⬜ Boş</label>
-                <input type="number" id="b-${o.id}" min="0" placeholder="0" style="border:2px solid var(--border)">
-              </div>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:6px;text-align:center">❌ YANLIŞ</div>
+              <input type="number" id="y-${o.id}" min="0" placeholder="0" oninput="updateSonucPreview('${o.id}')"
+                style="width:100%;padding:12px;text-align:center;font-size:22px;font-weight:900;border:2.5px solid #dc2626;border-radius:10px;outline:none;color:#dc2626">
             </div>
-            <button class="btn-primary" style="margin-top:12px" onclick="submitSonuc('${o.id}')">💾 Kaydet</button>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--gray);margin-bottom:6px;text-align:center">⬜ BOŞ</div>
+              <input type="number" id="b-${o.id}" min="0" placeholder="0" oninput="updateSonucPreview('${o.id}')"
+                style="width:100%;padding:12px;text-align:center;font-size:22px;font-weight:900;border:2.5px solid var(--border);border-radius:10px;outline:none">
+            </div>
           </div>
-        </div>`;
+          <div id="sonuc-preview-${o.id}" style="display:none;background:white;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center;font-size:14px;font-weight:700"></div>
+          <button onclick="submitSonuc('${o.id}')" style="width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 Kaydet</button>
+        </div>
+      </div>`;
     });
     html += '</div>';
+    bekBolum.innerHTML = html;
   }
 
-  if (tamamlanan.length) {
-    html += `<div class="card"><div class="card-title"><span class="icon">✅</span> Tamamlananlar</div>`;
-    tamamlanan.forEach(o => {
-      const pct = o.toplam > 0 ? Math.round(o.dogru / o.toplam * 100) : 0;
-      const badge = pct >= 80 ? 'badge-green' : pct >= 60 ? 'badge-yellow' : 'badge-red';
-      html += `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div>
-            <div style="font-weight:600;font-size:14px">${o.konu}</div>
-            <div style="font-size:12px;color:var(--gray)">${o.gun} — ${o.kaynak}</div>
-            <div style="font-size:12px;margin-top:3px">✅${o.dogru} ❌${o.yanlis} ⬜${o.bos}</div>
-          </div>
-          <span class="badge ${badge}">${pct}%</span>
-        </div>`;
-    });
-    html += '</div>';
-  }
+  // Tamamlanan
+  const tamBolum = document.getElementById('ogr-tamamlanan-bolum');
+  if (!tamamlanan.length) { tamBolum.innerHTML = ''; return; }
 
-  content.innerHTML = html;
+  let tamHtml = `<div style="background:white;border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+    <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:14px">✅ Tamamlanan Ödevler</div>`;
+  tamamlanan.forEach(o => {
+    const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0;
+    const top=Number(o.toplam)||(d+y+b);
+    const pct=top>0?Math.round(d/top*100):0;
+    const col=pct>=80?'#16a34a':pct>=60?'#ca8a04':'#dc2626';
+    const bg=pct>=80?'#D1FAE5':pct>=60?'#FEF9C3':'#FEE2E2';
+    const fg=pct>=80?'#065f46':pct>=60?'#713f12':'#991b1b';
+    tamHtml += `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <div style="font-weight:600;font-size:14px">${o.konu}</div>
+          <div style="font-size:11px;color:var(--gray);margin-top:2px">${o.gun||''} — ${o.kaynak||''}</div>
+        </div>
+        <span style="background:${bg};color:${fg};padding:3px 10px;border-radius:20px;font-size:13px;font-weight:700;flex-shrink:0;margin-left:8px">%${pct}</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:12px;margin-bottom:6px">
+        <span style="color:#16a34a;font-weight:600">✅ ${d}</span>
+        <span style="color:#dc2626;font-weight:600">❌ ${y}</span>
+        <span style="color:var(--gray)">⬜ ${b} / ${top} soru</span>
+      </div>
+      <div style="background:#E5E7EB;border-radius:20px;height:6px;overflow:hidden">
+        <div style="width:${pct}%;background:${col};height:6px;border-radius:20px"></div>
+      </div>
+    </div>`;
+  });
+  tamHtml += '</div>';
+  tamBolum.innerHTML = tamHtml;
+}
+
+function updateSonucPreview(odevId) {
+  const d=Number(document.getElementById('d-'+odevId).value)||0;
+  const y=Number(document.getElementById('y-'+odevId).value)||0;
+  const b=Number(document.getElementById('b-'+odevId).value)||0;
+  const top=d+y+b;
+  const pct=top>0?Math.round(d/top*100):0;
+  const prev=document.getElementById('sonuc-preview-'+odevId);
+  if(top>0){
+    prev.style.display='block';
+    prev.textContent=`Toplam: ${top} soru — Başarı: %${pct}`;
+    prev.style.color=pct>=80?'#16a34a':pct>=60?'#ca8a04':'#dc2626';
+  } else { prev.style.display='none'; }
 }
 
 function toggleSonucForm(id) {
@@ -1217,7 +1318,6 @@ async function submitSonuc(odevId) {
   const dogru  = document.getElementById('d-' + odevId).value || 0;
   const yanlis = document.getElementById('y-' + odevId).value || 0;
   const bos    = document.getElementById('b-' + odevId).value || 0;
-
   showToast('Kaydediliyor...');
   const res = await api({ action: 'odevSonuc', odevId, dogru, yanlis, bos });
   if (res.success) {
@@ -1226,6 +1326,67 @@ async function submitSonuc(odevId) {
   } else {
     showToast('❌ Hata: ' + (res.error || ''));
   }
+}
+
+// ── ÖĞRENCİ BAŞARI TABLOSU ───────────────────────────────────
+async function loadOgrBasari() {
+  const content = document.getElementById('ogr-basari-content');
+  content.innerHTML = '<div class="loading"><span class="spinner"></span>Yükleniyor...</div>';
+
+  const [raporRes, kazRes] = await Promise.all([
+    api({ action: 'getRapor', ogrenciId: state.user.id }),
+    api({ action: 'getKazanim', sinif: state.user.sinif })
+  ]);
+
+  const raporMap = {};
+  (raporRes.data || []).forEach(r => raporMap[r.konu] = r);
+  const tumKonular = [...new Set((kazRes.data || []).map(k => k.konu))];
+
+  if (!tumKonular.length) {
+    content.innerHTML = '<div class="card"><div class="loading">Müfredat verisi bulunamadı.</div></div>';
+    return;
+  }
+
+  const calisilan = tumKonular.filter(k => raporMap[k]).length;
+  const topDogru  = Object.values(raporMap).reduce((s,r) => s+r.dogru, 0);
+  const topToplam = Object.values(raporMap).reduce((s,r) => s+r.toplam, 0);
+  const genelPct  = topToplam > 0 ? Math.round(topDogru/topToplam*100) : 0;
+
+  let html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+        <div style="font-size:26px;font-weight:900;color:var(--blue)">${calisilan}/${tumKonular.length}</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:2px">İşlenen Konu</div>
+      </div>
+      <div style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+        <div style="font-size:26px;font-weight:900;color:${genelPct>=80?'#16a34a':genelPct>=60?'#ca8a04':'#dc2626'}">%${genelPct}</div>
+        <div style="font-size:12px;color:var(--gray);margin-top:2px">Genel Başarı</div>
+      </div>
+    </div>
+    <div style="background:white;border-radius:14px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px">📚 ${state.user.sinif} Konu Haritası</div>`;
+
+  tumKonular.forEach((konu, idx) => {
+    const r = raporMap[konu];
+    const pct = r ? r.basari : null;
+    const col = pct===null?'#E5E7EB':pct>=80?'#16a34a':pct>=60?'#ca8a04':'#dc2626';
+    const nbg = pct===null?'#F3F4F6':pct>=80?'#D1FAE5':pct>=60?'#FEF9C3':'#FEE2E2';
+    const ikon = pct===null?'⬜':pct>=80?'✅':pct>=60?'⚠️':'❌';
+    html += `<div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:24px;height:24px;border-radius:50%;background:${nbg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:var(--navy)">${idx+1}</div>
+        <div style="flex:1;font-weight:600;font-size:14px">${konu}</div>
+        <div style="font-size:13px;font-weight:700;color:${col};min-width:36px;text-align:right">${pct!==null?'%'+pct:'—'}</div>
+        <div style="font-size:15px">${ikon}</div>
+      </div>
+      <div style="background:#F3F4F6;border-radius:20px;height:8px;overflow:hidden;margin-left:34px">
+        <div style="width:${pct||0}%;background:${col};height:8px;border-radius:20px;transition:width 0.8s ease"></div>
+      </div>
+      ${r?`<div style="font-size:11px;color:var(--gray);margin-top:4px;margin-left:34px">✅${r.dogru} ❌${r.yanlis} ⬜${r.bos} / ${r.toplam} soru</div>`:`<div style="font-size:11px;color:#9CA3AF;margin-top:4px;margin-left:34px">Henüz ödev tamamlanmadı</div>`}
+    </div>`;
+  });
+  html += '</div>';
+  content.innerHTML = html;
 }
 
 // ── VELİ RAPOR ────────────────────────────────────────────────

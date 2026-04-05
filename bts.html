@@ -363,7 +363,7 @@
 
       <div class="form-group">
         <label>Öğrenci</label>
-        <select id="odev-ogrenci" onchange="loadOdevKaynaklar()">
+        <select id="odev-ogrenci" onchange="loadOdevSayfa()">
           <option value="">— Öğrenci seç —</option>
         </select>
       </div>
@@ -372,26 +372,11 @@
         ⚠️ Bu öğrenciye henüz kaynak atanmamış. <a href="#" onclick="goPage('kaynaklar');return false" style="color:var(--blue);font-weight:600">Kaynak Yönetimi</a>'nden atayabilirsin.
       </div>
 
-      <div class="form-group">
-        <label>Ödev Listesi</label>
-        <div style="overflow-x:auto">
-          <table class="odev-table" id="odevTable">
-            <thead>
-              <tr>
-                <th>Gün</th>
-                <th>Konu/Kazanım</th>
-                <th>Kaynak</th>
-                <th>Detay</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="odevBody"></tbody>
-          </table>
-        </div>
-        <button class="add-row-btn" onclick="addOdevRow()">+ Satır Ekle</button>
+      <div id="odev-satir-alani" style="display:none">
+        <div id="odevSatirlar"></div>
+        <button class="add-row-btn" onclick="addOdevSatir()">+ Satır Ekle</button>
+        <button class="btn-primary" style="margin-top:12px" onclick="odevSave()">💾 Tümünü Kaydet</button>
       </div>
-
-      <button class="btn-primary" onclick="odevSave()">💾 Tümünü Kaydet</button>
     </div>
   </div>
 
@@ -401,6 +386,16 @@
     <!-- Genel Havuz -->
     <div class="card">
       <div class="card-title"><span class="icon">📚</span> Genel Kaynak Havuzu</div>
+      <!-- Filtre -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <select id="k-filtre-sinif" onchange="renderGenelKaynaklar()" style="flex:1">
+          <option value="">Tüm Sınıflar</option>
+          <option>5. Sınıf</option><option>6. Sınıf</option>
+          <option>7. Sınıf</option><option>8. Sınıf</option>
+        </select>
+        <input type="text" id="k-filtre-ad" placeholder="🔍 Kaynak ara..." oninput="renderGenelKaynaklar()"
+          style="flex:2;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px">
+      </div>
       <div id="genelKaynakList" class="loading">Yükleniyor...</div>
     </div>
 
@@ -419,10 +414,8 @@
         <div class="form-group">
           <label>Sınıf</label>
           <select id="k-sinif">
-            <option>5. Sınıf</option>
-            <option>6. Sınıf</option>
-            <option>7. Sınıf</option>
-            <option selected>8. Sınıf</option>
+            <option>5. Sınıf</option><option>6. Sınıf</option>
+            <option>7. Sınıf</option><option selected>8. Sınıf</option>
           </select>
         </div>
       </div>
@@ -430,9 +423,7 @@
         <div class="form-group">
           <label>Zorluk Derecesi</label>
           <select id="k-zorluk">
-            <option>Kolay</option>
-            <option selected>Orta</option>
-            <option>Zor</option>
+            <option>Kolay</option><option selected>Orta</option><option>Zor</option>
           </select>
         </div>
         <div class="form-group">
@@ -448,19 +439,17 @@
       <div class="card-title"><span class="icon">🔗</span> Öğrenciye Kaynak Ata</div>
       <div class="form-group">
         <label>Öğrenci</label>
-        <select id="ata-ogrenci" onchange="loadOgrenciKaynaklar()">
+        <select id="ata-ogrenci" onchange="ataOgrenciDegisti()">
           <option value="">— Öğrenci seç —</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Kaynak</label>
+        <label>Kaynak (öğrencinin sınıfına göre filtreli)</label>
         <select id="ata-kaynak">
-          <option value="">— Kaynak seç —</option>
+          <option value="">— Önce öğrenci seçin —</option>
         </select>
       </div>
       <button class="btn-primary" onclick="kaynakAta()">🔗 Ata</button>
-
-      <!-- Öğrencinin mevcut kaynakları -->
       <div id="ogrenciKaynakList" style="margin-top:16px"></div>
     </div>
   </div>
@@ -554,7 +543,6 @@ async function initApp() {
     await loadMasterData();
     fillOgrenciSelects();
     fillOdevKaynaklar();
-    addOdevRow();
     loadStats();
     goPage('anasayfa');
   } else if (state.rol === 'ogrenci') {
@@ -612,19 +600,14 @@ async function loadMasterData() {
 }
 
 async function loadStats() {
-  // Tarih
   const now = new Date();
   document.getElementById('welcomeDate').textContent =
     now.toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-
-  // Öğrenci sayısı
   document.getElementById('statOgrenci').textContent = state.ogrenciler.length;
 
   // Sınıf dağılımı
   const sinifMap = {};
-  state.ogrenciler.forEach(o => {
-    sinifMap[o.sinif] = (sinifMap[o.sinif] || 0) + 1;
-  });
+  state.ogrenciler.forEach(o => { sinifMap[o.sinif] = (sinifMap[o.sinif] || 0) + 1; });
   const sinifHTML = Object.entries(sinifMap).sort().map(([s,n]) => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <div style="font-weight:600;font-size:14px;width:90px">${s}</div>
@@ -635,32 +618,40 @@ async function loadStats() {
     </div>`).join('');
   document.getElementById('sinifDagilim').innerHTML = sinifHTML || '<div class="loading">Veri yok</div>';
 
-  // Ödev istatistikleri
   try {
+    // Ödev istatistikleri
     const odevRes = await api({ action: 'getOdev' });
     const tumOdevler = odevRes.data || [];
-    const bekleyen = tumOdevler.filter(o => o.durum === 'Bekliyor');
+    const bekleyen = tumOdevler.filter(o => String(o.durum).trim() === 'Bekliyor');
     document.getElementById('statOdev').textContent = bekleyen.length;
 
     // Bu ay ders sayısı
     const dersRes = await api({ action: 'getDers' });
-    const buAy = (dersRes.data || []).filter(d => {
+    const dersler = dersRes.data || [];
+    const buAy = dersler.filter(d => {
+      if (!d.tarih) return false;
       const t = new Date(d.tarih);
       return t.getMonth() === now.getMonth() && t.getFullYear() === now.getFullYear();
     });
-    document.getElementById('statDers').textContent = buAy.length;
+    // Benzersiz ders ID sayısı (her kazanım ayrı satır olduğu için)
+    const benzersizDers = new Set(buAy.map(d => d.id)).size;
+    document.getElementById('statDers').textContent = benzersizDers;
 
     // Bekleyen ödev listesi
-    if (bekleyen.length === 0) {
-      document.getElementById('bekleyenList').innerHTML = '<div style="color:var(--green);font-size:14px;padding:8px 0">✅ Bekleyen ödev yok!</div>';
+    if (!bekleyen.length) {
+      document.getElementById('bekleyenList').innerHTML =
+        '<div style="color:var(--green);font-size:14px;padding:8px 0">✅ Bekleyen ödev yok!</div>';
     } else {
+      // Öğrenci adını ID'den bul
+      const ogrMap = {};
+      state.ogrenciler.forEach(o => ogrMap[o.id] = o.ad);
       const bekleyenHTML = bekleyen.slice(0,5).map(o => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
           <div>
-            <div style="font-size:13px;font-weight:600">${o.konu}</div>
-            <div style="font-size:11px;color:var(--gray)">${o.gun} — ${o.kaynak}</div>
+            <div style="font-size:13px;font-weight:600">${ogrMap[o.ogrenciId] || o.ogrenciId}</div>
+            <div style="font-size:11px;color:var(--gray)">${o.gun} — ${o.konu}</div>
           </div>
-          <span class="badge badge-yellow">${o.durum}</span>
+          <span class="badge badge-yellow">Bekliyor</span>
         </div>`).join('');
       document.getElementById('bekleyenList').innerHTML = bekleyenHTML +
         (bekleyen.length > 5 ? `<div style="font-size:12px;color:var(--gray);padding-top:8px">+${bekleyen.length-5} daha...</div>` : '');
@@ -669,9 +660,8 @@ async function loadStats() {
     document.getElementById('statOdev').textContent = '—';
     document.getElementById('statDers').textContent = '—';
     document.getElementById('bekleyenList').innerHTML = '<div class="loading">Yüklenemedi</div>';
+    console.error(e);
   }
-
-  // Öğrenci listesini yükle
   renderOgrenciListesi();
 }
 
@@ -758,69 +748,181 @@ function fillOgrenciSelects() {
 }
 
 function fillOdevKaynaklar() {
-  // Genel kaynak select için (kaynak atama ekranı)
-  const ataSel = document.getElementById('ata-kaynak');
-  if (ataSel) {
-    ataSel.innerHTML = '<option value="">— Kaynak seç —</option>' +
-      state.kaynaklar.map(k => `<option value="${k.ad}" data-zorluk="${k.zorluk}" data-konu="${k.konuSayisi}">${k.ad} (${k.sinif})</option>`).join('');
-  }
-  // Ata öğrenci select
   const ataOgr = document.getElementById('ata-ogrenci');
   if (ataOgr) {
     ataOgr.innerHTML = '<option value="">— Öğrenci seç —</option>' +
-      state.ogrenciler.map(o => `<option value="${o.id}">${o.ad} (${o.sinif})</option>`).join('');
+      state.ogrenciler.map(o => `<option value="${o.id}" data-sinif="${o.sinif}">${o.ad} (${o.sinif})</option>`).join('');
   }
-  // Genel havuz listesi
   renderGenelKaynaklar();
 }
 
 function renderGenelKaynaklar() {
   const el = document.getElementById('genelKaynakList');
   if (!el) return;
-  if (!state.kaynaklar.length) {
-    el.innerHTML = '<div class="loading">Henüz kaynak eklenmemiş</div>';
-    return;
-  }
-  el.innerHTML = state.kaynaklar.map(k => `
+  const filtreSinif = document.getElementById('k-filtre-sinif')?.value || '';
+  const filtreAd    = (document.getElementById('k-filtre-ad')?.value || '').toLowerCase();
+
+  const filtered = state.kaynaklar.filter(k =>
+    (!filtreSinif || k.sinif === filtreSinif) &&
+    (!filtreAd || k.ad.toLowerCase().includes(filtreAd))
+  );
+
+  if (!filtered.length) { el.innerHTML = '<div class="loading">Kaynak bulunamadı</div>'; return; }
+  el.innerHTML = filtered.map(k => `
     <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1">
         <div style="font-weight:600;font-size:14px">${k.ad}</div>
-        <div style="font-size:12px;color:var(--gray)">${k.yayinevi} — ${k.sinif}</div>
+        <div style="font-size:12px;color:var(--gray)">${k.yayinevi||'—'} — ${k.sinif}</div>
       </div>
       <span class="badge ${k.zorluk==='Kolay'?'badge-green':k.zorluk==='Zor'?'badge-red':'badge-yellow'}">${k.zorluk||'—'}</span>
       <span style="font-size:12px;color:var(--gray)">${k.konuSayisi||'—'} konu</span>
     </div>`).join('');
 }
 
-// Ödev girerken öğrencinin kendi kaynaklarını yükle
-async function loadOdevKaynaklar() {
-  const ogrenciId = document.getElementById('odev-ogrenci').value;
-  const uyari = document.getElementById('odev-kaynak-uyari');
-  if (!ogrenciId) return;
+// Kaynak atama — öğrenci seçince sınıfa göre kaynakları filtrele
+function ataOgrenciDegisti() {
+  const sel = document.getElementById('ata-ogrenci');
+  const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
+  const ataSel = document.getElementById('ata-kaynak');
 
-  const res = await api({ action: 'getOgrenciKaynak', ogrenciId });
-  const kaynaklar = res.data || [];
-  state._odevKaynaklar = kaynaklar;
+  const filtered = state.kaynaklar.filter(k =>
+    !sinif || k.sinif.toLowerCase() === sinif.toLowerCase()
+  );
 
-  if (!kaynaklar.length) {
-    uyari.style.display = 'block';
-  } else {
-    uyari.style.display = 'none';
-  }
+  ataSel.innerHTML = '<option value="">— Kaynak seç —</option>' +
+    filtered.map(k => `<option value="${k.ad}" data-zorluk="${k.zorluk}" data-konu="${k.konuSayisi}">${k.ad}</option>`).join('');
 
-  // Mevcut satırların kaynak dropdown'larını güncelle
-  document.querySelectorAll('#odevBody .kaynak-select').forEach(sel => {
-    const val = sel.value;
-    sel.innerHTML = kaynakSelectHTML();
-    sel.value = val;
-  });
+  loadOgrenciKaynaklar();
 }
 
-function kaynakSelectHTML() {
-  const kaynaklar = state._odevKaynaklar || [];
-  if (!kaynaklar.length) return '<option value="">— Önce kaynak ata —</option>';
-  return '<option value="">— Kaynak —</option>' +
-    kaynaklar.map(k => `<option value="${k.ad}">${k.ad}</option>`).join('');
+// ── ÖDEV GİR — yeni akış ─────────────────────────────────────
+async function loadOdevSayfa() {
+  const sel = document.getElementById('odev-ogrenci');
+  const ogrenciId = sel.value;
+  const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
+  const uyari = document.getElementById('odev-kaynak-uyari');
+  const alan  = document.getElementById('odev-satir-alani');
+
+  if (!ogrenciId) { alan.style.display = 'none'; return; }
+
+  // Öğrencinin kazanımlarını ve kaynaklarını yükle
+  const [kazRes, kayRes] = await Promise.all([
+    api({ action: 'getKazanim', sinif }),
+    api({ action: 'getOgrenciKaynak', ogrenciId })
+  ]);
+
+  state._odevKazanimlar = kazRes.data || [];
+  state._odevKaynaklar  = kayRes.data || [];
+  state._odevSinif      = sinif;
+
+  if (!state._odevKaynaklar.length) {
+    uyari.style.display = 'block';
+    alan.style.display = 'none';
+  } else {
+    uyari.style.display = 'none';
+    alan.style.display = 'block';
+    document.getElementById('odevSatirlar').innerHTML = '';
+    addOdevSatir();
+  }
+}
+
+function addOdevSatir() {
+  const container = document.getElementById('odevSatirlar');
+  const idx = container.children.length;
+
+  // Konu listesi (unique)
+  const konular = [...new Set((state._odevKazanimlar||[]).map(k => k.konu))];
+  const konuOpts = '<option value="">— Konu —</option>' +
+    konular.map(k => `<option value="${k}">${k}</option>`).join('');
+
+  // Kaynak listesi
+  const kaynakOpts = '<option value="">— Kaynak —</option>' +
+    (state._odevKaynaklar||[]).map(k => `<option value="${k.ad}">${k.ad}</option>`).join('');
+
+  const div = document.createElement('div');
+  div.className = 'odev-satir-card';
+  div.style.cssText = 'background:#f9fafb;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;position:relative';
+  div.innerHTML = `
+    <button onclick="this.closest('.odev-satir-card').remove()"
+      style="position:absolute;top:10px;right:10px;background:#FEE2E2;border:none;color:var(--red);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:16px;line-height:1">×</button>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">📅 Gün</label>
+        <select style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px">
+          ${GUNLER.map(g => `<option>${g}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">📚 Kaynak</label>
+        <select class="kaynak-sel" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px">
+          ${kaynakOpts}
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px">
+      <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">📖 Konu</label>
+      <select class="konu-sel" onchange="konuSecildi(this)" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px">
+        ${konuOpts}
+      </select>
+    </div>
+
+    <div style="margin-bottom:8px">
+      <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">🎯 Kazanım <span style="font-weight:400;color:var(--gray)">(opsiyonel)</span></label>
+      <select class="kazanim-sel" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px">
+        <option value="">— Önce konu seçin —</option>
+      </select>
+    </div>
+
+    <div>
+      <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">📄 Detay (sayfa/test)</label>
+      <input type="text" class="detay-inp" placeholder="sy. 45-49 veya Test 3"
+        style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px">
+    </div>`;
+  container.appendChild(div);
+}
+
+function konuSecildi(konuSel) {
+  const konu = konuSel.value;
+  const kazanimSel = konuSel.closest('.odev-satir-card').querySelector('.kazanim-sel');
+  const filtered = (state._odevKazanimlar||[]).filter(k => k.konu === konu);
+  kazanimSel.innerHTML = '<option value="">— Kazanım seç (opsiyonel) —</option>' +
+    filtered.map(k => `<option value="${k.kod}">${k.kod} ${k.aciklama.substring(0,60)}...</option>`).join('');
+}
+
+async function odevSave() {
+  const ogrenciId = document.getElementById('odev-ogrenci').value;
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+
+  const satirlar = document.querySelectorAll('.odev-satir-card');
+  if (!satirlar.length) { showToast('⚠️ En az bir ödev satırı ekleyin'); return; }
+
+  const odevler = [];
+  let valid = true;
+  satirlar.forEach(s => {
+    const gun    = s.querySelector('select').value;
+    const kaynak = s.querySelector('.kaynak-sel').value;
+    const konu   = s.querySelector('.konu-sel').value;
+    const kazanim = s.querySelector('.kazanim-sel').value;
+    const detay  = s.querySelector('.detay-inp').value.trim();
+    if (!konu) { valid = false; return; }
+    // Konu + kazanım birleştir
+    const konuKazanim = kazanim ? `${konu} — ${kazanim}` : konu;
+    odevler.push({ gun, kaynak, konu: konuKazanim, detay });
+  });
+
+  if (!valid) { showToast('⚠️ Tüm satırlarda konu seçin'); return; }
+
+  showToast('Kaydediliyor...');
+  const res = await api({ action: 'odevSave', ogrenciId, odevler: JSON.stringify(odevler) });
+  if (res.success) {
+    showToast(`✅ ${res.count} ödev kaydedildi!`);
+    document.getElementById('odevSatirlar').innerHTML = '';
+    addOdevSatir();
+  } else {
+    showToast('❌ ' + (res.error || 'Hata'));
+  }
 }
 
 // ── KAYNAK YÖNETİMİ ───────────────────────────────────────────
@@ -837,7 +939,6 @@ async function kaynakEkle() {
   const res = await api({ action: 'kaynakEkle', ad, yayinevi, sinif, zorluk, konuSayisi });
   if (res.success) {
     showToast('✅ Kaynak eklendi!');
-    // Listeyi güncelle
     const kyRes = await api({ action: 'getKaynak' });
     state.kaynaklar = kyRes.data || [];
     fillOdevKaynaklar();
@@ -982,58 +1083,6 @@ async function dersSave() {
   }
 }
 
-// ── ÖDEV KAYDET ───────────────────────────────────────────────
-const GUNLER = ['PAZARTESİ','SALI','ÇARŞAMBA','PERŞEMBE','CUMA','CUMARTESİ','PAZAR'];
-
-function addOdevRow() {
-  const tbody = document.getElementById('odevBody');
-  const row = document.createElement('tr');
-  row.innerHTML = `
-    <td>
-      <select style="min-width:100px">
-        ${GUNLER.map(g => `<option>${g}</option>`).join('')}
-      </select>
-    </td>
-    <td><input type="text" placeholder="Konu / Kazanım" style="min-width:120px"></td>
-    <td>
-      <select class="kaynak-select" style="min-width:110px">${kaynakSelectHTML()}</select>
-    </td>
-    <td><input type="text" placeholder="sy. 10-15" style="min-width:80px"></td>
-    <td><button class="del-row-btn" onclick="this.closest('tr').remove()">×</button></td>`;
-  tbody.appendChild(row);
-}
-
-async function odevSave() {
-  const ogrenciId = document.getElementById('odev-ogrenci').value;
-  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
-
-  const rows = document.querySelectorAll('#odevBody tr');
-  if (!rows.length) { showToast('⚠️ En az bir ödev satırı ekleyin'); return; }
-
-  const odevler = [];
-  let valid = true;
-  rows.forEach(row => {
-    const cells = row.querySelectorAll('td');
-    const gun   = cells[0].querySelector('select').value;
-    const konu  = cells[1].querySelector('input').value.trim();
-    const kaynak = cells[2].querySelector('select').value;
-    const detay = cells[3].querySelector('input').value.trim();
-    if (!konu) { valid = false; return; }
-    odevler.push({ gun, konu, kaynak, detay });
-  });
-
-  if (!valid) { showToast('⚠️ Boş konu alanı var'); return; }
-
-  showToast('Kaydediliyor...');
-  const res = await api({ action: 'odevSave', ogrenciId, odevler: JSON.stringify(odevler) });
-  if (res.success) {
-    showToast(`✅ ${res.count} ödev kaydedildi!`);
-    document.getElementById('odevBody').innerHTML = '';
-    addOdevRow();
-  } else {
-    showToast('❌ Hata: ' + (res.error || 'Bilinmeyen'));
-  }
-}
 
 // ── RAPOR ─────────────────────────────────────────────────────
 async function loadRapor() {
@@ -1081,7 +1130,7 @@ async function loadRapor() {
   content.innerHTML = html;
 }
 
-// ── ÖĞRENCİ: ÖDEVLERİM ───────────────────────────────────────
+// ── ÖĞRENCI: ÖDEVLERİM ───────────────────────────────────────
 async function loadOdevlerim() {
   const content = document.getElementById('odevlerimContent');
   content.innerHTML = '<div class="loading"><span class="spinner"></span>Yükleniyor...</div>';

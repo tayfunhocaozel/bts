@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Scholar Metric</title>
+<title>AdaptiX — Bireysel Takip Sistemi</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -85,7 +85,7 @@ tailwind.config = {
   <header class="flex justify-between items-center px-6 py-4 glass-header z-10">
     <div class="flex items-center gap-2">
       <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">school</span>
-      <span class="font-headline text-xl font-extrabold tracking-tight text-primary">Scholar Metric</span>
+      <span class="font-headline text-xl font-extrabold tracking-tight text-primary">AdaptiX</span>
     </div>
   </header>
 
@@ -162,7 +162,7 @@ tailwind.config = {
     <div class="mb-10 px-2">
       <div class="flex items-center gap-2 mb-1">
         <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings:'FILL' 1">school</span>
-        <span class="font-headline text-lg font-extrabold text-primary tracking-tight">Scholar Metric</span>
+        <span class="font-headline text-lg font-extrabold text-primary tracking-tight">AdaptiX</span>
       </div>
       <div class="text-xs text-outline font-medium px-1" id="sidebar-rol-label">—</div>
     </div>
@@ -185,7 +185,7 @@ tailwind.config = {
   <header class="glass-header md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-5 py-3">
     <div class="flex items-center gap-2">
       <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings:'FILL' 1">school</span>
-      <span class="font-headline text-base font-extrabold text-primary">Scholar Metric</span>
+      <span class="font-headline text-base font-extrabold text-primary">AdaptiX</span>
     </div>
     <div class="flex items-center gap-2">
       <div class="text-xs text-outline font-medium" id="mobile-user-name">—</div>
@@ -719,7 +719,7 @@ async function loadMasterData() {
 
 function fillSelects() {
   const ogrOpts = '<option value="">— Öğrenci seçin —</option>' +
-    state.ogrenciler.map(o => `<option value="${o.ogrenci_id}" data-sinif="${o.sinif}">${o.ad_soyad} (${o.sinif})</option>`).join('');
+    state.ogrenciler.map(o => { const s = (o.sinif||'').trim(); return `<option value="${o.ogrenci_id}" data-sinif="${s}">${o.ad_soyad} (${s})</option>`; }).join('');
 
   ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci'].forEach(id => {
     const el = document.getElementById(id);
@@ -736,7 +736,7 @@ async function loadDashboard() {
 
   // Sınıf dağılımı
   const sinifMap = {};
-  state.ogrenciler.forEach(o => sinifMap[o.sinif] = (sinifMap[o.sinif]||0)+1);
+  state.ogrenciler.forEach(o => { const s = (o.sinif||'').trim(); sinifMap[s] = (sinifMap[s]||0)+1; });
   document.getElementById('sinif-dagilim').innerHTML = Object.entries(sinifMap).sort().map(([s,n]) => `
     <div class="flex items-center gap-3 mb-2">
       <div class="text-sm font-semibold text-on-surface w-20">${s}</div>
@@ -747,7 +747,7 @@ async function loadDashboard() {
     </div>`).join('');
 
   // Ödevler
-  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','Bekliyor');
+  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','BEKLİYOR');
   const bekleyen = odevler || [];
   document.getElementById('stat-bekleyen').textContent = bekleyen.length;
 
@@ -784,7 +784,7 @@ function dersOgrenciSecildi() {
   const konuSel = document.getElementById('ders-konu');
   konuSel.innerHTML = '<option value="">— Konu seçin —</option>';
 
-  const konular = [...new Set(state.kazanimlar.filter(k => !sinif || k.sinif?.toLowerCase() === sinif.toLowerCase()).map(k => k.konu))];
+  const sinifNorm = sinif.toLowerCase().replace('.',''); const konular = [...new Set(state.kazanimlar.filter(k => !sinif || (k.sinif||'').toLowerCase().replace('.','').includes(sinifNorm.replace(/[^0-9]/g,''))).map(k => k.konu))];
   konular.forEach(k => konuSel.innerHTML += `<option value="${k}">${k}</option>`);
   document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
 }
@@ -843,12 +843,12 @@ async function odevOgrenciSecildi() {
   if (!ogrenciId) { alan.classList.add('hidden'); return; }
 
   const [kazRes, kayRes] = await Promise.all([
-    sb.from('kazanimlar').select('*').ilike('sinif', sinif),
-    sb.from('ogrn_kaynak').select('*, kaynaklar(*)').eq('ogrenci_id', ogrenciId)
+    sb.from('kazanimlar').select('*').ilike('sinif', `%${(sinif||'').replace(/[^0-9]/g,'')}%`).order('konu'),
+    sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId)
   ]);
 
   state._odevKazanimlar = kazRes.data || [];
-  state._odevKaynaklar  = (kayRes.data || []).map(r => ({ ...r, kaynak_adi: r.kaynaklar?.kaynak_adi || '' }));
+  state._odevKaynaklar  = kayRes.data || [];
   state._odevSinif = sinif;
 
   if (!state._odevKaynaklar.length) {
@@ -859,6 +859,7 @@ async function odevOgrenciSecildi() {
     alan.classList.remove('hidden');
     document.getElementById('odev-satirlar').innerHTML = '';
     addOdevSatir();
+    loadBekleyenOdevlerForOgrenci(ogrenciId);
   }
 }
 
@@ -899,6 +900,46 @@ function odevKonuSecildi(konuSel) {
     filtered.map(k => `<option value="${k.kazanim_kodu||''}">${k.kazanim_kodu||''} ${(k.kazanim_aciklamasi||k.aciklama||'').substring(0,50)}...</option>`).join('');
 }
 
+
+// ── ÖDEV GİR: bekleyen ödevleri göster ───────────────────────
+async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
+  const { data } = await sb.from('odevler').select('*')
+    .eq('ogrenci_id', ogrenciId)
+    .in('durum', ['BEKLİYOR','EKSİK','YAPILMADI'])
+    .order('verilis_tarihi', { ascending: false })
+    .limit(10);
+
+  const odevler = data || [];
+  const container = document.getElementById('odev-satirlar-alani');
+  
+  // Mevcut bekleyen ödev bölümünü temizle veya oluştur
+  let bekEl = document.getElementById('bekleyen-odev-listesi');
+  if (!bekEl) {
+    bekEl = document.createElement('div');
+    bekEl.id = 'bekleyen-odev-listesi';
+    container.insertBefore(bekEl, container.firstChild);
+  }
+
+  if (!odevler.length) { bekEl.innerHTML = ''; return; }
+
+  bekEl.innerHTML = `
+    <div class="bg-surface-container-high rounded-xl p-4 mb-4">
+      <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">
+        ⏳ Önceki Bekleyen Ödevler (${odevler.length})
+      </div>
+      ${odevler.map(o => `
+        <div class="flex items-center justify-between py-2 border-b border-outline-variant/20 last:border-0">
+          <div>
+            <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+            <div class="text-xs text-outline">${o.gun||'—'} — ${o.kaynak||'—'} ${o.detay?'— '+o.detay:''}</div>
+          </div>
+          <span class="text-xs font-bold px-2 py-0.5 rounded-full ${o.durum==='BEKLİYOR'?'bg-secondary-container/40 text-on-secondary-container':o.durum==='EKSİK'?'bg-error-container/40 text-error':'bg-surface-container-highest text-outline'}">
+            ${o.durum}
+          </span>
+        </div>`).join('')}
+    </div>`;
+}
+
 async function odevSave() {
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
@@ -917,7 +958,7 @@ async function odevSave() {
     const kazanim = s.querySelector('.kazanim-sel').value;
     const detay  = s.querySelector('.detay-inp').value.trim();
     if (!konu) { valid = false; return; }
-    rows.push({ ogrenci_id: ogrenciId, verilis_tarihi: tarih, gun, kaynak, konu: kazanim ? `${konu} — ${kazanim}` : konu, kazanim, detay, durum: 'Bekliyor', dogru: 0, yanlis: 0, bos: 0, toplam: 0 });
+    rows.push({ ogrenci_id: ogrenciId, verilis_tarihi: tarih, gun, kaynak, konu: kazanim ? `${konu} — ${kazanim}` : konu, kazanim, detay, durum: 'BEKLİYOR', dogru: 0, yanlis: 0, bos: 0, toplam: 0 });
   });
 
   if (!valid) { showToast('⚠️ Tüm satırlarda konu seçin'); return; }
@@ -1004,7 +1045,7 @@ function renderKaynaklar() {
   if (!el) return;
 
   const filtered = state.kaynaklar.filter(k =>
-    (!filtreSinif || k.sinif === filtreSinif) &&
+    (!filtreSinif || (k.sinif||'').toLowerCase() === filtreSinif.toLowerCase()) &&
     (!filtreAd || (k.kaynak_adi||'').toLowerCase().includes(filtreAd))
   );
 
@@ -1013,12 +1054,12 @@ function renderKaynaklar() {
       <div class="flex items-center gap-3 py-3">
         <div class="flex-1">
           <div class="text-sm font-semibold text-on-surface">${k.kaynak_adi}</div>
-          <div class="text-xs text-outline">${k.yayinevi||'—'} — ${k.sinif}</div>
+          <div class="text-xs text-outline">${k.yayin_evi||'—'} — ${k.sinif}</div>
         </div>
         <span class="text-xs font-bold px-2.5 py-1 rounded-full ${k.zorluk_derecesi==='Kolay'?'bg-tertiary-container/40 text-tertiary':k.zorluk_derecesi==='Zor'?'bg-error-container/40 text-error':'bg-secondary-container/40 text-on-secondary-container'}">
           ${k.zorluk_derecesi||'—'}
         </span>
-        <span class="text-xs text-outline">${k.kapsadigi_konu_sayisi||'—'} konu</span>
+        <span class="text-xs text-outline">${k.konu_sayisi||'—'} konu</span>
       </div>`).join('');
 }
 
@@ -1028,11 +1069,11 @@ async function kaynakEkle() {
 
   showToast('Ekleniyor...');
   const { error } = await sb.from('kaynaklar').insert({
-    kaynak_adi: ad,
-    yayinevi: document.getElementById('k-yayinevi').value.trim(),
+    kaynak_adi: ad, kaynak_id: 'KYN-' + Date.now(),
+    yayin_evi: document.getElementById('k-yayinevi').value.trim(),
     sinif: document.getElementById('k-sinif').value,
     zorluk_derecesi: document.getElementById('k-zorluk').value,
-    kapsadigi_konu_sayisi: document.getElementById('k-konu-sayisi').value || null
+    konu_sayisi: parseInt(document.getElementById('k-konu-sayisi').value) || null
   });
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Kaynak eklendi!');
@@ -1049,14 +1090,15 @@ async function ataOgrenciSecildi() {
   const ogrenciId = sel.value;
   const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
 
-  // Sınıfa göre kaynakları filtrele
-  const filtered = state.kaynaklar.filter(k => !sinif || k.sinif?.toLowerCase() === sinif.toLowerCase());
+  // Sınıfa göre kaynakları filtrele (case-insensitive)
+  const filtered = state.kaynaklar.filter(k => !sinif || (k.sinif||'').toLowerCase() === sinif.toLowerCase());
   document.getElementById('ata-kaynak').innerHTML = '<option value="">— Kaynak seçin —</option>' +
-    filtered.map(k => `<option value="${k.id}">${k.kaynak_adi}</option>`).join('');
+    filtered.map(k => `<option value="${k.kaynak_adi}">${k.kaynak_adi}</option>`).join('');
 
   if (!ogrenciId) { document.getElementById('ogrenci-kaynak-listesi').innerHTML = ''; return; }
 
-  const { data } = await sb.from('ogrn_kaynak').select('*, kaynaklar(kaynak_adi, zorluk_derecesi, kapsadigi_konu_sayisi)').eq('ogrenci_id', ogrenciId);
+  // ogrn_kaynak: kayit_id, ogrenci_id, kaynak_adi, konu_sayisi, islenen_konu, ilerleme_yuzdesi
+  const { data } = await sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId);
   const kaynaklar = data || [];
   const el = document.getElementById('ogrenci-kaynak-listesi');
 
@@ -1067,19 +1109,19 @@ async function ataOgrenciSecildi() {
 
   el.innerHTML = '<div class="mt-3 text-xs font-semibold text-outline uppercase tracking-wider mb-2">Atanmış Kaynaklar</div>' +
     kaynaklar.map(k => {
-      const toplam = k.kaynaklar?.kapsadigi_konu_sayisi || 0;
-      const islenen = k.islenen_konu_sayisi || 0;
+      const toplam = k.konu_sayisi || 0;
+      const islenen = k.islenen_konu || 0;
       const pct = toplam > 0 ? Math.round(islenen/toplam*100) : 0;
       return `
         <div class="py-2.5 border-b border-outline-variant/20 last:border-0">
           <div class="flex items-center justify-between mb-1.5">
-            <div class="text-sm font-semibold">${k.kaynaklar?.kaynak_adi||'—'}</div>
-            <button onclick="kaynakSil('${k.id}')" class="text-xs text-error hover:underline">Kaldır</button>
+            <div class="text-sm font-semibold">${k.kaynak_adi||'—'}</div>
+            <button onclick="kaynakSil('${k.kayit_id}')" class="text-xs text-error hover:underline">Kaldır</button>
           </div>
           <div class="flex items-center gap-2">
             <div class="flex-1 progress-bar"><div class="progress-fill bg-primary" style="width:${pct}%"></div></div>
             <div class="flex items-center gap-1">
-              <input type="number" min="0" max="${toplam}" value="${islened}" onchange="kaynakGuncelle('${k.id}',this.value)"
+              <input type="number" min="0" max="${toplam}" value="${islenen}" onchange="kaynakGuncelle('${k.kayit_id}',this.value)"
                 class="w-12 text-center px-1 py-1 rounded-lg bg-surface-container-low border-none text-xs font-bold">
               <span class="text-xs text-outline">/${toplam}</span>
             </div>
@@ -1094,7 +1136,14 @@ async function kaynakAta() {
   if (!ogrenciId || !kaynakId) { showToast('⚠️ Öğrenci ve kaynak seçin'); return; }
 
   showToast('Atanıyor...');
-  const { error } = await sb.from('ogrn_kaynak').insert({ ogrenci_id: ogrenciId, kaynak_id: kaynakId, islenen_konu_sayisi: 0 });
+  // kaynakId burada kaynak_adi değeri taşıyor (select value="kaynak_adi")
+  const { error } = await sb.from('ogrn_kaynak').insert({ 
+    ogrenci_id: ogrenciId, 
+    kaynak_adi: kaynakId, 
+    konu_sayisi: 12,
+    islenen_konu: 0, 
+    ilerleme_yuzdesi: 0 
+  });
   if (error) { showToast('❌ ' + (error.code === '23505' ? 'Bu kaynak zaten atanmış' : error.message)); return; }
   showToast('✅ Kaynak atandı!');
   ataOgrenciSecildi();
@@ -1102,13 +1151,13 @@ async function kaynakAta() {
 
 async function kaynakSil(id) {
   if (!confirm('Bu kaynağı kaldırmak istediğine emin misin?')) return;
-  await sb.from('ogrn_kaynak').delete().eq('id', id);
+  await sb.from('ogrn_kaynak').delete().eq('kayit_id', id);
   showToast('✅ Kaldırıldı');
   ataOgrenciSecildi();
 }
 
 async function kaynakGuncelle(id, deger) {
-  await sb.from('ogrn_kaynak').update({ islenen_konu_sayisi: parseInt(deger)||0 }).eq('id', id);
+  await sb.from('ogrn_kaynak').update({ islened_konu: parseInt(deger)||0, ilerleme_yuzdesi: Math.round((parseInt(deger)||0)/12*100) }).eq('kayit_id', id);
   showToast('✅ Güncellendi');
 }
 
@@ -1121,7 +1170,7 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).eq('durum','Tamamlandı'),
+    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).eq('durum','TAMAMLANDI'),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||'')
   ]);
 
@@ -1207,8 +1256,8 @@ async function loadOgrenciPanel() {
 
   const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id);
   const tumOdevler = odevler || [];
-  const bekleyen   = tumOdevler.filter(o => String(o.durum).trim() === 'Bekliyor');
-  const tamamlanan = tumOdevler.filter(o => String(o.durum).trim() === 'Tamamlandı');
+  const bekleyen   = tumOdevler.filter(o => String(o.durum).trim().toUpperCase() === 'BEKLİYOR');
+  const tamamlanan = tumOdevler.filter(o => String(o.durum).trim().toUpperCase() === 'TAMAMLANDI');
 
   document.getElementById('ogr-stat-bekleyen').textContent   = bekleyen.length;
   document.getElementById('ogr-stat-tamamlanan').textContent = tamamlanan.length;
@@ -1332,13 +1381,13 @@ async function submitSonuc(odevId) {
 
   showToast('Kaydediliyor...');
   const { error } = await sb.from('odevler').update({
-    dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'Tamamlandı'
+    dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'TAMAMLANDI'
   }).eq('odev_id', odevId);
 
   if (error) {
     // id alanı farklı olabilir, id ile dene
     const { error: e2 } = await sb.from('odevler').update({
-      dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'Tamamlandı'
+      dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'TAMAMLANDI'
     }).eq('id', odevId);
     if (e2) { showToast('❌ ' + e2.message); return; }
   }
@@ -1352,8 +1401,8 @@ async function loadOgrBasari() {
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
   const [raporRes, kazRes] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','Tamamlandı'),
-    sb.from('kazanimlar').select('*').ilike('sinif', state.user.sinif||'')
+    sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','TAMAMLANDI'),
+    sb.from('kazanimlar').select('*').ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`)
   ]);
 
   const odevler = raporRes.data || [];
@@ -1418,8 +1467,8 @@ async function loadVeliPanel() {
   document.getElementById('veli-cocuk-adi').textContent = state.user.ad_soyad || '—';
   const el = document.getElementById('veli-rapor-content');
 
-  const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','Tamamlandı');
-  const { data: kazData } = await sb.from('kazanimlar').select('*').ilike('sinif', state.user.sinif||'');
+  const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','TAMAMLANDI');
+  const { data: kazData } = await sb.from('kazanimlar').select('*').ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`);
 
   const konular = [...new Set((kazData||[]).map(k => k.konu))];
   const konuMap = {};

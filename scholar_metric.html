@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html class="light" lang="tr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Scholar Metric</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "primary": "#005d8d",
+        "on-primary": "#ffffff",
+        "primary-container": "#0d76b1",
+        "on-primary-container": "#f0f6ff",
+        "primary-fixed": "#cce5ff",
+        "secondary": "#805600",
+        "secondary-container": "#feb223",
+        "on-secondary-container": "#6b4800",
+        "tertiary": "#00661d",
+        "tertiary-container": "#008228",
+        "on-tertiary-container": "#d9ffd3",
+        "error": "#ba1a1a",
+        "error-container": "#ffdad6",
+        "surface": "#f5faff",
+        "on-surface": "#141d22",
+        "surface-variant": "#dbe4eb",
+        "on-surface-variant": "#404850",
+        "surface-container-lowest": "#ffffff",
+        "surface-container-low": "#ecf5fc",
+        "surface-container": "#e6eff6",
+        "surface-container-high": "#e0e9f0",
+        "surface-container-highest": "#dbe4eb",
+        "outline": "#707881",
+        "outline-variant": "#c0c7d1",
+        "inverse-surface": "#293237",
+      },
+      borderRadius: {
+        "DEFAULT": "12px", "lg": "12px", "xl": "16px", "2xl": "24px", "full": "9999px"
+      },
+      fontFamily: {
+        "headline": ["Manrope", "sans-serif"],
+        "body": ["Inter", "sans-serif"],
+        "sans": ["Inter", "sans-serif"],
+      }
+    }
+  }
+}
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+  }
+  body { font-family: 'Inter', sans-serif; }
+  h1,h2,h3,.font-headline { font-family: 'Manrope', sans-serif; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .spinner { border: 3px solid #e6eff6; border-top-color: #005d8d; border-radius: 50%; width: 24px; height: 24px; animation: spin 0.7s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #141d22; color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+  ::-webkit-scrollbar { width: 0; }
+  .glass-header { background: rgba(245,250,255,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid rgba(192,199,209,0.15); }
+  input:focus, select:focus, textarea:focus { outline: none; ring: none; box-shadow: 0 0 0 2px #005d8d; }
+  .nav-item.active { color: #005d8d; font-weight: 700; }
+  .nav-item.active .nav-icon { color: #005d8d; }
+  .progress-bar { height: 8px; border-radius: 8px; background: #e6eff6; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 8px; transition: width 0.8s ease; }
+  .ambient-blob { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; opacity: 0.25; }
+</style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+
+<!-- ═══════════════════════════════════════════ LOGIN -->
+<div id="loginScreen" class="min-h-screen flex flex-col relative overflow-hidden">
+  <div class="ambient-blob w-96 h-96 bg-primary-fixed top-[-20%] left-[-15%]"></div>
+  <div class="ambient-blob w-80 h-80 bg-tertiary-container bottom-[-10%] right-[-10%]"></div>
+
+  <header class="flex justify-between items-center px-6 py-4 glass-header z-10">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings:'FILL' 1">school</span>
+      <span class="font-headline text-xl font-extrabold tracking-tight text-primary">Scholar Metric</span>
+    </div>
+  </header>
+
+  <main class="flex-grow flex items-center justify-center p-6 z-10">
+    <div class="w-full max-w-md">
+      <div class="bg-surface-container-lowest rounded-2xl p-8 md:p-10 shadow-[0px_16px_48px_rgba(0,29,49,0.08)] border border-outline-variant/20">
+        <div class="mb-8">
+          <h1 class="font-headline text-2xl font-bold text-on-surface tracking-tight mb-2">Hoş Geldiniz</h1>
+          <p class="text-on-surface-variant text-sm">Eğitim yolculuğunuzda size rehberlik etmek için buradayız.</p>
+        </div>
+
+        <!-- Rol Seçimi -->
+        <div class="flex bg-surface-container rounded-xl p-1 mb-6 gap-1">
+          <button onclick="switchRole('ogretmen')" id="role-ogretmen"
+            class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-surface-container-lowest text-primary shadow-sm">
+            👨‍🏫 Öğretmen
+          </button>
+          <button onclick="switchRole('ogrenci')" id="role-ogrenci"
+            class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-on-surface-variant">
+            🎓 Öğrenci
+          </button>
+          <button onclick="switchRole('veli')" id="role-veli"
+            class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-on-surface-variant">
+            👨‍👩‍👧 Veli
+          </button>
+        </div>
+
+        <!-- Öğretmen Formu -->
+        <div id="form-ogretmen" class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-on-surface-variant mb-2">Şifre</label>
+            <input type="password" id="ogr-sifre" placeholder="••••••••"
+              class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm transition-all"
+              onkeydown="if(event.key==='Enter') doLogin()"/>
+          </div>
+        </div>
+
+        <!-- Öğrenci Formu -->
+        <div id="form-ogrenci" class="space-y-4 hidden">
+          <div>
+            <label class="block text-sm font-semibold text-on-surface-variant mb-2">TC Kimlik Numarası</label>
+            <input type="number" id="ogrenci-tc" placeholder="12345678901"
+              class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm"
+              onkeydown="if(event.key==='Enter') doLogin()"/>
+          </div>
+        </div>
+
+        <!-- Veli Formu -->
+        <div id="form-veli" class="space-y-4 hidden">
+          <div>
+            <label class="block text-sm font-semibold text-on-surface-variant mb-2">Kayıtlı Telefon Numarası</label>
+            <input type="number" id="veli-tel" placeholder="05xxxxxxxxx"
+              class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm"
+              onkeydown="if(event.key==='Enter') doLogin()"/>
+          </div>
+        </div>
+
+        <button onclick="doLogin()"
+          class="w-full mt-6 py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-base shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all duration-150">
+          Giriş Yap
+        </button>
+
+        <div id="loginError" class="hidden mt-4 p-3 bg-error-container/50 text-error rounded-xl text-sm font-medium text-center"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════ APP -->
+<div id="appScreen" class="hidden min-h-screen pb-20 md:pb-0 md:pl-64">
+
+  <!-- Sidebar (Desktop) -->
+  <aside id="sidebar" class="hidden md:flex flex-col h-screen p-6 fixed left-0 top-0 w-64 bg-surface-container-lowest border-r border-outline-variant/15 z-40">
+    <div class="mb-10 px-2">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings:'FILL' 1">school</span>
+        <span class="font-headline text-lg font-extrabold text-primary tracking-tight">Scholar Metric</span>
+      </div>
+      <div class="text-xs text-outline font-medium px-1" id="sidebar-rol-label">—</div>
+    </div>
+    <nav class="flex flex-col gap-1 flex-grow" id="sidebarNav"></nav>
+    <div class="border-t border-outline-variant/20 pt-4 mt-4">
+      <div class="flex items-center gap-3 px-3 py-2">
+        <div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white font-headline font-bold text-sm" id="sidebar-avatar">—</div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-on-surface truncate" id="sidebar-name">—</div>
+          <div class="text-xs text-outline truncate" id="sidebar-sinif">—</div>
+        </div>
+        <button onclick="logout()" class="p-1.5 hover:bg-error-container/30 rounded-lg transition-colors">
+          <span class="material-symbols-outlined text-outline hover:text-error text-xl">logout</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Top Header (Mobile) -->
+  <header class="glass-header md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-5 py-3">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings:'FILL' 1">school</span>
+      <span class="font-headline text-base font-extrabold text-primary">Scholar Metric</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="text-xs text-outline font-medium" id="mobile-user-name">—</div>
+      <button onclick="logout()" class="p-1.5">
+        <span class="material-symbols-outlined text-outline text-xl">logout</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="pt-16 md:pt-0 px-5 md:px-8 py-6 max-w-3xl">
+
+    <!-- ── ÖĞRETMEN PANELİ -->
+    <div id="page-dashboard" class="page">
+      <div class="mb-6">
+        <p class="text-outline text-sm font-medium">Merhaba 👋</p>
+        <h1 class="font-headline text-2xl font-bold text-on-surface" id="dash-welcome">—</h1>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-3 gap-3 mb-6" id="dashStats">
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+          <div class="font-headline text-3xl font-extrabold text-primary" id="stat-ogrenci"><div class="spinner"></div></div>
+          <div class="text-xs text-outline mt-1 font-medium">Öğrenci</div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+          <div class="font-headline text-3xl font-extrabold text-secondary" id="stat-bekleyen"><div class="spinner"></div></div>
+          <div class="text-xs text-outline mt-1 font-medium">Bekleyen Ödev</div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+          <div class="font-headline text-3xl font-extrabold text-tertiary" id="stat-ders"><div class="spinner"></div></div>
+          <div class="text-xs text-outline mt-1 font-medium">Bu Ay Ders</div>
+        </div>
+      </div>
+
+      <!-- Sınıf Dağılımı -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 mb-4 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+        <h2 class="font-headline font-bold text-base text-on-surface mb-4">Sınıf Dağılımı</h2>
+        <div id="sinif-dagilim"></div>
+      </div>
+
+      <!-- Bekleyen Ödevler -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+        <h2 class="font-headline font-bold text-base text-on-surface mb-4">⏳ Bekleyen Ödevler</h2>
+        <div id="bekleyen-odevler"></div>
+      </div>
+    </div>
+
+    <!-- ── DERS KAYDET -->
+    <div id="page-ders" class="page">
+      <div class="mb-6">
+        <h1 class="font-headline text-2xl font-bold text-on-surface">Ders İşleme</h1>
+        <p class="text-outline text-sm mt-1">İşlenen dersi ve kazanımları kaydet</p>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] space-y-5">
+        <div>
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Öğrenci</label>
+          <select id="ders-ogrenci" onchange="dersOgrenciSecildi()"
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm appearance-none">
+            <option value="">— Öğrenci seçin —</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Konu</label>
+          <select id="ders-konu" onchange="konuSecildi()"
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm appearance-none">
+            <option value="">— Önce öğrenci seçin —</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">
+            Kazanımlar <span class="text-outline font-normal">(birden fazla seçilebilir)</span>
+          </label>
+          <div id="kazanim-checkboxlar" class="bg-surface-container-low rounded-xl max-h-52 overflow-y-auto divide-y divide-outline-variant/20">
+            <div class="p-4 text-sm text-outline">Önce konu seçin</div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Ders Görüşü</label>
+          <textarea id="ders-gorus" rows="3" placeholder="Bu ders hakkında notlarınız..."
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Sonraki Ders Hatırlatma</label>
+          <textarea id="ders-hatirlatma" rows="2" placeholder="Bir sonraki derse not..."
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm resize-none"></textarea>
+        </div>
+        <button onclick="dersSave()"
+          class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
+          <span class="material-symbols-outlined text-sm mr-1">save</span> Dersi Kaydet
+        </button>
+      </div>
+    </div>
+
+    <!-- ── ÖDEV GİR -->
+    <div id="page-odev" class="page">
+      <div class="mb-6">
+        <h1 class="font-headline text-2xl font-bold text-on-surface">Ödev Atama</h1>
+        <p class="text-outline text-sm mt-1">Haftalık ödev planını oluştur</p>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Öğrenci</label>
+          <select id="odev-ogrenci" onchange="odevOgrenciSecildi()"
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm appearance-none">
+            <option value="">— Öğrenci seçin —</option>
+          </select>
+        </div>
+
+        <div id="odev-kaynak-uyari" class="hidden mb-4 p-3 bg-secondary-container/30 rounded-xl text-sm text-on-secondary-container font-medium">
+          ⚠️ Bu öğrenciye henüz kaynak atanmamış.
+        </div>
+
+        <div id="odev-satirlar-alani" class="hidden">
+          <div id="odev-satirlar" class="space-y-3 mb-3"></div>
+          <button onclick="addOdevSatir()"
+            class="w-full py-2.5 border-2 border-dashed border-primary/30 rounded-xl text-primary text-sm font-semibold hover:bg-primary-fixed/30 transition-colors">
+            + Satır Ekle
+          </button>
+          <button onclick="odevSave()"
+            class="w-full mt-3 py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
+            <span class="material-symbols-outlined text-sm mr-1">save</span> Tümünü Kaydet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ÖĞRENCİLER -->
+    <div id="page-ogrenciler" class="page">
+      <div class="mb-6">
+        <h1 class="font-headline text-2xl font-bold text-on-surface">Öğrenciler</h1>
+        <p class="text-outline text-sm mt-1">Öğrenci listesi ve yönetimi</p>
+      </div>
+
+      <!-- Filtre -->
+      <div class="flex gap-3 mb-4">
+        <select id="filtre-sinif" onchange="renderOgrenciler()"
+          class="flex-1 px-4 py-3 rounded-xl bg-surface-container-lowest border-none text-sm text-on-surface shadow-[0_2px_8px_rgba(0,29,49,0.05)] appearance-none">
+          <option value="">Tüm Sınıflar</option>
+          <option>5. Sınıf</option><option>6. Sınıf</option>
+          <option>7. Sınıf</option><option>8. Sınıf</option>
+        </select>
+        <input type="text" id="filtre-ad" placeholder="🔍 Ad ara..." oninput="renderOgrenciler()"
+          class="flex-2 px-4 py-3 rounded-xl bg-surface-container-lowest border-none text-sm text-on-surface shadow-[0_2px_8px_rgba(0,29,49,0.05)]" style="flex:2"/>
+      </div>
+
+      <div id="ogrenci-listesi" class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] divide-y divide-outline-variant/20 mb-6"></div>
+
+      <!-- Yeni Öğrenci -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+        <h2 class="font-headline font-bold text-base text-on-surface mb-4">➕ Yeni Öğrenci Ekle</h2>
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Ad Soyad *</label>
+              <input type="text" id="yeni-ad" placeholder="Ali Yılmaz"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm text-on-surface"/>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">TC Kimlik *</label>
+              <input type="number" id="yeni-tc" placeholder="12345678901"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm text-on-surface"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Sınıf</label>
+              <select id="yeni-sinif" class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+                <option>5. Sınıf</option><option>6. Sınıf</option>
+                <option>7. Sınıf</option><option>8. Sınıf</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Şube</label>
+              <input type="text" id="yeni-sube" placeholder="A"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Okul</label>
+              <input type="text" id="yeni-okul" placeholder="Okul adı"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Okul No</label>
+              <input type="number" id="yeni-okulno" placeholder="145"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Veli Adı</label>
+              <input type="text" id="yeni-veli" placeholder="Ahmet Yılmaz"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Veli Telefonu</label>
+              <input type="number" id="yeni-tel" placeholder="5051234567"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+            </div>
+          </div>
+          <button onclick="ogrenciEkle()"
+            class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
+            Kaydet
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── KAYNAKLAR -->
+    <div id="page-kaynaklar" class="page">
+      <div class="mb-6">
+        <h1 class="font-headline text-2xl font-bold text-on-surface">Kaynak Yönetimi</h1>
+        <p class="text-outline text-sm mt-1">Genel havuz ve öğrenci atamaları</p>
+      </div>
+
+      <!-- Genel Havuz -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
+        <h2 class="font-headline font-bold text-base text-on-surface mb-3">📚 Genel Kaynak Havuzu</h2>
+        <div class="flex gap-2 mb-3">
+          <select id="k-filtre-sinif" onchange="renderKaynaklar()"
+            class="flex-1 px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+            <option value="">Tüm Sınıflar</option>
+            <option>5. Sınıf</option><option>6. Sınıf</option>
+            <option>7. Sınıf</option><option>8. Sınıf</option>
+          </select>
+          <input type="text" id="k-filtre-ad" placeholder="🔍 Ara..." oninput="renderKaynaklar()"
+            class="flex-1 px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm"/>
+        </div>
+        <div id="kaynak-listesi" class="divide-y divide-outline-variant/20"></div>
+      </div>
+
+      <!-- Yeni Kaynak Ekle -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
+        <h2 class="font-headline font-bold text-base text-on-surface mb-4">➕ Havuza Kaynak Ekle</h2>
+        <div class="space-y-3">
+          <input type="text" id="k-ad" placeholder="Kaynak adı"
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+          <div class="grid grid-cols-2 gap-3">
+            <input type="text" id="k-yayinevi" placeholder="Yayın evi / Yazar"
+              class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+            <select id="k-sinif" class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+              <option>5. Sınıf</option><option>6. Sınıf</option>
+              <option>7. Sınıf</option><option selected>8. Sınıf</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <select id="k-zorluk" class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+              <option>Kolay</option><option selected>Orta</option><option>Zor</option>
+            </select>
+            <input type="number" id="k-konu-sayisi" placeholder="Konu sayısı"
+              class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
+          </div>
+          <button onclick="kaynakEkle()"
+            class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
+            Havuza Ekle
+          </button>
+        </div>
+      </div>
+
+      <!-- Öğrenciye Ata -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+        <h2 class="font-headline font-bold text-base text-on-surface mb-4">🔗 Öğrenciye Kaynak Ata</h2>
+        <div class="space-y-3">
+          <select id="ata-ogrenci" onchange="ataOgrenciSecildi()"
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+            <option value="">— Öğrenci seçin —</option>
+          </select>
+          <select id="ata-kaynak"
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+            <option value="">— Kaynak seçin —</option>
+          </select>
+          <button onclick="kaynakAta()"
+            class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
+            Ata
+          </button>
+        </div>
+        <div id="ogrenci-kaynak-listesi" class="mt-4"></div>
+      </div>
+    </div>
+
+    <!-- ── RAPOR -->
+    <div id="page-rapor" class="page">
+      <div class="mb-6">
+        <h1 class="font-headline text-2xl font-bold text-on-surface">Performans Analizi</h1>
+        <p class="text-outline text-sm mt-1">Konu bazlı başarı raporu</p>
+      </div>
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
+        <select id="rapor-ogrenci" onchange="loadRapor()"
+          class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+          <option value="">— Öğrenci seçin —</option>
+        </select>
+      </div>
+      <div id="rapor-content"></div>
+    </div>
+
+    <!-- ── ÖĞRENCİ PANELI -->
+    <div id="page-ogrenci-panel" class="page">
+      <!-- Hero Banner -->
+      <div class="relative overflow-hidden bg-gradient-to-br from-primary to-primary-container rounded-2xl p-6 mb-5 text-on-primary shadow-lg">
+        <div class="absolute right-[-8%] top-[-40%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+        <p class="text-xs font-semibold opacity-75 uppercase tracking-widest mb-1">Hoş geldin 👋</p>
+        <h1 class="font-headline text-2xl font-extrabold" id="ogr-welcome-ad">—</h1>
+        <p class="text-sm opacity-75 mt-1" id="ogr-welcome-sinif">—</p>
+      </div>
+
+      <!-- Tab -->
+      <div class="flex bg-surface-container rounded-xl p-1 mb-5 gap-1">
+        <button onclick="ogrTab('odevler')" id="tab-odevler"
+          class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all bg-surface-container-lowest text-primary shadow-sm">
+          📋 Ödevlerim
+        </button>
+        <button onclick="ogrTab('basari')" id="tab-basari"
+          class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all text-on-surface-variant">
+          📊 Başarım
+        </button>
+      </div>
+
+      <div id="ogr-tab-odevler">
+        <!-- İstatistikler -->
+        <div class="grid grid-cols-3 gap-3 mb-5">
+          <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+            <div class="font-headline text-2xl font-extrabold text-error" id="ogr-stat-bekleyen">—</div>
+            <div class="text-xs text-outline mt-1">Bekleyen</div>
+          </div>
+          <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+            <div class="font-headline text-2xl font-extrabold text-tertiary" id="ogr-stat-tamamlanan">—</div>
+            <div class="text-xs text-outline mt-1">Tamamlanan</div>
+          </div>
+          <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+            <div class="font-headline text-2xl font-extrabold text-primary" id="ogr-stat-basari">—</div>
+            <div class="text-xs text-outline mt-1">Başarı</div>
+          </div>
+        </div>
+        <div id="ogr-bekleyen-bolum"></div>
+        <div id="ogr-tamamlanan-bolum"></div>
+      </div>
+
+      <div id="ogr-tab-basari" class="hidden">
+        <div id="ogr-basari-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── VELİ PANELİ -->
+    <div id="page-veli-panel" class="page">
+      <div class="mb-6">
+        <h1 class="font-headline text-2xl font-bold text-on-surface">Performans Raporu</h1>
+        <p class="text-outline text-sm mt-1" id="veli-cocuk-adi">—</p>
+      </div>
+      <div id="veli-rapor-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Nav (Mobile) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-header flex justify-around py-2 z-40" id="bottomNav"></nav>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────
+const SUPABASE_URL = 'https://ldxeenczugcoirdrldjv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_V8o8lkgrliAmX_oV-mjXDA_wbpxEeMu';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ─────────────────────────────────────────────────────
+let state = {
+  rol: null, user: null,
+  ogrenciler: [], kazanimlar: [], kaynaklar: [],
+  _odevKazanimlar: [], _odevKaynaklar: [], _odevSinif: ''
+};
+
+const OGRETMEN_SIFRE = 'tayfun2024';
+const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+
+// ── LOGIN ─────────────────────────────────────────────────────
+let activeRole = 'ogretmen';
+
+function switchRole(rol) {
+  activeRole = rol;
+  ['ogretmen','ogrenci','veli'].forEach(r => {
+    const btn = document.getElementById('role-' + r);
+    const form = document.getElementById('form-' + r);
+    btn.classList.toggle('bg-surface-container-lowest', r === rol);
+    btn.classList.toggle('text-primary', r === rol);
+    btn.classList.toggle('shadow-sm', r === rol);
+    btn.classList.toggle('text-on-surface-variant', r !== rol);
+    form.classList.toggle('hidden', r !== rol);
+  });
+}
+
+async function doLogin() {
+  const errEl = document.getElementById('loginError');
+  errEl.classList.add('hidden');
+
+  try {
+    if (activeRole === 'ogretmen') {
+      const sifre = document.getElementById('ogr-sifre').value;
+      if (sifre !== OGRETMEN_SIFRE) { showError('Şifre hatalı'); return; }
+      state.rol = 'ogretmen';
+      state.user = { ad: 'Tayfun Hoca', rol: 'ogretmen' };
+
+    } else if (activeRole === 'ogrenci') {
+      const tc = document.getElementById('ogrenci-tc').value.trim();
+      const { data, error } = await sb.from('ogrenciler').select('*').eq('tc_kimlik', tc).eq('kayit_durumu', 'AKTİF').single();
+      if (error || !data) { showError('TC kimlik numarası bulunamadı'); return; }
+      state.rol = 'ogrenci';
+      state.user = { ...data, rol: 'ogrenci' };
+
+    } else {
+      const tel = document.getElementById('veli-tel').value.trim();
+      const { data, error } = await sb.from('ogrenciler').select('*').eq('veli_telefonu', tel).eq('kayit_durumu', 'AKTİF').single();
+      if (error || !data) { showError('Telefon numarası bulunamadı'); return; }
+      state.rol = 'veli';
+      state.user = { ...data, rol: 'veli' };
+    }
+
+    initApp();
+  } catch(e) {
+    showError('Bağlantı hatası. Tekrar deneyin.');
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function initApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+
+  buildNav();
+  updateUserInfo();
+
+  if (state.rol === 'ogretmen') {
+    await loadMasterData();
+    fillSelects();
+    loadDashboard();
+    goPage('dashboard');
+  } else if (state.rol === 'ogrenci') {
+    goPage('ogrenci-panel');
+    loadOgrenciPanel();
+  } else {
+    goPage('veli-panel');
+    loadVeliPanel();
+  }
+}
+
+function updateUserInfo() {
+  const ad = state.rol === 'ogretmen' ? 'Tayfun Hoca' :
+             state.rol === 'ogrenci'  ? (state.user.ad_soyad || state.user.ogrenci_id) :
+             (state.user.ad_soyad || '') + ' — Veli';
+  const sinif = state.user.sinif || '';
+
+  document.getElementById('sidebar-name').textContent = ad;
+  document.getElementById('sidebar-sinif').textContent = sinif;
+  document.getElementById('sidebar-avatar').textContent = ad.charAt(0).toUpperCase();
+  document.getElementById('mobile-user-name').textContent = ad.split(' ')[0];
+  document.getElementById('sidebar-rol-label').textContent =
+    state.rol === 'ogretmen' ? 'Matematik Öğretmeni' :
+    state.rol === 'ogrenci' ? 'Öğrenci' : 'Veli';
+}
+
+function buildNav() {
+  const pages = state.rol === 'ogretmen' ? [
+    { id: 'dashboard',  icon: 'home',         label: 'Ana Sayfa' },
+    { id: 'ders',       icon: 'menu_book',     label: 'Ders Kaydet' },
+    { id: 'odev',       icon: 'assignment',    label: 'Ödev Gir' },
+    { id: 'ogrenciler', icon: 'group',         label: 'Öğrenciler' },
+    { id: 'kaynaklar',  icon: 'library_books', label: 'Kaynaklar' },
+    { id: 'rapor',      icon: 'analytics',     label: 'Rapor' },
+  ] : state.rol === 'ogrenci' ? [
+    { id: 'ogrenci-panel', icon: 'dashboard', label: 'Panel' },
+  ] : [
+    { id: 'veli-panel', icon: 'dashboard', label: 'Rapor' },
+  ];
+
+  const sidebarNav = document.getElementById('sidebarNav');
+  const bottomNav  = document.getElementById('bottomNav');
+  sidebarNav.innerHTML = '';
+  bottomNav.innerHTML  = '';
+
+  pages.forEach(p => {
+    // Sidebar
+    const sEl = document.createElement('button');
+    sEl.className = 'nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors text-sm font-semibold w-full text-left';
+    sEl.dataset.page = p.id;
+    sEl.innerHTML = `<span class="material-symbols-outlined nav-icon text-xl">${p.icon}</span>${p.label}`;
+    sEl.onclick = () => goPage(p.id);
+    sidebarNav.appendChild(sEl);
+
+    // Bottom Nav
+    const bEl = document.createElement('button');
+    bEl.className = 'nav-item flex flex-col items-center gap-0.5 px-3 py-1 text-on-surface-variant text-xs font-semibold';
+    bEl.dataset.page = p.id;
+    bEl.innerHTML = `<span class="material-symbols-outlined nav-icon text-xl">${p.icon}</span><span>${p.label}</span>`;
+    bEl.onclick = () => goPage(p.id);
+    bottomNav.appendChild(bEl);
+  });
+}
+
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.page === id);
+  });
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ── MASTER DATA ───────────────────────────────────────────────
+async function loadMasterData() {
+  const [o, k, ky] = await Promise.all([
+    sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').order('ad_soyad'),
+    sb.from('kazanimlar').select('*').order('sinif').order('konu'),
+    sb.from('kaynaklar').select('*').order('kaynak_adi'),
+  ]);
+  state.ogrenciler = o.data || [];
+  state.kazanimlar = k.data || [];
+  state.kaynaklar  = ky.data || [];
+}
+
+function fillSelects() {
+  const ogrOpts = '<option value="">— Öğrenci seçin —</option>' +
+    state.ogrenciler.map(o => `<option value="${o.ogrenci_id}" data-sinif="${o.sinif}">${o.ad_soyad} (${o.sinif})</option>`).join('');
+
+  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = ogrOpts;
+  });
+
+  renderKaynaklar();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+async function loadDashboard() {
+  document.getElementById('dash-welcome').textContent = 'Tayfun Hoca';
+  document.getElementById('stat-ogrenci').textContent = state.ogrenciler.length;
+
+  // Sınıf dağılımı
+  const sinifMap = {};
+  state.ogrenciler.forEach(o => sinifMap[o.sinif] = (sinifMap[o.sinif]||0)+1);
+  document.getElementById('sinif-dagilim').innerHTML = Object.entries(sinifMap).sort().map(([s,n]) => `
+    <div class="flex items-center gap-3 mb-2">
+      <div class="text-sm font-semibold text-on-surface w-20">${s}</div>
+      <div class="flex-1 progress-bar">
+        <div class="progress-fill bg-primary" style="width:${Math.round(n/state.ogrenciler.length*100)}%"></div>
+      </div>
+      <div class="text-sm font-bold text-primary w-6 text-right">${n}</div>
+    </div>`).join('');
+
+  // Ödevler
+  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','Bekliyor');
+  const bekleyen = odevler || [];
+  document.getElementById('stat-bekleyen').textContent = bekleyen.length;
+
+  // Bu ay ders
+  const buAy = new Date();
+  const { data: dersler } = await sb.from('dersler').select('kayit_id, tarih')
+    .gte('tarih', `${buAy.getFullYear()}-${String(buAy.getMonth()+1).padStart(2,'0')}-01`);
+  const benzersiz = new Set((dersler||[]).map(d => d.kayit_id)).size;
+  document.getElementById('stat-ders').textContent = benzersiz || (dersler||[]).length;
+
+  // Bekleyen liste
+  const ogrMap = {};
+  state.ogrenciler.forEach(o => ogrMap[o.ogrenci_id] = o.ad_soyad);
+  const el = document.getElementById('bekleyen-odevler');
+  if (!bekleyen.length) {
+    el.innerHTML = '<div class="text-tertiary text-sm font-semibold py-2">🎉 Bekleyen ödev yok!</div>';
+  } else {
+    el.innerHTML = bekleyen.slice(0,5).map(o => `
+      <div class="flex items-center justify-between py-3 border-b border-outline-variant/20 last:border-0">
+        <div>
+          <div class="text-sm font-semibold text-on-surface">${ogrMap[o.ogrenci_id]||o.ogrenci_id}</div>
+          <div class="text-xs text-outline mt-0.5">${o.gun||'—'} — ${o.konu||'—'}</div>
+        </div>
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">Bekliyor</span>
+      </div>`).join('') +
+      (bekleyen.length > 5 ? `<div class="text-xs text-outline pt-2">+${bekleyen.length-5} daha...</div>` : '');
+  }
+}
+
+// ── DERS KAYDET ───────────────────────────────────────────────
+function dersOgrenciSecildi() {
+  const sel = document.getElementById('ders-ogrenci');
+  const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
+  const konuSel = document.getElementById('ders-konu');
+  konuSel.innerHTML = '<option value="">— Konu seçin —</option>';
+
+  const konular = [...new Set(state.kazanimlar.filter(k => !sinif || k.sinif?.toLowerCase() === sinif.toLowerCase()).map(k => k.konu))];
+  konular.forEach(k => konuSel.innerHTML += `<option value="${k}">${k}</option>`);
+  document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
+}
+
+function konuSecildi() {
+  const konu = document.getElementById('ders-konu').value;
+  const container = document.getElementById('kazanim-checkboxlar');
+  if (!konu) { container.innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>'; return; }
+
+  const filtered = state.kazanimlar.filter(k => k.konu === konu);
+  container.innerHTML = filtered.map(k => `
+    <label class="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-surface-container transition-colors">
+      <input type="checkbox" value="${k.kazanim_kodu||k.id}" class="mt-0.5 w-4 h-4 accent-primary flex-shrink-0">
+      <div>
+        <div class="text-xs font-bold text-primary mb-0.5">${k.kazanim_kodu||''}</div>
+        <div class="text-sm text-on-surface leading-snug">${k.kazanim_aciklamasi||k.aciklama||''}</div>
+      </div>
+    </label>`).join('');
+}
+
+async function dersSave() {
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const konu      = document.getElementById('ders-konu').value;
+  const gorus     = document.getElementById('ders-gorus').value;
+  const hatirlatma = document.getElementById('ders-hatirlatma').value;
+  const secili    = [...document.querySelectorAll('#kazanim-checkboxlar input:checked')].map(c => c.value);
+
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+  if (!konu)      { showToast('⚠️ Konu seçin'); return; }
+  if (!secili.length) { showToast('⚠️ En az bir kazanım seçin'); return; }
+
+  showToast('Kaydediliyor...');
+  const rows = secili.map(kod => ({
+    ogrenci_id: ogrenciId, tarih: new Date().toISOString().split('T')[0],
+    islenen_konu: konu, kazanim_kodu: kod,
+    ders_gorusu: gorus, hatirlatma
+  }));
+
+  const { error } = await sb.from('dersler').insert(rows);
+  if (error) { showToast('❌ Hata: ' + error.message); return; }
+  showToast('✅ Ders kaydedildi!');
+  document.getElementById('ders-gorus').value = '';
+  document.getElementById('ders-hatirlatma').value = '';
+  document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
+  document.getElementById('ders-konu').value = '';
+}
+
+// ── ÖDEV GİR ──────────────────────────────────────────────────
+async function odevOgrenciSecildi() {
+  const sel = document.getElementById('odev-ogrenci');
+  const ogrenciId = sel.value;
+  const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
+  const uyari = document.getElementById('odev-kaynak-uyari');
+  const alan  = document.getElementById('odev-satirlar-alani');
+
+  if (!ogrenciId) { alan.classList.add('hidden'); return; }
+
+  const [kazRes, kayRes] = await Promise.all([
+    sb.from('kazanimlar').select('*').ilike('sinif', sinif),
+    sb.from('ogrn_kaynak').select('*, kaynaklar(*)').eq('ogrenci_id', ogrenciId)
+  ]);
+
+  state._odevKazanimlar = kazRes.data || [];
+  state._odevKaynaklar  = (kayRes.data || []).map(r => ({ ...r, kaynak_adi: r.kaynaklar?.kaynak_adi || '' }));
+  state._odevSinif = sinif;
+
+  if (!state._odevKaynaklar.length) {
+    uyari.classList.remove('hidden');
+    alan.classList.add('hidden');
+  } else {
+    uyari.classList.add('hidden');
+    alan.classList.remove('hidden');
+    document.getElementById('odev-satirlar').innerHTML = '';
+    addOdevSatir();
+  }
+}
+
+function addOdevSatir() {
+  const container = document.getElementById('odev-satirlar');
+  const konular = [...new Set(state._odevKazanimlar.map(k => k.konu))];
+  const konuOpts = '<option value="">— Konu —</option>' + konular.map(k => `<option>${k}</option>`).join('');
+  const kaynakOpts = '<option value="">— Kaynak —</option>' + state._odevKaynaklar.map(k => `<option>${k.kaynak_adi}</option>`).join('');
+
+  const div = document.createElement('div');
+  div.className = 'bg-surface-container rounded-xl p-4 relative';
+  div.innerHTML = `
+    <button onclick="this.closest('.bg-surface-container').remove()"
+      class="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg bg-error-container/40 text-error text-lg font-bold hover:bg-error-container transition-colors">×</button>
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <select class="gun-sel px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+        ${GUNLER.map(g => `<option>${g}</option>`).join('')}
+      </select>
+      <select class="kaynak-sel px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${kaynakOpts}</select>
+    </div>
+    <div class="mb-2">
+      <select class="konu-sel w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none" onchange="odevKonuSecildi(this)">${konuOpts}</select>
+    </div>
+    <div class="mb-2">
+      <select class="kazanim-sel w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+        <option value="">— Kazanım (opsiyonel) —</option>
+      </select>
+    </div>
+    <input type="text" class="detay-inp w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm" placeholder="Sayfa / Test numarası">`;
+  container.appendChild(div);
+}
+
+function odevKonuSecildi(konuSel) {
+  const konu = konuSel.value;
+  const kazanimSel = konuSel.closest('.bg-surface-container').querySelector('.kazanim-sel');
+  const filtered = state._odevKazanimlar.filter(k => k.konu === konu);
+  kazanimSel.innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>' +
+    filtered.map(k => `<option value="${k.kazanim_kodu||''}">${k.kazanim_kodu||''} ${(k.kazanim_aciklamasi||k.aciklama||'').substring(0,50)}...</option>`).join('');
+}
+
+async function odevSave() {
+  const ogrenciId = document.getElementById('odev-ogrenci').value;
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+
+  const satirlar = document.querySelectorAll('#odev-satirlar .bg-surface-container');
+  if (!satirlar.length) { showToast('⚠️ Satır ekleyin'); return; }
+
+  const rows = [];
+  let valid = true;
+  const tarih = new Date().toISOString().split('T')[0];
+
+  satirlar.forEach(s => {
+    const gun    = s.querySelector('.gun-sel').value;
+    const kaynak = s.querySelector('.kaynak-sel').value;
+    const konu   = s.querySelector('.konu-sel').value;
+    const kazanim = s.querySelector('.kazanim-sel').value;
+    const detay  = s.querySelector('.detay-inp').value.trim();
+    if (!konu) { valid = false; return; }
+    rows.push({ ogrenci_id: ogrenciId, verilis_tarihi: tarih, gun, kaynak, konu: kazanim ? `${konu} — ${kazanim}` : konu, kazanim, detay, durum: 'Bekliyor', dogru: 0, yanlis: 0, bos: 0, toplam: 0 });
+  });
+
+  if (!valid) { showToast('⚠️ Tüm satırlarda konu seçin'); return; }
+
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('odevler').insert(rows);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(`✅ ${rows.length} ödev kaydedildi!`);
+  document.getElementById('odev-satirlar').innerHTML = '';
+  addOdevSatir();
+}
+
+// ── ÖĞRENCİLER ───────────────────────────────────────────────
+function renderOgrenciler() {
+  const filtreSinif = document.getElementById('filtre-sinif').value;
+  const filtreAd    = document.getElementById('filtre-ad').value.toLowerCase();
+  const el = document.getElementById('ogrenci-listesi');
+
+  const filtered = state.ogrenciler.filter(o =>
+    (!filtreSinif || o.sinif === filtreSinif) &&
+    (!filtreAd || (o.ad_soyad||'').toLowerCase().includes(filtreAd))
+  );
+
+  if (!filtered.length) { el.innerHTML = '<div class="p-4 text-sm text-outline">Öğrenci bulunamadı</div>'; return; }
+
+  el.innerHTML = filtered.map(o => `
+    <div class="flex items-center gap-3 px-4 py-3">
+      <div class="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center font-headline font-bold text-primary text-sm flex-shrink-0">
+        ${(o.ad_soyad||'?').charAt(0)}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-semibold text-on-surface truncate">${o.ad_soyad||'—'}</div>
+        <div class="text-xs text-outline">${o.sinif||'—'} — ${o.ogrenci_id}</div>
+      </div>
+      <button onclick="goRaporFor('${o.ogrenci_id}')"
+        class="text-xs font-bold px-3 py-1.5 rounded-full bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors">
+        Rapor
+      </button>
+    </div>`).join('');
+}
+
+function goRaporFor(id) {
+  goPage('rapor');
+  document.getElementById('rapor-ogrenci').value = id;
+  loadRapor();
+}
+
+async function ogrenciEkle() {
+  const ad = document.getElementById('yeni-ad').value.trim();
+  const tc = document.getElementById('yeni-tc').value.trim();
+  if (!ad) { showToast('⚠️ Ad Soyad zorunlu'); return; }
+  if (!tc) { showToast('⚠️ TC kimlik zorunlu'); return; }
+
+  const sinif = document.getElementById('yeni-sinif').value;
+  const sube  = document.getElementById('yeni-sube').value.trim();
+  const okul  = document.getElementById('yeni-okul').value.trim();
+  const okulno = document.getElementById('yeni-okulno').value;
+  const veli  = document.getElementById('yeni-veli').value.trim();
+  const tel   = document.getElementById('yeni-tel').value.trim();
+
+  const lastId = state.ogrenciler.length + 1001;
+  const newId  = 'OGR-' + lastId;
+
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('ogrenciler').insert({
+    ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
+    tc_kimlik: tc, okul_no: okulno, veli_adi: veli, veli_telefonu: tel, kayit_durumu: 'AKTİF'
+  });
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Öğrenci eklendi!');
+  // Listeyi güncelle
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  state.ogrenciler = data || [];
+  fillSelects();
+  renderOgrenciler();
+  ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno','yeni-veli','yeni-tel'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ── KAYNAKLAR ─────────────────────────────────────────────────
+function renderKaynaklar() {
+  const filtreSinif = document.getElementById('k-filtre-sinif')?.value || '';
+  const filtreAd    = (document.getElementById('k-filtre-ad')?.value || '').toLowerCase();
+  const el = document.getElementById('kaynak-listesi');
+  if (!el) return;
+
+  const filtered = state.kaynaklar.filter(k =>
+    (!filtreSinif || k.sinif === filtreSinif) &&
+    (!filtreAd || (k.kaynak_adi||'').toLowerCase().includes(filtreAd))
+  );
+
+  el.innerHTML = !filtered.length ? '<div class="py-3 text-sm text-outline">Kaynak bulunamadı</div>' :
+    filtered.map(k => `
+      <div class="flex items-center gap-3 py-3">
+        <div class="flex-1">
+          <div class="text-sm font-semibold text-on-surface">${k.kaynak_adi}</div>
+          <div class="text-xs text-outline">${k.yayinevi||'—'} — ${k.sinif}</div>
+        </div>
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full ${k.zorluk_derecesi==='Kolay'?'bg-tertiary-container/40 text-tertiary':k.zorluk_derecesi==='Zor'?'bg-error-container/40 text-error':'bg-secondary-container/40 text-on-secondary-container'}">
+          ${k.zorluk_derecesi||'—'}
+        </span>
+        <span class="text-xs text-outline">${k.kapsadigi_konu_sayisi||'—'} konu</span>
+      </div>`).join('');
+}
+
+async function kaynakEkle() {
+  const ad = document.getElementById('k-ad').value.trim();
+  if (!ad) { showToast('⚠️ Kaynak adı zorunlu'); return; }
+
+  showToast('Ekleniyor...');
+  const { error } = await sb.from('kaynaklar').insert({
+    kaynak_adi: ad,
+    yayinevi: document.getElementById('k-yayinevi').value.trim(),
+    sinif: document.getElementById('k-sinif').value,
+    zorluk_derecesi: document.getElementById('k-zorluk').value,
+    kapsadigi_konu_sayisi: document.getElementById('k-konu-sayisi').value || null
+  });
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Kaynak eklendi!');
+  const { data } = await sb.from('kaynaklar').select('*').order('kaynak_adi');
+  state.kaynaklar = data || [];
+  renderKaynaklar();
+  document.getElementById('k-ad').value = '';
+  document.getElementById('k-yayinevi').value = '';
+  document.getElementById('k-konu-sayisi').value = '';
+}
+
+async function ataOgrenciSecildi() {
+  const sel = document.getElementById('ata-ogrenci');
+  const ogrenciId = sel.value;
+  const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
+
+  // Sınıfa göre kaynakları filtrele
+  const filtered = state.kaynaklar.filter(k => !sinif || k.sinif?.toLowerCase() === sinif.toLowerCase());
+  document.getElementById('ata-kaynak').innerHTML = '<option value="">— Kaynak seçin —</option>' +
+    filtered.map(k => `<option value="${k.id}">${k.kaynak_adi}</option>`).join('');
+
+  if (!ogrenciId) { document.getElementById('ogrenci-kaynak-listesi').innerHTML = ''; return; }
+
+  const { data } = await sb.from('ogrn_kaynak').select('*, kaynaklar(kaynak_adi, zorluk_derecesi, kapsadigi_konu_sayisi)').eq('ogrenci_id', ogrenciId);
+  const kaynaklar = data || [];
+  const el = document.getElementById('ogrenci-kaynak-listesi');
+
+  if (!kaynaklar.length) {
+    el.innerHTML = '<div class="mt-3 text-sm text-outline">Henüz kaynak atanmamış.</div>';
+    return;
+  }
+
+  el.innerHTML = '<div class="mt-3 text-xs font-semibold text-outline uppercase tracking-wider mb-2">Atanmış Kaynaklar</div>' +
+    kaynaklar.map(k => {
+      const toplam = k.kaynaklar?.kapsadigi_konu_sayisi || 0;
+      const islenen = k.islenen_konu_sayisi || 0;
+      const pct = toplam > 0 ? Math.round(islenen/toplam*100) : 0;
+      return `
+        <div class="py-2.5 border-b border-outline-variant/20 last:border-0">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="text-sm font-semibold">${k.kaynaklar?.kaynak_adi||'—'}</div>
+            <button onclick="kaynakSil('${k.id}')" class="text-xs text-error hover:underline">Kaldır</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 progress-bar"><div class="progress-fill bg-primary" style="width:${pct}%"></div></div>
+            <div class="flex items-center gap-1">
+              <input type="number" min="0" max="${toplam}" value="${islened}" onchange="kaynakGuncelle('${k.id}',this.value)"
+                class="w-12 text-center px-1 py-1 rounded-lg bg-surface-container-low border-none text-xs font-bold">
+              <span class="text-xs text-outline">/${toplam}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+async function kaynakAta() {
+  const ogrenciId = document.getElementById('ata-ogrenci').value;
+  const kaynakId  = document.getElementById('ata-kaynak').value;
+  if (!ogrenciId || !kaynakId) { showToast('⚠️ Öğrenci ve kaynak seçin'); return; }
+
+  showToast('Atanıyor...');
+  const { error } = await sb.from('ogrn_kaynak').insert({ ogrenci_id: ogrenciId, kaynak_id: kaynakId, islenen_konu_sayisi: 0 });
+  if (error) { showToast('❌ ' + (error.code === '23505' ? 'Bu kaynak zaten atanmış' : error.message)); return; }
+  showToast('✅ Kaynak atandı!');
+  ataOgrenciSecildi();
+}
+
+async function kaynakSil(id) {
+  if (!confirm('Bu kaynağı kaldırmak istediğine emin misin?')) return;
+  await sb.from('ogrn_kaynak').delete().eq('id', id);
+  showToast('✅ Kaldırıldı');
+  ataOgrenciSecildi();
+}
+
+async function kaynakGuncelle(id, deger) {
+  await sb.from('ogrn_kaynak').update({ islenen_konu_sayisi: parseInt(deger)||0 }).eq('id', id);
+  showToast('✅ Güncellendi');
+}
+
+// ── RAPOR ─────────────────────────────────────────────────────
+async function loadRapor() {
+  const ogrenciId = document.getElementById('rapor-ogrenci').value;
+  if (!ogrenciId) return;
+  const el = document.getElementById('rapor-content');
+  el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+
+  const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
+  const [odevRes, kazRes] = await Promise.all([
+    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).eq('durum','Tamamlandı'),
+    sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||'')
+  ]);
+
+  const odevler = odevRes.data || [];
+  const konular = [...new Set((kazRes.data||[]).map(k => k.konu))];
+
+  const konuMap = {};
+  odevler.forEach(o => {
+    const konu = (o.konu||'').split(' — ')[0];
+    if (!konuMap[konu]) konuMap[konu] = { dogru:0, yanlis:0, bos:0, toplam:0 };
+    konuMap[konu].dogru   += Number(o.dogru)||0;
+    konuMap[konu].yanlis  += Number(o.yanlis)||0;
+    konuMap[konu].bos     += Number(o.bos)||0;
+    konuMap[konu].toplam  += Number(o.toplam)||0;
+  });
+
+  if (!konular.length && !Object.keys(konuMap).length) {
+    el.innerHTML = '<div class="bg-surface-container-lowest rounded-xl p-5 text-sm text-outline text-center">Henüz tamamlanan ödev yok.</div>';
+    return;
+  }
+
+  const topDogru  = Object.values(konuMap).reduce((s,r)=>s+r.dogru,0);
+  const topToplam = Object.values(konuMap).reduce((s,r)=>s+r.toplam,0);
+  const genelPct  = topToplam > 0 ? Math.round(topDogru/topToplam*100) : 0;
+
+  let html = `
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="font-headline text-2xl font-extrabold text-primary">${Object.keys(konuMap).length}/${konular.length||'?'}</div>
+        <div class="text-xs text-outline mt-1">İşlenen Konu</div>
+      </div>
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="font-headline text-2xl font-extrabold" style="color:${genelPct>=80?'#00661d':genelPct>=60?'#805600':'#ba1a1a'}">%${genelPct}</div>
+        <div class="text-xs text-outline mt-1">Genel Başarı</div>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+      <h2 class="font-headline font-bold text-base text-on-surface mb-4">${ogr?.sinif||''} Konu Haritası</h2>`;
+
+  const allKonular = konular.length ? konular : Object.keys(konuMap);
+  allKonular.forEach((konu, idx) => {
+    const r = konuMap[konu];
+    const pct = r && r.toplam > 0 ? Math.round(r.dogru/r.toplam*100) : null;
+    const col = pct===null?'#e6eff6':pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+    const ikon = pct===null?'⬜':pct>=80?'✅':pct>=60?'⚠️':'❌';
+
+    html += `
+      <div class="py-3 border-b border-outline-variant/15 last:border-0">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-xs font-bold text-outline flex-shrink-0">${idx+1}</div>
+          <div class="flex-1 text-sm font-semibold text-on-surface">${konu}</div>
+          <div class="text-sm font-bold" style="color:${col}">${pct!==null?'%'+pct:'—'}</div>
+          <div>${ikon}</div>
+        </div>
+        <div class="ml-9 progress-bar">
+          <div class="progress-fill" style="width:${pct||0}%;background:${col}"></div>
+        </div>
+        ${r?`<div class="ml-9 mt-1 text-xs text-outline">✅${r.dogru} ❌${r.yanlis} ⬜${r.bos} / ${r.toplam} soru</div>`:`<div class="ml-9 mt-1 text-xs text-outline/60">Henüz ödev tamamlanmadı</div>`}
+      </div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ── ÖĞRENCİ PANELİ ───────────────────────────────────────────
+function ogrTab(tab) {
+  document.getElementById('ogr-tab-odevler').classList.toggle('hidden', tab !== 'odevler');
+  document.getElementById('ogr-tab-basari').classList.toggle('hidden', tab !== 'basari');
+  ['odevler','basari'].forEach(t => {
+    const btn = document.getElementById('tab-' + t);
+    btn.classList.toggle('bg-surface-container-lowest', t === tab);
+    btn.classList.toggle('text-primary', t === tab);
+    btn.classList.toggle('shadow-sm', t === tab);
+    btn.classList.toggle('text-on-surface-variant', t !== tab);
+  });
+  if (tab === 'basari') loadOgrBasari();
+}
+
+async function loadOgrenciPanel() {
+  document.getElementById('ogr-welcome-ad').textContent   = state.user.ad_soyad || '—';
+  document.getElementById('ogr-welcome-sinif').textContent = state.user.sinif || '—';
+
+  const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id);
+  const tumOdevler = odevler || [];
+  const bekleyen   = tumOdevler.filter(o => String(o.durum).trim() === 'Bekliyor');
+  const tamamlanan = tumOdevler.filter(o => String(o.durum).trim() === 'Tamamlandı');
+
+  document.getElementById('ogr-stat-bekleyen').textContent   = bekleyen.length;
+  document.getElementById('ogr-stat-tamamlanan').textContent = tamamlanan.length;
+
+  const topDogru  = tamamlanan.reduce((s,o)=>s+(Number(o.dogru)||0),0);
+  const topToplam = tamamlanan.reduce((s,o)=>s+(Number(o.toplam)||0),0);
+  document.getElementById('ogr-stat-basari').textContent = topToplam > 0 ? '%'+Math.round(topDogru/topToplam*100) : '—';
+
+  // Bekleyen
+  const bekEl = document.getElementById('ogr-bekleyen-bolum');
+  if (!bekleyen.length) {
+    bekEl.innerHTML = `
+      <div class="bg-surface-container-lowest rounded-xl p-6 text-center mb-4 shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="text-4xl mb-2">🎉</div>
+        <div class="font-headline font-bold text-tertiary">Tüm ödevlerin tamamlandı!</div>
+        <div class="text-sm text-outline mt-1">Harika iş çıkardın.</div>
+      </div>`;
+  } else {
+    bekEl.innerHTML = `
+      <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4 overflow-hidden">
+        <div class="px-5 py-4 border-b border-outline-variant/20">
+          <span class="font-headline font-bold text-error text-sm">⏳ Bekleyen Ödevler (${bekleyen.length})</span>
+        </div>
+        ${bekleyen.map(o => `
+          <div class="border-b border-outline-variant/20 last:border-0">
+            <div class="px-5 py-4 flex items-start gap-3 cursor-pointer" onclick="toggleSonucForm('${o.odev_id||o.id}')">
+              <div class="w-2.5 h-2.5 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
+              <div class="flex-1">
+                <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}${o.detay?' &nbsp;•&nbsp; 📄 '+o.detay:''}</div>
+              </div>
+              <span class="text-xs font-bold text-primary mt-0.5">Gir ▼</span>
+            </div>
+            <div id="sonuc-${o.odev_id||o.id}" class="hidden px-5 pb-5 bg-surface-container-low">
+              <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Sonuçlarını gir</div>
+              <div class="grid grid-cols-3 gap-3 mb-3">
+                <div>
+                  <div class="text-xs font-bold text-tertiary text-center mb-2">✅ DOĞRU</div>
+                  <input type="number" id="d-${o.odev_id||o.id}" min="0" placeholder="0" oninput="updatePreview('${o.odev_id||o.id}')"
+                    class="w-full text-center py-3 text-xl font-extrabold rounded-xl bg-white border-2 border-tertiary text-tertiary">
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-error text-center mb-2">❌ YANLIŞ</div>
+                  <input type="number" id="y-${o.odev_id||o.id}" min="0" placeholder="0" oninput="updatePreview('${o.odev_id||o.id}')"
+                    class="w-full text-center py-3 text-xl font-extrabold rounded-xl bg-white border-2 border-error text-error">
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-outline text-center mb-2">⬜ BOŞ</div>
+                  <input type="number" id="b-${o.odev_id||o.id}" min="0" placeholder="0" oninput="updatePreview('${o.odev_id||o.id}')"
+                    class="w-full text-center py-3 text-xl font-extrabold rounded-xl bg-white border-2 border-outline-variant text-on-surface">
+                </div>
+              </div>
+              <div id="preview-${o.odev_id||o.id}" class="hidden text-center text-sm font-bold mb-3 py-2 rounded-xl bg-white"></div>
+              <button onclick="submitSonuc('${o.odev_id||o.id}')"
+                class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20">
+                💾 Kaydet
+              </button>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // Tamamlanan
+  const tamEl = document.getElementById('ogr-tamamlanan-bolum');
+  if (!tamamlanan.length) { tamEl.innerHTML = ''; return; }
+
+  tamEl.innerHTML = `
+    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+      <div class="px-5 py-4 border-b border-outline-variant/20">
+        <span class="font-headline font-bold text-on-surface text-sm">✅ Tamamlanan Ödevler</span>
+      </div>
+      ${tamamlanan.map(o => {
+        const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0;
+        const top=Number(o.toplam)||(d+y+b);
+        const pct=top>0?Math.round(d/top*100):0;
+        const col=pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+        const bg=pct>=80?'rgba(0,130,40,0.1)':pct>=60?'rgba(254,178,35,0.2)':'rgba(186,26,26,0.1)';
+        return `
+          <div class="px-5 py-4 border-b border-outline-variant/20 last:border-0">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-xs text-outline mt-0.5">${o.gun||''} — ${o.kaynak||''}</div>
+              </div>
+              <span class="text-sm font-extrabold px-2.5 py-1 rounded-full" style="background:${bg};color:${col}">%${pct}</span>
+            </div>
+            <div class="flex gap-3 text-xs mb-2">
+              <span class="font-semibold text-tertiary">✅ ${d}</span>
+              <span class="font-semibold text-error">❌ ${y}</span>
+              <span class="text-outline">⬜ ${b} / ${top} soru</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function toggleSonucForm(id) {
+  const el = document.getElementById('sonuc-' + id);
+  el.classList.toggle('hidden');
+}
+
+function updatePreview(id) {
+  const d=Number(document.getElementById('d-'+id)?.value)||0;
+  const y=Number(document.getElementById('y-'+id)?.value)||0;
+  const b=Number(document.getElementById('b-'+id)?.value)||0;
+  const top=d+y+b;
+  const pct=top>0?Math.round(d/top*100):0;
+  const prev=document.getElementById('preview-'+id);
+  if(top>0){
+    prev.classList.remove('hidden');
+    prev.textContent=`Toplam: ${top} soru — Başarı: %${pct}`;
+    prev.style.color=pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+  } else prev.classList.add('hidden');
+}
+
+async function submitSonuc(odevId) {
+  const d=Number(document.getElementById('d-'+odevId)?.value)||0;
+  const y=Number(document.getElementById('y-'+odevId)?.value)||0;
+  const b=Number(document.getElementById('b-'+odevId)?.value)||0;
+
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('odevler').update({
+    dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'Tamamlandı'
+  }).eq('odev_id', odevId);
+
+  if (error) {
+    // id alanı farklı olabilir, id ile dene
+    const { error: e2 } = await sb.from('odevler').update({
+      dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'Tamamlandı'
+    }).eq('id', odevId);
+    if (e2) { showToast('❌ ' + e2.message); return; }
+  }
+
+  showToast('✅ Sonuç kaydedildi!');
+  loadOgrenciPanel();
+}
+
+async function loadOgrBasari() {
+  const el = document.getElementById('ogr-basari-content');
+  el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+
+  const [raporRes, kazRes] = await Promise.all([
+    sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','Tamamlandı'),
+    sb.from('kazanimlar').select('*').ilike('sinif', state.user.sinif||'')
+  ]);
+
+  const odevler = raporRes.data || [];
+  const konular = [...new Set((kazRes.data||[]).map(k => k.konu))];
+
+  const konuMap = {};
+  odevler.forEach(o => {
+    const konu = (o.konu||'').split(' — ')[0];
+    if (!konuMap[konu]) konuMap[konu] = { dogru:0, yanlis:0, bos:0, toplam:0 };
+    konuMap[konu].dogru   += Number(o.dogru)||0;
+    konuMap[konu].yanlis  += Number(o.yanlis)||0;
+    konuMap[konu].bos     += Number(o.bos)||0;
+    konuMap[konu].toplam  += Number(o.toplam)||0;
+  });
+
+  const allKonular = konular.length ? konular : Object.keys(konuMap);
+  const calisilan  = allKonular.filter(k => konuMap[k]).length;
+  const topDogru   = Object.values(konuMap).reduce((s,r)=>s+r.dogru,0);
+  const topToplam  = Object.values(konuMap).reduce((s,r)=>s+r.toplam,0);
+  const genelPct   = topToplam > 0 ? Math.round(topDogru/topToplam*100) : 0;
+
+  let html = `
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="font-headline text-2xl font-extrabold text-primary">${calisilan}/${allKonular.length}</div>
+        <div class="text-xs text-outline mt-1">İşlenen Konu</div>
+      </div>
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="font-headline text-2xl font-extrabold" style="color:${genelPct>=80?'#00661d':genelPct>=60?'#805600':'#ba1a1a'}">%${genelPct}</div>
+        <div class="text-xs text-outline mt-1">Genel Başarı</div>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+      <h2 class="font-headline font-bold text-base text-on-surface mb-4">📚 ${state.user.sinif} Konu Haritası</h2>`;
+
+  allKonular.forEach((konu, idx) => {
+    const r = konuMap[konu];
+    const pct = r && r.toplam > 0 ? Math.round(r.dogru/r.toplam*100) : null;
+    const col = pct===null?'#c0c7d1':pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+    const nbg = pct===null?'#e6eff6':pct>=80?'rgba(0,130,40,0.1)':pct>=60?'rgba(254,178,35,0.2)':'rgba(186,26,26,0.1)';
+    const ikon = pct===null?'⬜':pct>=80?'✅':pct>=60?'⚠️':'❌';
+
+    html += `
+      <div class="py-3 border-b border-outline-variant/15 last:border-0">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style="background:${nbg};color:${col}">${idx+1}</div>
+          <div class="flex-1 text-sm font-semibold text-on-surface">${konu}</div>
+          <div class="text-sm font-bold" style="color:${col}">${pct!==null?'%'+pct:'—'}</div>
+          <div>${ikon}</div>
+        </div>
+        <div class="ml-9 progress-bar"><div class="progress-fill" style="width:${pct||0}%;background:${col}"></div></div>
+        ${r?`<div class="ml-9 mt-1 text-xs text-outline">✅${r.dogru} ❌${r.yanlis} ⬜${r.bos} / ${r.toplam}</div>`:`<div class="ml-9 mt-1 text-xs text-outline/50">Henüz tamamlanmadı</div>`}
+      </div>`;
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ── VELİ PANELİ ──────────────────────────────────────────────
+async function loadVeliPanel() {
+  document.getElementById('veli-cocuk-adi').textContent = state.user.ad_soyad || '—';
+  const el = document.getElementById('veli-rapor-content');
+
+  const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','Tamamlandı');
+  const { data: kazData } = await sb.from('kazanimlar').select('*').ilike('sinif', state.user.sinif||'');
+
+  const konular = [...new Set((kazData||[]).map(k => k.konu))];
+  const konuMap = {};
+  (odevler||[]).forEach(o => {
+    const konu = (o.konu||'').split(' — ')[0];
+    if (!konuMap[konu]) konuMap[konu] = { dogru:0, toplam:0 };
+    konuMap[konu].dogru  += Number(o.dogru)||0;
+    konuMap[konu].toplam += Number(o.toplam)||0;
+  });
+
+  if (!Object.keys(konuMap).length) {
+    el.innerHTML = '<div class="bg-surface-container-lowest rounded-xl p-5 text-sm text-outline text-center">Henüz tamamlanan ödev yok.</div>';
+    return;
+  }
+
+  const allKonular = konular.length ? konular : Object.keys(konuMap);
+  el.innerHTML = `
+    <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+      <h2 class="font-headline font-bold text-base text-on-surface mb-4">Konu Bazlı Başarı</h2>
+      ${allKonular.map(konu => {
+        const r = konuMap[konu];
+        const pct = r && r.toplam > 0 ? Math.round(r.dogru/r.toplam*100) : null;
+        const col = pct===null?'#c0c7d1':pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+        return `
+          <div class="flex items-center gap-3 py-3 border-b border-outline-variant/15 last:border-0">
+            <div class="flex-1 text-sm font-semibold text-on-surface">${konu}</div>
+            <div class="w-24 progress-bar"><div class="progress-fill" style="width:${pct||0}%;background:${col}"></div></div>
+            <div class="text-sm font-bold w-10 text-right" style="color:${col}">${pct!==null?'%'+pct:'—'}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function logout() {
+  state = { rol:null, user:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
+  document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('ogr-sifre').value = '';
+  document.getElementById('ogrenci-tc').value = '';
+  document.getElementById('veli-tel').value = '';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

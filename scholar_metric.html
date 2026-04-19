@@ -545,21 +545,67 @@ tailwind.config = {
     <!-- ── ÖĞRENCİ PANELI -->
     <div id="page-ogrenci-panel" class="page">
       <!-- Hero Banner -->
-      <div class="relative overflow-hidden bg-gradient-to-br from-primary to-primary-container rounded-2xl p-6 mb-5 text-on-primary shadow-lg">
+      <div class="relative overflow-hidden bg-gradient-to-br from-primary to-primary-container rounded-2xl p-6 mb-4 text-on-primary shadow-lg">
         <div class="absolute right-[-8%] top-[-40%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
         <p class="text-xs font-semibold opacity-75 uppercase tracking-widest mb-1">Hoş geldin 👋</p>
         <h1 class="font-headline text-2xl font-extrabold" id="ogr-welcome-ad">—</h1>
         <p class="text-sm opacity-75 mt-1" id="ogr-welcome-sinif">—</p>
       </div>
 
+      <!-- LGS Geri Sayım (sadece 8. Sınıf) -->
+      <div id="lgs-countdown-card" class="hidden bg-gradient-to-br from-secondary to-secondary-container rounded-2xl p-5 mb-4 shadow-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-widest text-on-secondary-container opacity-80 mb-1">🎯 LGS'ye Kalan Süre</p>
+            <div class="font-headline text-4xl font-extrabold text-on-secondary-container" id="lgs-gun-sayisi">—</div>
+            <p class="text-xs text-on-secondary-container opacity-70 mt-1">Her gün bir adım daha yakınsın!</p>
+          </div>
+          <div class="text-right">
+            <div class="text-5xl">🏆</div>
+            <div class="text-xs text-on-secondary-container opacity-70 mt-1" id="lgs-tarih-label"></div>
+          </div>
+        </div>
+        <div class="mt-3 bg-black/10 rounded-full h-2">
+          <div id="lgs-progress-bar" class="h-2 rounded-full bg-on-secondary-container/80 transition-all"></div>
+        </div>
+        <div class="flex justify-between text-xs text-on-secondary-container opacity-60 mt-1">
+          <span>Bugün</span>
+          <span id="lgs-progress-label"></span>
+        </div>
+      </div>
+
+      <!-- Motivasyon Kartı -->
+      <div class="bg-surface-container-lowest rounded-2xl p-5 mb-4 shadow-[0_2px_8px_rgba(0,29,49,0.06)] border-l-4 border-primary">
+        <p class="text-xs font-bold uppercase tracking-widest text-primary mb-2">💡 Günün Motivasyonu</p>
+        <p class="text-sm font-semibold text-on-surface leading-relaxed" id="motivasyon-mesaj">—</p>
+        <p class="text-xs text-outline mt-2" id="motivasyon-kaynak"></p>
+      </div>
+
+      <!-- Hedefim -->
+      <div class="bg-surface-container-lowest rounded-2xl p-5 mb-5 shadow-[0_2px_8px_rgba(0,29,49,0.06)]">
+        <p class="text-xs font-bold uppercase tracking-widest text-tertiary mb-3">🎯 Hedefim</p>
+        <textarea id="ogr-hedef-input" rows="2" placeholder="Hedefini buraya yaz... (Örn: LGS'de matematik bölümünü tam yapacağım!)"
+          class="w-full px-4 py-3 rounded-xl bg-surface-container text-sm text-on-surface resize-none border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-tertiary placeholder:text-outline/50"></textarea>
+        <div class="flex justify-end mt-2">
+          <button onclick="hedefKaydet()"
+            class="px-4 py-2 rounded-full text-xs font-bold bg-tertiary text-on-primary hover:bg-tertiary/80 transition-colors shadow-sm">
+            💾 Kaydet
+          </button>
+        </div>
+      </div>
+
       <!-- Tab -->
       <div class="flex bg-surface-container rounded-xl p-1 mb-5 gap-1">
         <button onclick="ogrTab('odevler')" id="tab-odevler"
-          class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all bg-surface-container-lowest text-primary shadow-sm">
+          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-surface-container-lowest text-primary shadow-sm">
           📋 Ödevlerim
         </button>
+        <button onclick="ogrTab('dersler')" id="tab-dersler"
+          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
+          📖 Derslerim
+        </button>
         <button onclick="ogrTab('basari')" id="tab-basari"
-          class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all text-on-surface-variant">
+          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
           📊 Başarım
         </button>
       </div>
@@ -582,6 +628,10 @@ tailwind.config = {
         </div>
         <div id="ogr-bekleyen-bolum"></div>
         <div id="ogr-tamamlanan-bolum"></div>
+      </div>
+
+      <div id="ogr-tab-dersler" class="hidden">
+        <div id="ogr-dersler-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
       </div>
 
       <div id="ogr-tab-basari" class="hidden">
@@ -1543,11 +1593,96 @@ async function loadRapor() {
   el.innerHTML = html;
 }
 
+// ── MOTİVASYON MESAJLARI ──────────────────────────────────────
+const MOTIVASYON = {
+  '5. Sınıf': [
+    ['Her gün biraz çalışmak, seni büyük bir yere götürür. Küçük adımlar, büyük zaferlerin başlangıcıdır! 🚀', 'Albert Einstein'],
+    ['Başarı, her sabah uyanıp tekrar denemekten geçer. Sen yapabilirsin! ⭐', 'Winston Churchill'],
+    ['Öğrenmek bir hazinedir; onu taşıyan kişiyi her yerde takip eder. 📚', 'Konfüçyüs'],
+    ['Bugün öğrendiklerin, yarınki sürprizlerin temelidir! 🌱', 'AdaptiX'],
+    ['Matematik bir dil, sen ise onu konuşmayı öğreniyorsun. Her gün biraz daha iyi! 🔢', 'AdaptiX'],
+    ['Zorlandığın her soru, seni daha güçlü yapıyor. Pes etme! 💪', 'AdaptiX'],
+    ['Başarı bir tesadüf değil, her gün verilen kararların toplamıdır. 🏆', 'AdaptiX'],
+  ],
+  '6. Sınıf': [
+    ['Büyük başarılar, küçük alışkanlıklardan doğar. Bugün çalışmak bir alışkanlık haline gelsin! ⚡', 'Aristoteles'],
+    ['Zihniniz bir kas gibidir; ne kadar çok kullanırsanız o kadar güçlenir. 🧠', 'AdaptiX'],
+    ['Zorlu sorular seni yavaşlatmaz, seni hazırlar. Her hata bir ders! 📖', 'AdaptiX'],
+    ['Başarı, başarısızlıktan başarısızlığa, hevesini yitirmeden yürümektir. 🌟', 'Winston Churchill'],
+    ['Sen düşündüğünden daha güçlüsün. Devam et! 💫', 'Winnie the Pooh'],
+    ['Her problem çözülebilir; sadece doğru adımları bulmak gerekir. 🔍', 'AdaptiX'],
+    ['Bugün küçük bir ilerleme, yarın büyük bir fark yaratır. 🚀', 'AdaptiX'],
+  ],
+  '7. Sınıf': [
+    ['Geleceğini şimdiden inşa ediyorsun. Her çalıştığın saat bir tuğladır. 🏗️', 'AdaptiX'],
+    ['Hayallerin var olduğu yerde, yol da vardır. Çalışmak o yolu açar. 🛤️', 'Paulo Coelho'],
+    ['Başarının sırrı basit: Hazırlan, çalış, pes etme. 🎯', 'AdaptiX'],
+    ['Zorlu anlarda vazgeçmemek, seni diğerlerinden ayırır. 💎', 'AdaptiX'],
+    ['Matematik seninle konuşuyor. Dinlemeye devam et! 🔢', 'AdaptiX'],
+    ['Her büyük başarı, bir gün "bunu yapabilirim" diye karar vermekle başlar. ✨', 'AdaptiX'],
+    ['Çalışmak acı verir; pişmanlık daha çok acı verir. Tercih senin! 🔥', 'AdaptiX'],
+  ],
+  '8. Sınıf': [
+    ['LGS\'ye kadar her gün sayılır. Bugün de bir adım attın, harika! 🏆', 'AdaptiX'],
+    ['Şu an hissettiğin baskı, sınav salonundaki özgüvene dönüşecek. 💪', 'AdaptiX'],
+    ['Hedeflediğin okul seni bekliyor. Ona kavuşmanın bedeli: şimdi çalışmak! 🎯', 'AdaptiX'],
+    ['Başarılı olmak için olağanüstü yetenekli olmak gerekmez; sadece ısrarcı olmak yeterli. ⚡', 'AdaptiX'],
+    ['Her doğru cevap, LGS\'de seni bir adım öne taşır. 🚀', 'AdaptiX'],
+    ['Yorulduğunda durmak değil, neden başladığını hatırla. 🌟', 'AdaptiX'],
+    ['Bugün yapılan her çalışma, sınav gününde fark yaratacak. Devam et! 🔥', 'AdaptiX'],
+  ],
+};
+
+const MOTIVASYON_DEFAULT = [
+  ['Başarı bir yolculuktur, varış noktası değil. Her gün bir adım! 🚀', 'AdaptiX'],
+  ['Öğrenmek için asla geç değildir. Bugün başla! 📚', 'AdaptiX'],
+];
+
+function gunlukMotivasyon(sinif) {
+  const liste = MOTIVASYON[sinif] || MOTIVASYON_DEFAULT;
+  const idx = Math.floor(Date.now() / 86400000) % liste.length;
+  return liste[idx];
+}
+
+// ── LGS GERİ SAYIM ────────────────────────────────────────────
+function lgsGeriSayim() {
+  // LGS 2026 tarihi (yaklaşık 6 Haziran 2026)
+  const lgs = new Date('2026-06-06');
+  const bugun = new Date();
+  bugun.setHours(0,0,0,0);
+  const diff = Math.ceil((lgs - bugun) / 86400000);
+
+  const card = document.getElementById('lgs-countdown-card');
+  card.classList.remove('hidden');
+  document.getElementById('lgs-gun-sayisi').textContent = diff > 0 ? diff + ' GÜN' : 'Bugün!';
+  document.getElementById('lgs-tarih-label').textContent = '6 Haziran 2026';
+
+  // İlerleme çubuğu (yaklaşık 365 gün üzerinden)
+  const toplamGun = 365;
+  const gecenGun = Math.max(0, toplamGun - diff);
+  const pct = Math.min(100, Math.round(gecenGun / toplamGun * 100));
+  document.getElementById('lgs-progress-bar').style.width = pct + '%';
+  document.getElementById('lgs-progress-label').textContent = 'LGS 2026';
+}
+
+// ── HEDEF ─────────────────────────────────────────────────────
+function hedefYukle() {
+  const key = 'hedef_' + state.user.ogrenci_id;
+  const hedef = localStorage.getItem(key) || '';
+  document.getElementById('ogr-hedef-input').value = hedef;
+}
+
+function hedefKaydet() {
+  const key = 'hedef_' + state.user.ogrenci_id;
+  const hedef = document.getElementById('ogr-hedef-input').value.trim();
+  localStorage.setItem(key, hedef);
+  showToast('🎯 Hedef kaydedildi!');
+}
+
 // ── ÖĞRENCİ PANELİ ───────────────────────────────────────────
 function ogrTab(tab) {
-  document.getElementById('ogr-tab-odevler').classList.toggle('hidden', tab !== 'odevler');
-  document.getElementById('ogr-tab-basari').classList.toggle('hidden', tab !== 'basari');
-  ['odevler','basari'].forEach(t => {
+  ['odevler','dersler','basari'].forEach(t => {
+    document.getElementById('ogr-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('tab-' + t);
     btn.classList.toggle('bg-surface-container-lowest', t === tab);
     btn.classList.toggle('text-primary', t === tab);
@@ -1555,11 +1690,23 @@ function ogrTab(tab) {
     btn.classList.toggle('text-on-surface-variant', t !== tab);
   });
   if (tab === 'basari') loadOgrBasari();
+  if (tab === 'dersler') loadOgrDersler();
 }
 
 async function loadOgrenciPanel() {
-  document.getElementById('ogr-welcome-ad').textContent   = state.user.ad_soyad || '—';
+  document.getElementById('ogr-welcome-ad').textContent    = state.user.ad_soyad || '—';
   document.getElementById('ogr-welcome-sinif').textContent = state.user.sinif || '—';
+
+  // Motivasyon
+  const [msg, kaynak] = gunlukMotivasyon(state.user.sinif);
+  document.getElementById('motivasyon-mesaj').textContent  = msg;
+  document.getElementById('motivasyon-kaynak').textContent = kaynak !== 'AdaptiX' ? '— ' + kaynak : '';
+
+  // LGS geri sayım (sadece 8. Sınıf)
+  if ((state.user.sinif || '').includes('8')) lgsGeriSayim();
+
+  // Hedef yükle
+  hedefYukle();
 
   const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id);
   const tumOdevler = odevler || [];
@@ -1701,6 +1848,51 @@ async function submitSonuc(odevId) {
 
   showToast('✅ Sonuç kaydedildi!');
   loadOgrenciPanel();
+}
+
+async function loadOgrDersler() {
+  const el = document.getElementById('ogr-dersler-content');
+  el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+
+  const { data: dersler } = await sb.from('dersler')
+    .select('tarih, islenen_konu, kazanim_kodu')
+    .eq('ogrenci_id', state.user.ogrenci_id)
+    .order('tarih', { ascending: false });
+
+  if (!dersler || !dersler.length) {
+    el.innerHTML = '<div class="bg-surface-container-lowest rounded-xl p-6 text-center text-sm text-outline">Henüz işlenen ders kaydı yok.</div>';
+    return;
+  }
+
+  // Tarihe göre grupla
+  const gruplar = {};
+  dersler.forEach(d => {
+    const k = d.tarih + '||' + (d.islenen_konu || '');
+    if (!gruplar[k]) gruplar[k] = { tarih: d.tarih, konu: d.islenen_konu, kazanimlar: [] };
+    if (d.kazanim_kodu) gruplar[k].kazanimlar.push(d.kazanim_kodu);
+  });
+
+  const satirlar = Object.values(gruplar);
+  el.innerHTML = `
+    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+      <div class="px-5 py-4 border-b border-outline-variant/20">
+        <span class="font-headline font-bold text-on-surface text-sm">📖 İşlenen Dersler (${satirlar.length})</span>
+      </div>
+      ${satirlar.map(d => {
+        const tarihStr = d.tarih ? new Date(d.tarih).toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' }) : '—';
+        return `
+          <div class="px-5 py-4 border-b border-outline-variant/15 last:border-0">
+            <div class="flex items-start gap-3">
+              <div class="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>
+              <div class="flex-1">
+                <div class="text-sm font-bold text-on-surface">${d.konu || '—'}</div>
+                <div class="text-xs text-outline mt-0.5">📅 ${tarihStr}</div>
+                ${d.kazanimlar.length ? `<div class="flex flex-wrap gap-1.5 mt-2">${d.kazanimlar.map(k => `<span class="text-xs px-2 py-0.5 rounded-full bg-primary-fixed text-primary font-semibold">${k}</span>`).join('')}</div>` : ''}
+              </div>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
 }
 
 async function loadOgrBasari() {

@@ -137,7 +137,7 @@ tailwind.config = {
         <div id="form-veli" class="space-y-4 hidden">
           <div>
             <label class="block text-sm font-semibold text-on-surface-variant mb-2">Kayıtlı Telefon Numarası</label>
-            <input type="number" id="veli-tel" placeholder="05xxxxxxxxx"
+            <input type="text" inputmode="numeric" id="veli-tel" placeholder="05xxxxxxxxx"
               class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm"
               onkeydown="if(event.key==='Enter') doLogin()"/>
           </div>
@@ -755,7 +755,7 @@ async function doLogin() {
 
     } else {
       const tel = document.getElementById('veli-tel').value.trim();
-      const { data, error } = await sb.from('ogrenciler').select('*').eq('veli_telefonu', tel).eq('kayit_durumu', 'AKTİF').single();
+      const { data, error } = await sb.from('ogrenciler').select('*').eq('veli_telefonu', tel).single();
       if (error || !data) { showError('Telefon numarası bulunamadı'); return; }
       state.rol = 'veli';
       state.user = { ...data, rol: 'veli' };

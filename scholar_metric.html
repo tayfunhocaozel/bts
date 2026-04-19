@@ -1189,20 +1189,29 @@ async function durumDegistir(odevId, yeniDurum) {
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
 }
 
-async function odevSonucGir(odevId) {
-  const d = prompt('✅ Doğru sayısı:');
-  if (d === null) return;
-  const y = prompt('❌ Yanlış sayısı:');
-  if (y === null) return;
-  const b = prompt('⬜ Boş sayısı:');
-  if (b === null) return;
+function odevSonucGir(odevId) {
+  const modal = document.getElementById('sonuc-modal');
+  modal.dataset.odevId = odevId;
+  modal.querySelector('#sm-soru').value = '';
+  modal.querySelector('#sm-dogru').value = '';
+  modal.querySelector('#sm-yanlis').value = '';
+  modal.querySelector('#sm-bos').value = '';
+  modal.classList.remove('hidden');
+  modal.querySelector('#sm-soru').focus();
+}
 
-  const dogru = parseInt(d)||0, yanlis = parseInt(y)||0, bos = parseInt(b)||0;
+async function sonucModalKaydet() {
+  const modal = document.getElementById('sonuc-modal');
+  const odevId = modal.dataset.odevId;
+  const soru   = parseInt(modal.querySelector('#sm-soru').value)  || 0;
+  const dogru  = parseInt(modal.querySelector('#sm-dogru').value) || 0;
+  const yanlis = parseInt(modal.querySelector('#sm-yanlis').value)|| 0;
+  const bos    = parseInt(modal.querySelector('#sm-bos').value)   || 0;
+  modal.classList.add('hidden');
   showToast('Kaydediliyor...');
   const { error } = await sb.from('odevler').update({
-    dogru, yanlis, bos, toplam: dogru+yanlis+bos, durum: 'TAMAMLANDI'
+    dogru, yanlis, bos, toplam: soru || dogru+yanlis+bos, durum: 'TAMAMLANDI'
   }).eq('odev_id', odevId);
-
   if (error) { showToast('❌ ' + error.message); return; }
   showToast(`✅ Sonuç kaydedildi (%${Math.round(dogru/(dogru+yanlis+bos||1)*100)})`);
   const ogrenciId = document.getElementById('odev-ogrenci').value;
@@ -1818,5 +1827,44 @@ function showToast(msg) {
   t._timer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 </script>
+
+<!-- Sonuç Gir Modal -->
+<div id="sonuc-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div class="bg-surface rounded-2xl shadow-xl p-6 w-80 flex flex-col gap-4">
+    <div class="font-headline font-bold text-lg text-on-surface">📝 Sonuç Gir</div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Soru Sayısı</label>
+        <input id="sm-soru" type="number" min="0" placeholder="0"
+          class="border border-outline-variant rounded-xl px-3 py-2 text-sm text-center bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-primary uppercase tracking-wider">✅ Doğru</label>
+        <input id="sm-dogru" type="number" min="0" placeholder="0"
+          class="border border-outline-variant rounded-xl px-3 py-2 text-sm text-center bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-error uppercase tracking-wider">❌ Yanlış</label>
+        <input id="sm-yanlis" type="number" min="0" placeholder="0"
+          class="border border-outline-variant rounded-xl px-3 py-2 text-sm text-center bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">⬜ Boş</label>
+        <input id="sm-bos" type="number" min="0" placeholder="0"
+          class="border border-outline-variant rounded-xl px-3 py-2 text-sm text-center bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+    </div>
+    <div class="flex gap-2 justify-end mt-1">
+      <button onclick="document.getElementById('sonuc-modal').classList.add('hidden')"
+        class="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">
+        İptal
+      </button>
+      <button onclick="sonucModalKaydet()"
+        class="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/80 transition-colors">
+        Kaydet
+      </button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

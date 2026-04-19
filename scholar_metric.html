@@ -396,6 +396,46 @@ tailwind.config = {
           </button>
         </div>
       </div>
+
+      <!-- Ders Programı -->
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+        <h2 class="font-headline font-bold text-base text-on-surface mb-4">🗓️ Ders Programı Ekle</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Öğrenci</label>
+            <select id="program-ogrenci" onchange="loadDersProgrami()"
+              class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+              <option value="">— Öğrenci seçin —</option>
+            </select>
+          </div>
+
+          <!-- Mevcut program -->
+          <div id="mevcut-program" class="hidden">
+            <div class="text-xs font-semibold text-outline uppercase tracking-wider mb-2">Mevcut Program</div>
+            <div id="program-listesi" class="divide-y divide-outline-variant/20 bg-surface-container-low rounded-xl px-3 mb-3"></div>
+          </div>
+
+          <!-- Yeni seans ekle -->
+          <div class="grid grid-cols-3 gap-2">
+            <select id="program-gun"
+              class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+              <option value="">— Gün —</option>
+              <option>Pazartesi</option><option>Salı</option><option>Çarşamba</option>
+              <option>Perşembe</option><option>Cuma</option><option>Cumartesi</option><option>Pazar</option>
+            </select>
+            <input type="time" id="program-baslangic"
+              class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm"
+              placeholder="14:00"/>
+            <input type="time" id="program-bitis"
+              class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm"
+              placeholder="15:00"/>
+          </div>
+          <button onclick="programEkle()"
+            class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
+            + Seans Ekle
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- ── KAYNAKLAR -->
@@ -722,7 +762,7 @@ function fillSelects() {
   const ogrOpts = '<option value="">— Öğrenci seçin —</option>' +
     state.ogrenciler.map(o => { const s = (o.sinif||'').trim(); return `<option value="${o.ogrenci_id}" data-sinif="${s}">${o.ad_soyad} (${s})</option>`; }).join('');
 
-  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci'].forEach(id => {
+  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci','program-ogrenci'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = ogrOpts;
   });
@@ -878,7 +918,7 @@ async function dersSave() {
   const rows = secili.map(kod => ({
     ogrenci_id: ogrenciId, tarih: new Date().toISOString().split('T')[0],
     islenen_konu: konu, kazanim_kodu: kod,
-    ders_gorusu: gorus, hatirlatma
+    ders_gorusu: gorus, sonraki_ders_hatirlatma: hatirlatma
   }));
 
   const { error } = await sb.from('dersler').insert(rows);
@@ -989,7 +1029,7 @@ async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
         <div class="flex items-center justify-between py-2 border-b border-outline-variant/20 last:border-0">
           <div>
             <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
-            <div class="text-xs text-outline">${o.gun||'—'} — ${o.kaynak||'—'} ${o.detay?'— '+o.detay:''}</div>
+            <div class="text-xs text-outline">${o.gun||'—'} — ${o.kaynak||'—'} ${o.odev_detay?'— '+o.odev_detay:''}</div>
           </div>
           <span class="text-xs font-bold px-2 py-0.5 rounded-full ${o.durum==='BEKLİYOR'?'bg-secondary-container/40 text-on-secondary-container':o.durum==='EKSİK'?'bg-error-container/40 text-error':'bg-surface-container-highest text-outline'}">
             ${o.durum}
@@ -1016,7 +1056,7 @@ async function odevSave() {
     const kazanim = s.querySelector('.kazanim-sel').value;
     const detay  = s.querySelector('.detay-inp').value.trim();
     if (!konu) { valid = false; return; }
-    rows.push({ ogrenci_id: ogrenciId, verilis_tarihi: tarih, gun, kaynak, konu: kazanim ? `${konu} — ${kazanim}` : konu, kazanim, detay, durum: 'BEKLİYOR', dogru: 0, yanlis: 0, bos: 0, toplam: 0 });
+    rows.push({ ogrenci_id: ogrenciId, verilis_tarihi: tarih, gun, kaynak, konu: kazanim ? `${konu} — ${kazanim}` : konu, kazanim, odev_detay: detay, durum: 'BEKLİYOR', dogru: 0, yanlis: 0, bos: 0, toplam: 0 });
   });
 
   if (!valid) { showToast('⚠️ Tüm satırlarda konu seçin'); return; }
@@ -1345,7 +1385,7 @@ async function loadOgrenciPanel() {
               <div class="w-2.5 h-2.5 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
               <div class="flex-1">
                 <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
-                <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}${o.detay?' &nbsp;•&nbsp; 📄 '+o.detay:''}</div>
+                <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}${o.odev_detay?' &nbsp;•&nbsp; 📄 '+o.odev_detay:''}</div>
               </div>
               <span class="text-xs font-bold text-primary mt-0.5">Gir ▼</span>
             </div>
@@ -1558,6 +1598,65 @@ async function loadVeliPanel() {
           </div>`;
       }).join('')}
     </div>`;
+}
+
+// ── DERS PROGRAMI ─────────────────────────────────────────────
+async function loadDersProgrami() {
+  const ogrenciId = document.getElementById('program-ogrenci').value;
+  const bolum = document.getElementById('mevcut-program');
+  const liste = document.getElementById('program-listesi');
+  if (!ogrenciId) { bolum.classList.add('hidden'); return; }
+
+  const { data } = await sb.from('ders_programi')
+    .select('*').eq('ogrenci_id', ogrenciId)
+    .order('gun');
+
+  const programlar = data || [];
+  bolum.classList.toggle('hidden', !programlar.length);
+
+  const gunSira = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+  programlar.sort((a,b) => gunSira.indexOf(a.gun) - gunSira.indexOf(b.gun));
+
+  liste.innerHTML = programlar.map(p => `
+    <div class="flex items-center justify-between py-2.5">
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-primary-fixed text-primary">${p.gun}</span>
+        <span class="text-sm font-semibold text-on-surface">${p.baslangic?.substring(0,5)} – ${p.bitis?.substring(0,5)}</span>
+      </div>
+      <button onclick="programSil('${p.program_id}')"
+        class="text-xs text-error hover:underline font-medium">Sil</button>
+    </div>`).join('');
+}
+
+async function programEkle() {
+  const ogrenciId = document.getElementById('program-ogrenci').value;
+  const gun       = document.getElementById('program-gun').value;
+  const baslangic = document.getElementById('program-baslangic').value;
+  const bitis     = document.getElementById('program-bitis').value;
+
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+  if (!gun)       { showToast('⚠️ Gün seçin'); return; }
+  if (!baslangic || !bitis) { showToast('⚠️ Saat girin'); return; }
+  if (baslangic >= bitis)   { showToast('⚠️ Bitiş saati başlangıçtan sonra olmalı'); return; }
+
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('ders_programi').insert({
+    ogrenci_id: ogrenciId, gun, baslangic, bitis
+  });
+
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Seans eklendi!');
+  document.getElementById('program-gun').value = '';
+  document.getElementById('program-baslangic').value = '';
+  document.getElementById('program-bitis').value = '';
+  loadDersProgrami();
+}
+
+async function programSil(id) {
+  if (!confirm('Bu seansı silmek istediğine emin misin?')) return;
+  await sb.from('ders_programi').delete().eq('program_id', id);
+  showToast('✅ Seans silindi');
+  loadDersProgrami();
 }
 
 // ── UTILS ─────────────────────────────────────────────────────

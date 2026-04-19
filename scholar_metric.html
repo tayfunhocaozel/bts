@@ -1732,45 +1732,55 @@ async function loadOgrenciPanel() {
   } else {
     bekEl.innerHTML = `
       <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4 overflow-hidden">
-        <div class="px-5 py-4 border-b border-outline-variant/20">
-          <span class="font-headline font-bold text-error text-sm">⏳ Bekleyen Ödevler (${bekleyen.length})</span>
+        <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
+          <span class="font-headline font-bold text-error text-sm">⏳ Bekleyen Ödevler</span>
+          <span class="text-xs font-bold bg-error/10 text-error px-2 py-0.5 rounded-full">${bekleyen.length}</span>
         </div>
-        ${bekleyen.map(o => `
-          <div class="border-b border-outline-variant/20 last:border-0">
-            <div class="px-5 py-4 flex items-start gap-3 cursor-pointer" onclick="toggleSonucForm('${o.odev_id||o.id}')">
-              <div class="w-2.5 h-2.5 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
-              <div class="flex-1">
-                <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
-                <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}${o.odev_detay?' &nbsp;•&nbsp; 📄 '+o.odev_detay:''}</div>
-              </div>
-              <span class="text-xs font-bold text-primary mt-0.5">Gir ▼</span>
-            </div>
-            <div id="sonuc-${o.odev_id||o.id}" class="hidden px-5 pb-5 bg-surface-container-low">
-              <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-3">Sonuçlarını gir</div>
-              <div class="grid grid-cols-3 gap-3 mb-3">
-                <div>
-                  <div class="text-xs font-bold text-tertiary text-center mb-2">✅ DOĞRU</div>
-                  <input type="number" id="d-${o.odev_id||o.id}" min="0" placeholder="0" oninput="updatePreview('${o.odev_id||o.id}')"
-                    class="w-full text-center py-3 text-xl font-extrabold rounded-xl bg-white border-2 border-tertiary text-tertiary">
-                </div>
-                <div>
-                  <div class="text-xs font-bold text-error text-center mb-2">❌ YANLIŞ</div>
-                  <input type="number" id="y-${o.odev_id||o.id}" min="0" placeholder="0" oninput="updatePreview('${o.odev_id||o.id}')"
-                    class="w-full text-center py-3 text-xl font-extrabold rounded-xl bg-white border-2 border-error text-error">
-                </div>
-                <div>
-                  <div class="text-xs font-bold text-outline text-center mb-2">⬜ BOŞ</div>
-                  <input type="number" id="b-${o.odev_id||o.id}" min="0" placeholder="0" oninput="updatePreview('${o.odev_id||o.id}')"
-                    class="w-full text-center py-3 text-xl font-extrabold rounded-xl bg-white border-2 border-outline-variant text-on-surface">
+        ${bekleyen.map(o => {
+          const oid = o.odev_id || o.id || '';
+          return `
+          <div class="border-b border-outline-variant/15 last:border-0">
+            <div class="px-5 py-4">
+              <div class="flex items-start gap-3 mb-3">
+                <div class="w-2.5 h-2.5 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
+                  <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}${o.odev_detay?' &nbsp;•&nbsp; '+o.odev_detay:''}</div>
                 </div>
               </div>
-              <div id="preview-${o.odev_id||o.id}" class="hidden text-center text-sm font-bold mb-3 py-2 rounded-xl bg-white"></div>
-              <button onclick="submitSonuc('${o.odev_id||o.id}')"
-                class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20">
-                💾 Kaydet
-              </button>
+              <div class="ml-5 bg-surface-container-low rounded-xl p-4">
+                <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Sonuçlarını gir</div>
+                <div class="grid grid-cols-4 gap-2 mb-3">
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="text-xs font-bold text-outline">SORU</div>
+                    <input type="number" id="s-${oid}" min="0" placeholder="0" oninput="updatePreview('${oid}')"
+                      class="w-full text-center py-2.5 text-lg font-extrabold rounded-xl bg-white border-2 border-outline-variant text-on-surface">
+                  </div>
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="text-xs font-bold text-tertiary">DOĞRU</div>
+                    <input type="number" id="d-${oid}" min="0" placeholder="0" oninput="updatePreview('${oid}')"
+                      class="w-full text-center py-2.5 text-lg font-extrabold rounded-xl bg-white border-2 border-tertiary text-tertiary">
+                  </div>
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="text-xs font-bold text-error">YANLIŞ</div>
+                    <input type="number" id="y-${oid}" min="0" placeholder="0" oninput="updatePreview('${oid}')"
+                      class="w-full text-center py-2.5 text-lg font-extrabold rounded-xl bg-white border-2 border-error text-error">
+                  </div>
+                  <div class="flex flex-col items-center gap-1">
+                    <div class="text-xs font-bold text-outline">BOŞ</div>
+                    <input type="number" id="b-${oid}" min="0" placeholder="0" oninput="updatePreview('${oid}')"
+                      class="w-full text-center py-2.5 text-lg font-extrabold rounded-xl bg-white border-2 border-outline-variant text-on-surface">
+                  </div>
+                </div>
+                <div id="preview-${oid}" class="hidden text-center text-sm font-bold mb-3 py-2 rounded-xl bg-white"></div>
+                <button onclick="submitSonuc('${oid}')"
+                  class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 active:scale-[0.98] transition-all">
+                  ✅ Tamamlandı Olarak Kaydet
+                </button>
+              </div>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>`;
   }
 
@@ -1815,38 +1825,42 @@ function toggleSonucForm(id) {
 }
 
 function updatePreview(id) {
+  const s=Number(document.getElementById('s-'+id)?.value)||0;
   const d=Number(document.getElementById('d-'+id)?.value)||0;
   const y=Number(document.getElementById('y-'+id)?.value)||0;
   const b=Number(document.getElementById('b-'+id)?.value)||0;
-  const top=d+y+b;
+  const top=s||(d+y+b);
   const pct=top>0?Math.round(d/top*100):0;
   const prev=document.getElementById('preview-'+id);
-  if(top>0){
+  if(d||y||b){
     prev.classList.remove('hidden');
-    prev.textContent=`Toplam: ${top} soru — Başarı: %${pct}`;
+    prev.textContent=`${top} soru — %${pct} başarı`;
     prev.style.color=pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
   } else prev.classList.add('hidden');
 }
 
 async function submitSonuc(odevId) {
+  const s=Number(document.getElementById('s-'+odevId)?.value)||0;
   const d=Number(document.getElementById('d-'+odevId)?.value)||0;
   const y=Number(document.getElementById('y-'+odevId)?.value)||0;
   const b=Number(document.getElementById('b-'+odevId)?.value)||0;
+  const toplam = s || (d+y+b);
 
   showToast('Kaydediliyor...');
-  const { error } = await sb.from('odevler').update({
-    dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'TAMAMLANDI'
-  }).eq('odev_id', odevId);
+  let err;
 
-  if (error) {
-    // id alanı farklı olabilir, id ile dene
-    const { error: e2 } = await sb.from('odevler').update({
-      dogru: d, yanlis: y, bos: b, toplam: d+y+b, durum: 'TAMAMLANDI'
-    }).eq('id', odevId);
-    if (e2) { showToast('❌ ' + e2.message); return; }
+  ({ error: err } = await sb.from('odevler').update({
+    dogru: d, yanlis: y, bos: b, toplam, durum: 'TAMAMLANDI'
+  }).eq('odev_id', odevId));
+
+  if (err) {
+    ({ error: err } = await sb.from('odevler').update({
+      dogru: d, yanlis: y, bos: b, toplam, durum: 'TAMAMLANDI'
+    }).eq('id', odevId));
   }
 
-  showToast('✅ Sonuç kaydedildi!');
+  if (err) { showToast('❌ ' + err.message); return; }
+  showToast('✅ Sonuç kaydedildi! ' + (toplam>0?`%${Math.round(d/toplam*100)} başarı`:''));
   loadOgrenciPanel();
 }
 

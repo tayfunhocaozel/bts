@@ -560,6 +560,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let state = {
   rol: null, user: null,
   ogrenciler: [], kazanimlar: [], kaynaklar: [],
+  _dersKazanimlar: [],
   _odevKazanimlar: [], _odevKaynaklar: [], _odevSinif: ''
 };
 
@@ -778,31 +779,88 @@ async function loadDashboard() {
 }
 
 // ── DERS KAYDET ───────────────────────────────────────────────
-function dersOgrenciSecildi() {
+async function dersOgrenciSecildi() {
   const sel = document.getElementById('ders-ogrenci');
   const sinif = sel.options[sel.selectedIndex]?.dataset.sinif || '';
   const konuSel = document.getElementById('ders-konu');
-  konuSel.innerHTML = '<option value="">— Konu seçin —</option>';
-
-  const sinifNorm = sinif.toLowerCase().replace('.',''); const konular = [...new Set(state.kazanimlar.filter(k => !sinif || (k.sinif||'').toLowerCase().replace('.','').includes(sinifNorm.replace(/[^0-9]/g,''))).map(k => k.konu))];
-  konular.forEach(k => konuSel.innerHTML += `<option value="${k}">${k}</option>`);
+  konuSel.innerHTML = '<option value="">⏳ Yükleniyor...</option>';
   document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
+
+  if (!sinif) {
+    konuSel.innerHTML = '<option value="">— Öğrenci seçin —</option>';
+    return;
+  }
+
+  // Supabase'den direkt bu sınıfın kazanımlarını çek
+  const { data, error } = await sb.from('kazanimlar')
+    .select('*')
+    .eq('sinif', sinif)
+    .order('konu');
+
+  if (error || !data || !data.length) {
+    // Büyük/küçük harf farkı olabilir, tüm varyasyonları dene
+    const sinifNo = sinif.match(/\d+/)?.[0] || '';
+    const { data: data2 } = await sb.from('kazanimlar')
+      .select('*')
+      .ilike('sinif', `%${sinifNo}%`)
+      .order('konu');
+    state._dersKazanimlar = data2 || [];
+  } else {
+    state._dersKazanimlar = data;
+  }
+
+  const konular = [...new Set(state._dersKazanimlar.map(k => k.konu))];
+  konuSel.innerHTML = '<option value="">— Konu seçin —</option>' +
+    konular.map(k => `<option value="${k}">${k}</option>`).join('');
+
+  if (!konular.length) {
+    konuSel.innerHTML = '<option value="">— Konu bulunamadı —</option>';
+    showToast(`⚠️ ${sinif} için kazanım bulunamadı`);
+  }
 }
 
 function konuSecildi() {
   const konu = document.getElementById('ders-konu').value;
   const container = document.getElementById('kazanim-checkboxlar');
-  if (!konu) { container.innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>'; return; }
+  if (!konu) {
+    container.innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
+    return;
+  }
 
-  const filtered = state.kazanimlar.filter(k => k.konu === konu);
-  container.innerHTML = filtered.map(k => `
-    <label class="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-surface-container transition-colors">
-      <input type="checkbox" value="${k.kazanim_kodu||k.id}" class="mt-0.5 w-4 h-4 accent-primary flex-shrink-0">
+  const filtered = (state._dersKazanimlar || []).filter(k => k.konu === konu);
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="p-4 text-sm text-outline">Bu konuya ait kazanım bulunamadı</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map((k, i) => `
+    <label class="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-surface-container transition-colors select-none" 
+      onclick="toggleKazanim(event, 'kaz-${i}')">
+      <div class="mt-0.5 w-5 h-5 rounded-md border-2 border-primary/40 flex items-center justify-center flex-shrink-0 transition-all" id="kaz-box-${i}">
+        <span class="material-symbols-outlined text-sm text-primary hidden" id="kaz-check-${i}">check</span>
+      </div>
+      <input type="checkbox" id="kaz-${i}" value="${k.kazanim_kodu||''}" class="hidden">
       <div>
         <div class="text-xs font-bold text-primary mb-0.5">${k.kazanim_kodu||''}</div>
-        <div class="text-sm text-on-surface leading-snug">${k.kazanim_aciklamasi||k.aciklama||''}</div>
+        <div class="text-sm text-on-surface leading-snug">${k.kazanim_aciklamasi||''}</div>
       </div>
     </label>`).join('');
+}
+
+function toggleKazanim(event, id) {
+  event.preventDefault();
+  const cb = document.getElementById(id);
+  const box = document.getElementById(id.replace('kaz-','kaz-box-'));
+  const check = document.getElementById(id.replace('kaz-','kaz-check-'));
+  cb.checked = !cb.checked;
+  if (cb.checked) {
+    box.classList.add('bg-primary', 'border-primary');
+    check.classList.remove('hidden');
+  } else {
+    box.classList.remove('bg-primary', 'border-primary');
+    check.classList.add('hidden');
+  }
 }
 
 async function dersSave() {

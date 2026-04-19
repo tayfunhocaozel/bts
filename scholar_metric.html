@@ -1241,9 +1241,9 @@ function renderOgrenciler() {
         <div class="text-sm font-semibold text-on-surface truncate">${o.ad_soyad||'—'}</div>
         <div class="text-xs text-outline">${o.sinif||'—'} — ${o.ogrenci_id}</div>
       </div>
-      <button onclick="goRaporFor('${o.ogrenci_id}')"
-        class="text-xs font-bold px-3 py-1.5 rounded-full bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors">
-        Rapor
+      <button onclick="ogrenciDuzenle('${o.ogrenci_id}')"
+        class="text-xs font-bold px-3 py-1.5 rounded-full bg-tertiary-container text-on-tertiary-container hover:bg-tertiary hover:text-on-tertiary transition-colors">
+        ✏️ Düzenle
       </button>
     </div>`).join('');
 }
@@ -1252,6 +1252,65 @@ function goRaporFor(id) {
   goPage('rapor');
   document.getElementById('rapor-ogrenci').value = id;
   loadRapor();
+}
+
+function ogrenciDuzenle(id) {
+  const o = state.ogrenciler.find(x => x.ogrenci_id === id);
+  if (!o) return;
+  const m = document.getElementById('ogr-duzenle-modal');
+  m.dataset.ogrenciId = id;
+  m.querySelector('#od-ad').value     = o.ad_soyad    || '';
+  m.querySelector('#od-sinif').value  = o.sinif        || '';
+  m.querySelector('#od-sube').value   = o.sube         || '';
+  m.querySelector('#od-okul').value   = o.okul         || '';
+  m.querySelector('#od-tc').value     = o.tc_kimlik    || '';
+  m.querySelector('#od-okulno').value = o.okul_no      || '';
+  m.querySelector('#od-veli').value   = o.veli_adi     || '';
+  m.querySelector('#od-tel').value    = o.veli_telefonu|| '';
+  m.classList.remove('hidden');
+  m.querySelector('#od-ad').focus();
+}
+
+async function ogrenciDuzenleKaydet() {
+  const m = document.getElementById('ogr-duzenle-modal');
+  const id = m.dataset.ogrenciId;
+  const ad = m.querySelector('#od-ad').value.trim();
+  if (!ad) { showToast('⚠️ Ad Soyad zorunlu'); return; }
+  const payload = {
+    ad_soyad:      ad,
+    sinif:         m.querySelector('#od-sinif').value,
+    sube:          m.querySelector('#od-sube').value.trim(),
+    okul:          m.querySelector('#od-okul').value.trim(),
+    tc_kimlik:     m.querySelector('#od-tc').value.trim(),
+    okul_no:       m.querySelector('#od-okulno').value.trim(),
+    veli_adi:      m.querySelector('#od-veli').value.trim(),
+    veli_telefonu: m.querySelector('#od-tel').value.trim(),
+  };
+  m.classList.add('hidden');
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('ogrenciler').update(payload).eq('ogrenci_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Bilgiler güncellendi');
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  state.ogrenciler = data || [];
+  fillSelects();
+  renderOgrenciler();
+}
+
+async function ogrenciSil() {
+  const m = document.getElementById('ogr-duzenle-modal');
+  const id = m.dataset.ogrenciId;
+  const ad = m.querySelector('#od-ad').value.trim();
+  if (!confirm(`"${ad}" adlı öğrenciyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+  m.classList.add('hidden');
+  showToast('Siliniyor...');
+  const { error } = await sb.from('ogrenciler').delete().eq('ogrenci_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑️ Öğrenci silindi');
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  state.ogrenciler = data || [];
+  fillSelects();
+  renderOgrenciler();
 }
 
 async function ogrenciEkle() {
@@ -1827,6 +1886,69 @@ function showToast(msg) {
   t._timer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 </script>
+
+<!-- Öğrenci Düzenle Modal -->
+<div id="ogr-duzenle-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div class="bg-surface rounded-2xl shadow-xl p-6 w-96 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+    <div class="font-headline font-bold text-lg text-on-surface">✏️ Öğrenci Düzenle</div>
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Ad Soyad *</label>
+        <input id="od-ad" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Sınıf</label>
+          <select id="od-sinif" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+            <option>5. Sınıf</option><option>6. Sınıf</option><option>7. Sınıf</option><option>8. Sınıf</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Şube</label>
+          <input id="od-sube" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Okul</label>
+        <input id="od-okul" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">TC Kimlik</label>
+          <input id="od-tc" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Okul No</label>
+          <input id="od-okulno" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veli Adı</label>
+        <input id="od-veli" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veli Telefonu</label>
+        <input id="od-tel" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+    </div>
+    <div class="flex gap-2 justify-between mt-1">
+      <button onclick="ogrenciSil()"
+        class="px-4 py-2 rounded-xl text-sm font-semibold bg-error-container text-error hover:bg-error hover:text-on-error transition-colors">
+        🗑️ Sil
+      </button>
+      <div class="flex gap-2">
+        <button onclick="document.getElementById('ogr-duzenle-modal').classList.add('hidden')"
+          class="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">
+          İptal
+        </button>
+        <button onclick="ogrenciDuzenleKaydet()"
+          class="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/80 transition-colors">
+          Kaydet
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Sonuç Gir Modal -->
 <div id="sonuc-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">

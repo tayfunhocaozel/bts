@@ -127,7 +127,7 @@ tailwind.config = {
         <div id="form-ogrenci" class="space-y-4 hidden">
           <div>
             <label class="block text-sm font-semibold text-on-surface-variant mb-2">TC Kimlik Numarası</label>
-            <input type="number" id="ogrenci-tc" placeholder="12345678901"
+            <input type="text" inputmode="numeric" id="ogrenci-tc" placeholder="12345678901"
               class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm"
               onkeydown="if(event.key==='Enter') doLogin()"/>
           </div>
@@ -748,7 +748,7 @@ async function doLogin() {
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
-      const { data, error } = await sb.from('ogrenciler').select('*').eq('tc_kimlik', tc).eq('kayit_durumu', 'AKTİF').single();
+      const { data, error } = await sb.from('ogrenciler').select('*').eq('tc_kimlik', tc).single();
       if (error || !data) { showError('TC kimlik numarası bulunamadı'); return; }
       state.rol = 'ogrenci';
       state.user = { ...data, rol: 'ogrenci' };

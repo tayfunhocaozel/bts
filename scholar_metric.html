@@ -748,20 +748,24 @@ async function doLogin() {
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
-      const { data, error } = await sb.from('ogrenciler').select('*').eq('tc_kimlik', tc).limit(1);
-      if (error) { showError('Bağlantı hatası: ' + error.message); return; }
-      if (!data || !data.length) { showError('TC kimlik numarası bulunamadı'); return; }
-      const ogrenci = data[0];
+      const { data: tumOgr, error: tumErr } = await sb.from('ogrenciler').select('ogrenci_id, tc_kimlik, ad_soyad');
+      if (tumErr) { showError('Bağlantı hatası: ' + tumErr.message); return; }
+      const ogrenci = (tumOgr||[]).find(o => String(o.tc_kimlik||'').trim() === tc);
+      if (!ogrenci) { showError(`Bulunamadı (${(tumOgr||[]).length} kayıt içinde arandı)`); return; }
+      const { data: fullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', ogrenci.ogrenci_id).limit(1);
+      const ogrenciFull = (fullData||[])[0] || ogrenci;
       state.rol = 'ogrenci';
-      state.user = { ...ogrenci, rol: 'ogrenci' };
+      state.user = { ...ogrenciFull, rol: 'ogrenci' };
 
     } else {
       const tel = document.getElementById('veli-tel').value.trim();
-      const { data: vdata, error: verror } = await sb.from('ogrenciler').select('*').eq('veli_telefonu', tel).limit(1);
-      if (verror) { showError('Bağlantı hatası: ' + verror.message); return; }
-      if (!vdata || !vdata.length) { showError('Telefon numarası bulunamadı'); return; }
+      const { data: tumVeli, error: veliErr } = await sb.from('ogrenciler').select('ogrenci_id, veli_telefonu, ad_soyad');
+      if (veliErr) { showError('Bağlantı hatası: ' + veliErr.message); return; }
+      const veliOgr = (tumVeli||[]).find(o => String(o.veli_telefonu||'').trim() === tel);
+      if (!veliOgr) { showError(`Bulunamadı (${(tumVeli||[]).length} kayıt içinde arandı)`); return; }
+      const { data: veliFullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', veliOgr.ogrenci_id).limit(1);
       state.rol = 'veli';
-      state.user = { ...vdata[0], rol: 'veli' };
+      state.user = { ...((veliFullData||[])[0] || veliOgr), rol: 'veli' };
     }
 
     initApp();

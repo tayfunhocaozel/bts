@@ -759,9 +759,9 @@ async function doLogin() {
 
     } else {
       const tel = document.getElementById('veli-tel').value.trim();
-      const { data: tumVeli, error: veliErr } = await sb.from('ogrenciler').select('ogrenci_id, veli_telefonu, ad_soyad');
+      const { data: tumVeli, error: veliErr } = await sb.from('ogrenciler').select('ogrenci_id, veli_telefon, ad_soyad');
       if (veliErr) { showError('Bağlantı hatası: ' + veliErr.message); return; }
-      const veliOgr = (tumVeli||[]).find(o => String(o.veli_telefonu||'').trim() === tel);
+      const veliOgr = (tumVeli||[]).find(o => String(o.veli_telefon||'').trim() === tel);
       if (!veliOgr) { showError(`Bulunamadı (${(tumVeli||[]).length} kayıt içinde arandı)`); return; }
       const { data: veliFullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', veliOgr.ogrenci_id).limit(1);
       state.rol = 'veli';
@@ -1367,7 +1367,7 @@ function ogrenciDuzenle(id) {
   m.querySelector('#od-tc').value     = o.tc_no    || '';
   m.querySelector('#od-okulno').value = o.okul_no      || '';
   m.querySelector('#od-veli').value   = o.veli_adi     || '';
-  m.querySelector('#od-tel').value    = o.veli_telefonu|| '';
+  m.querySelector('#od-tel').value    = o.veli_telefon|| '';
   m.classList.remove('hidden');
   m.querySelector('#od-ad').focus();
 }
@@ -1385,7 +1385,7 @@ async function ogrenciDuzenleKaydet() {
     tc_no:     m.querySelector('#od-tc').value.trim(),
     okul_no:       m.querySelector('#od-okulno').value.trim(),
     veli_adi:      m.querySelector('#od-veli').value.trim(),
-    veli_telefonu: m.querySelector('#od-tel').value.trim(),
+    veli_telefon: m.querySelector('#od-tel').value.trim(),
   };
   m.classList.add('hidden');
   showToast('Kaydediliyor...');
@@ -1433,7 +1433,7 @@ async function ogrenciEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').insert({
     ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
-    tc_no: tc, okul_no: okulno, veli_adi: veli, veli_telefonu: tel, kayit_durumu: 'AKTİF'
+    tc_no: tc, okul_no: okulno, veli_adi: veli, veli_telefon: tel, kayit_durumu: 'AKTİF'
   });
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Öğrenci eklendi!');

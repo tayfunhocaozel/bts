@@ -748,11 +748,12 @@ async function doLogin() {
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
-      const { data: tumOgr, error: tumErr } = await sb.from('ogrenciler').select('*').limit(1);
+      const { data: tumOgr, error: tumErr } = await sb.from('ogrenciler').select('ogrenci_id, tc_no, ad_soyad');
       if (tumErr) { showError('Bağlantı hatası: ' + tumErr.message); return; }
-      if (tumOgr && tumOgr.length) { showError('Kolon adları: ' + Object.keys(tumOgr[0]).join(', ')); return; }
-      showError('Tablo boş');
-      return;
+      const ogrenci = (tumOgr||[]).find(o => String(o.tc_no||'').trim() === tc);
+      if (!ogrenci) { showError(`TC kimlik numarası bulunamadı`); return; }
+      const { data: fullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', ogrenci.ogrenci_id).limit(1);
+      const ogrenciFull = (fullData||[])[0] || ogrenci;
       state.rol = 'ogrenci';
       state.user = { ...ogrenciFull, rol: 'ogrenci' };
 
@@ -1363,7 +1364,7 @@ function ogrenciDuzenle(id) {
   m.querySelector('#od-sinif').value  = o.sinif        || '';
   m.querySelector('#od-sube').value   = o.sube         || '';
   m.querySelector('#od-okul').value   = o.okul         || '';
-  m.querySelector('#od-tc').value     = o.tc_kimlik    || '';
+  m.querySelector('#od-tc').value     = o.tc_no    || '';
   m.querySelector('#od-okulno').value = o.okul_no      || '';
   m.querySelector('#od-veli').value   = o.veli_adi     || '';
   m.querySelector('#od-tel').value    = o.veli_telefonu|| '';
@@ -1381,7 +1382,7 @@ async function ogrenciDuzenleKaydet() {
     sinif:         m.querySelector('#od-sinif').value,
     sube:          m.querySelector('#od-sube').value.trim(),
     okul:          m.querySelector('#od-okul').value.trim(),
-    tc_kimlik:     m.querySelector('#od-tc').value.trim(),
+    tc_no:     m.querySelector('#od-tc').value.trim(),
     okul_no:       m.querySelector('#od-okulno').value.trim(),
     veli_adi:      m.querySelector('#od-veli').value.trim(),
     veli_telefonu: m.querySelector('#od-tel').value.trim(),
@@ -1432,7 +1433,7 @@ async function ogrenciEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').insert({
     ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
-    tc_kimlik: tc, okul_no: okulno, veli_adi: veli, veli_telefonu: tel, kayit_durumu: 'AKTİF'
+    tc_no: tc, okul_no: okulno, veli_adi: veli, veli_telefonu: tel, kayit_durumu: 'AKTİF'
   });
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Öğrenci eklendi!');

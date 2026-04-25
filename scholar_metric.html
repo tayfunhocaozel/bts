@@ -748,12 +748,11 @@ async function doLogin() {
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
-      const { data: tumOgr, error: tumErr } = await sb.from('ogrenciler').select('ogrenci_id, tc_kimlik, ad_soyad');
+      const { data: tumOgr, error: tumErr } = await sb.from('ogrenciler').select('*').limit(1);
       if (tumErr) { showError('Bağlantı hatası: ' + tumErr.message); return; }
-      const ogrenci = (tumOgr||[]).find(o => String(o.tc_kimlik||'').trim() === tc);
-      if (!ogrenci) { showError(`Bulunamadı (${(tumOgr||[]).length} kayıt içinde arandı)`); return; }
-      const { data: fullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', ogrenci.ogrenci_id).limit(1);
-      const ogrenciFull = (fullData||[])[0] || ogrenci;
+      if (tumOgr && tumOgr.length) { showError('Kolon adları: ' + Object.keys(tumOgr[0]).join(', ')); return; }
+      showError('Tablo boş');
+      return;
       state.rol = 'ogrenci';
       state.user = { ...ogrenciFull, rol: 'ogrenci' };
 

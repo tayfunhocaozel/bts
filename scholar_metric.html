@@ -748,17 +748,20 @@ async function doLogin() {
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
-      const { data, error } = await sb.from('ogrenciler').select('*').eq('tc_kimlik', tc).single();
-      if (error || !data) { showError('TC kimlik numarası bulunamadı'); return; }
+      const { data, error } = await sb.from('ogrenciler').select('*').eq('tc_kimlik', tc).limit(1);
+      if (error) { showError('Bağlantı hatası: ' + error.message); return; }
+      if (!data || !data.length) { showError('TC kimlik numarası bulunamadı'); return; }
+      const ogrenci = data[0];
       state.rol = 'ogrenci';
-      state.user = { ...data, rol: 'ogrenci' };
+      state.user = { ...ogrenci, rol: 'ogrenci' };
 
     } else {
       const tel = document.getElementById('veli-tel').value.trim();
-      const { data, error } = await sb.from('ogrenciler').select('*').eq('veli_telefonu', tel).single();
-      if (error || !data) { showError('Telefon numarası bulunamadı'); return; }
+      const { data: vdata, error: verror } = await sb.from('ogrenciler').select('*').eq('veli_telefonu', tel).limit(1);
+      if (verror) { showError('Bağlantı hatası: ' + verror.message); return; }
+      if (!vdata || !vdata.length) { showError('Telefon numarası bulunamadı'); return; }
       state.rol = 'veli';
-      state.user = { ...data, rol: 'veli' };
+      state.user = { ...vdata[0], rol: 'veli' };
     }
 
     initApp();

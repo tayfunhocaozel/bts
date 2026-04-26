@@ -566,6 +566,85 @@ tailwind.config = {
       </div>
     </div>
 
+    <!-- ── DENEMELER -->
+    <div id="page-denemeler" class="page">
+      <div class="mb-5">
+        <h1 class="font-headline text-2xl font-bold text-on-surface">Denemeler</h1>
+        <p class="text-outline text-sm mt-0.5">Öğrenci deneme sınavı sonuçları</p>
+      </div>
+
+      <!-- Öğrenci seç + form -->
+      <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] p-5 mb-5">
+        <div class="mb-4">
+          <label class="block text-xs font-bold text-outline uppercase tracking-wider mb-2">Öğrenci</label>
+          <select id="deneme-ogrenci" onchange="loadDenemeler()"
+            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+            <option value="">— Öğrenci seçin —</option>
+          </select>
+        </div>
+
+        <div class="border-t border-outline-variant/20 pt-4">
+          <div class="text-xs font-bold text-outline uppercase tracking-wider mb-3">Yeni Deneme Ekle</div>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs font-semibold text-outline mb-1">Tarih</label>
+              <input type="date" id="deneme-tarih"
+                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-outline mb-1">Deneme Adı</label>
+              <input type="text" id="deneme-adi" placeholder="örn. TYT Deneme 1"
+                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-3 mb-4">
+            <div>
+              <label class="block text-xs font-bold text-tertiary mb-1 text-center">Doğru</label>
+              <input type="number" id="deneme-dogru" min="0" placeholder="0"
+                oninput="denemeNetHesapla()"
+                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-2 border-tertiary text-tertiary font-bold text-center text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-error mb-1 text-center">Yanlış</label>
+              <input type="number" id="deneme-yanlis" min="0" placeholder="0"
+                oninput="denemeNetHesapla()"
+                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-2 border-error text-error font-bold text-center text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-outline mb-1 text-center">Boş</label>
+              <input type="number" id="deneme-bos" min="0" placeholder="0"
+                oninput="denemeNetHesapla()"
+                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-center text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-outline mb-1 text-center">Toplam Soru</label>
+              <input type="number" id="deneme-toplam" min="0" placeholder="0"
+                oninput="denemeNetHesapla()"
+                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-center text-sm">
+            </div>
+          </div>
+          <!-- Önizleme -->
+          <div id="deneme-onizleme" class="hidden bg-surface-container rounded-xl px-4 py-3 mb-3 flex items-center gap-6 text-sm">
+            <div class="text-center">
+              <div class="text-xs text-outline mb-0.5">Net</div>
+              <div class="font-headline font-extrabold text-primary" id="deneme-net-onizleme">—</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-outline mb-0.5">Başarı %</div>
+              <div class="font-headline font-extrabold" id="deneme-basari-onizleme">—</div>
+            </div>
+          </div>
+          <button onclick="denemeEkle()"
+            class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
+            ➕ Deneme Ekle
+          </button>
+        </div>
+      </div>
+
+      <!-- Liste -->
+      <div id="deneme-liste"></div>
+    </div>
+
     <!-- ── RAPOR -->
     <div id="page-rapor" class="page">
       <div class="flex items-center justify-between mb-4">
@@ -870,6 +949,7 @@ function buildNav() {
     { id: 'odev',       icon: 'assignment',    label: 'Ödev Gir' },
     { id: 'ogrenciler', icon: 'group',         label: 'Öğrenciler' },
     { id: 'kaynaklar',  icon: 'library_books', label: 'Kaynaklar' },
+    { id: 'denemeler',  icon: 'quiz',          label: 'Denemeler' },
     { id: 'rapor',      icon: 'analytics',     label: 'Rapor' },
   ] : state.rol === 'ogrenci' ? [
     { id: 'ogrenci-panel', icon: 'dashboard', label: 'Panel' },
@@ -927,7 +1007,7 @@ function fillSelects() {
   const ogrOpts = '<option value="">— Öğrenci seçin —</option>' +
     state.ogrenciler.map(o => { const s = (o.sinif||'').trim(); return `<option value="${o.ogrenci_id}" data-sinif="${s}">${o.ad_soyad} (${s})</option>`; }).join('');
 
-  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci','program-ogrenci'].forEach(id => {
+  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci','program-ogrenci','deneme-ogrenci'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = ogrOpts;
   });
@@ -1616,6 +1696,128 @@ async function kaynakGuncelle(id, deger) {
 }
 
 // ── RAPOR ─────────────────────────────────────────────────────
+// ── DENEMELER ─────────────────────────────────────────────────
+function denemeNetHesapla() {
+  const d = parseFloat(document.getElementById('deneme-dogru').value)  || 0;
+  const y = parseFloat(document.getElementById('deneme-yanlis').value) || 0;
+  const t = parseFloat(document.getElementById('deneme-toplam').value) || 0;
+  const net = d - (y / 3);
+  const pct = t > 0 ? (net / t * 100) : 0;
+  const onizleme = document.getElementById('deneme-onizleme');
+  if (d || y) {
+    onizleme.classList.remove('hidden');
+    document.getElementById('deneme-net-onizleme').textContent    = net.toFixed(2);
+    const basariEl = document.getElementById('deneme-basari-onizleme');
+    basariEl.textContent  = '%' + (t > 0 ? pct.toFixed(2) : '—');
+    basariEl.style.color  = pct >= 80 ? '#00661d' : pct >= 60 ? '#805600' : '#ba1a1a';
+  } else {
+    onizleme.classList.add('hidden');
+  }
+}
+
+async function denemeEkle() {
+  const ogrenciId = document.getElementById('deneme-ogrenci').value;
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
+  const tarih = document.getElementById('deneme-tarih').value;
+  const adi   = document.getElementById('deneme-adi').value.trim();
+  if (!tarih) { showToast('⚠️ Tarih girin'); return; }
+  if (!adi)   { showToast('⚠️ Deneme adı girin'); return; }
+
+  const d   = parseFloat(document.getElementById('deneme-dogru').value)  || 0;
+  const y   = parseFloat(document.getElementById('deneme-yanlis').value) || 0;
+  const b   = parseFloat(document.getElementById('deneme-bos').value)    || 0;
+  const top = parseFloat(document.getElementById('deneme-toplam').value) || 0;
+  const net = parseFloat((d - y / 3).toFixed(2));
+  const pct = top > 0 ? parseFloat((net / top * 100).toFixed(2)) : 0;
+
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('denemeler').insert({
+    ogrenci_id: ogrenciId, tarih, deneme_adi: adi,
+    dogru: d, yanlis: y, bos: b, toplam_soru: top,
+    net, basari_yuzdesi: pct
+  });
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Deneme eklendi!');
+  ['deneme-adi','deneme-dogru','deneme-yanlis','deneme-bos','deneme-toplam'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('deneme-tarih').value = '';
+  document.getElementById('deneme-onizleme').classList.add('hidden');
+  loadDenemeler();
+}
+
+async function loadDenemeler() {
+  const ogrenciId = document.getElementById('deneme-ogrenci').value;
+  const el = document.getElementById('deneme-liste');
+  if (!ogrenciId) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="flex justify-center py-8"><div class="spinner"></div></div>';
+
+  const { data, error } = await sb.from('denemeler').select('*')
+    .eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false });
+
+  if (error) { el.innerHTML = `<div class="text-sm text-error text-center py-4">${error.message}</div>`; return; }
+  const liste = data || [];
+
+  if (!liste.length) {
+    el.innerHTML = '<div class="bg-surface-container-lowest rounded-2xl p-6 text-sm text-outline text-center">Henüz deneme kaydı yok.</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+      <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
+        <span class="font-headline font-bold text-on-surface text-sm">📋 Deneme Sonuçları</span>
+        <span class="text-xs text-outline">${liste.length} kayıt</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="bg-surface-container border-b border-outline-variant/20 text-xs font-bold text-outline uppercase tracking-wider">
+              <th class="px-4 py-3 text-left">Tarih</th>
+              <th class="px-4 py-3 text-left">Deneme Adı</th>
+              <th class="px-3 py-3 text-center text-tertiary">D</th>
+              <th class="px-3 py-3 text-center text-error">Y</th>
+              <th class="px-3 py-3 text-center">B</th>
+              <th class="px-3 py-3 text-center text-primary">Net</th>
+              <th class="px-3 py-3 text-center">Başarı %</th>
+              <th class="px-3 py-3 text-center"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${liste.map((r, i) => {
+              const pct = parseFloat(r.basari_yuzdesi) || 0;
+              const col = pct >= 80 ? '#00661d' : pct >= 60 ? '#805600' : '#ba1a1a';
+              const bg  = i % 2 === 1 ? 'bg-surface-container/30' : '';
+              const tarihStr = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR') : '—';
+              return `<tr class="border-b border-outline-variant/10 last:border-0 ${bg}">
+                <td class="px-4 py-3 text-xs text-outline">${tarihStr}</td>
+                <td class="px-4 py-3 font-semibold text-on-surface">${r.deneme_adi||'—'}</td>
+                <td class="px-3 py-3 text-center font-bold text-tertiary">${r.dogru}</td>
+                <td class="px-3 py-3 text-center font-bold text-error">${r.yanlis}</td>
+                <td class="px-3 py-3 text-center text-outline">${r.bos}</td>
+                <td class="px-3 py-3 text-center font-extrabold text-primary">${parseFloat(r.net).toFixed(2)}</td>
+                <td class="px-3 py-3 text-center">
+                  <span class="font-extrabold text-xs px-2 py-1 rounded-full" style="background:${col}20;color:${col}">
+                    %${pct.toFixed(2)}
+                  </span>
+                </td>
+                <td class="px-3 py-3 text-center">
+                  <button onclick="denemeKayitSil('${r.id}')" class="text-outline hover:text-error transition-colors text-lg font-bold">×</button>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function denemeKayitSil(id) {
+  if (!confirm('Bu deneme kaydını silmek istediğinize emin misiniz?')) return;
+  const { error } = await sb.from('denemeler').delete().eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑️ Silindi');
+  loadDenemeler();
+}
+
 async function loadRapor() {
   const ogrenciId = document.getElementById('rapor-ogrenci').value;
   if (!ogrenciId) return;

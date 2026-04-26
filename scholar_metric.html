@@ -721,6 +721,10 @@ tailwind.config = {
           class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-surface-container-lowest text-primary shadow-sm">
           📋 Ödevlerim
         </button>
+        <button onclick="ogrTab('denemeler')" id="tab-denemeler"
+          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
+          📝 Denemeler
+        </button>
         <button onclick="ogrTab('dersler')" id="tab-dersler"
           class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
           📖 Derslerim
@@ -751,6 +755,9 @@ tailwind.config = {
         <div id="ogr-tamamlanan-bolum"></div>
       </div>
 
+      <div id="ogr-tab-denemeler" class="hidden">
+        <div id="ogr-denemeler-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
+      </div>
       <div id="ogr-tab-dersler" class="hidden">
         <div id="ogr-dersler-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
       </div>
@@ -801,6 +808,10 @@ tailwind.config = {
           class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
           📖 Dersler
         </button>
+        <button onclick="veliTab('denemeler')" id="vtab-denemeler"
+          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
+          📝 Denemeler
+        </button>
         <button onclick="veliTab('basari')" id="vtab-basari"
           class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
           🏅 Başarı
@@ -810,6 +821,7 @@ tailwind.config = {
       <div id="veli-tab-ozet"></div>
       <div id="veli-tab-odevler" class="hidden"></div>
       <div id="veli-tab-dersler" class="hidden"></div>
+      <div id="veli-tab-denemeler" class="hidden"></div>
       <div id="veli-tab-basari" class="hidden"></div>
     </div>
 
@@ -1826,15 +1838,17 @@ async function loadRapor() {
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
-  const [odevRes, kazRes, dersRes] = await Promise.all([
+  const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).eq('durum','TAMAMLANDI'),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+    sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
   const odevler  = odevRes.data  || [];
   const kazData  = kazRes.data   || [];
   const dersler  = dersRes.data  || [];
+  const denemeler = denemeRes.data || [];
   const konular  = [...new Set(kazData.map(k => k.konu))];
 
   // Konu istatistikleri
@@ -2009,7 +2023,51 @@ async function loadRapor() {
         }).join('')}
       </div>`}
     </div>
-  </div>`;
+  </div>
+
+  ${denemeler.length ? `
+  <!-- Denemeler -->
+  <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mt-5">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-xl">quiz</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Deneme Sonuçları</h2>
+      <span class="ml-auto text-xs text-outline">${denemeler.length} deneme</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="bg-surface-container text-xs font-bold text-outline uppercase tracking-wider border-b border-outline-variant/20">
+            <th class="px-4 py-3 text-left">Tarih</th>
+            <th class="px-4 py-3 text-left">Deneme Adı</th>
+            <th class="px-3 py-3 text-center text-tertiary">D</th>
+            <th class="px-3 py-3 text-center text-error">Y</th>
+            <th class="px-3 py-3 text-center">B</th>
+            <th class="px-3 py-3 text-center text-primary">Net</th>
+            <th class="px-3 py-3 text-center">Başarı %</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${denemeler.map((r,i) => {
+            const pct = parseFloat(r.basari_yuzdesi)||0;
+            const col = pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+            const bg  = i%2===1?'bg-surface-container/30':'';
+            const tarih = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR') : '—';
+            return `<tr class="border-b border-outline-variant/10 last:border-0 ${bg}">
+              <td class="px-4 py-2.5 text-xs text-outline">${tarih}</td>
+              <td class="px-4 py-2.5 font-semibold text-on-surface">${r.deneme_adi||'—'}</td>
+              <td class="px-3 py-2.5 text-center font-bold text-tertiary">${r.dogru}</td>
+              <td class="px-3 py-2.5 text-center font-bold text-error">${r.yanlis}</td>
+              <td class="px-3 py-2.5 text-center text-outline">${r.bos}</td>
+              <td class="px-3 py-2.5 text-center font-extrabold text-primary">${parseFloat(r.net||0).toFixed(2)}</td>
+              <td class="px-3 py-2.5 text-center">
+                <span class="font-extrabold text-xs px-2 py-1 rounded-full" style="background:${col}20;color:${col}">%${pct.toFixed(2)}</span>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>` : ''}`;
 }
 
 // ── MOTİVASYON MESAJLARI ──────────────────────────────────────
@@ -2100,7 +2158,7 @@ function hedefKaydet() {
 
 // ── ÖĞRENCİ PANELİ ───────────────────────────────────────────
 function ogrTab(tab) {
-  ['odevler','dersler','basari'].forEach(t => {
+  ['odevler','denemeler','dersler','basari'].forEach(t => {
     document.getElementById('ogr-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('tab-' + t);
     btn.classList.toggle('bg-surface-container-lowest', t === tab);
@@ -2108,8 +2166,76 @@ function ogrTab(tab) {
     btn.classList.toggle('shadow-sm', t === tab);
     btn.classList.toggle('text-on-surface-variant', t !== tab);
   });
-  if (tab === 'basari') loadOgrBasari();
-  if (tab === 'dersler') loadOgrDersler();
+  if (tab === 'basari')   loadOgrBasari();
+  if (tab === 'dersler')  loadOgrDersler();
+  if (tab === 'denemeler') loadOgrDenemeler();
+}
+
+async function loadOgrDenemeler() {
+  const el = document.getElementById('ogr-denemeler-content');
+  el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+  const { data } = await sb.from('denemeler').select('*')
+    .eq('ogrenci_id', state.user.ogrenci_id).order('tarih', { ascending: false });
+  el.innerHTML = denemeTabloHTML(data || []);
+}
+
+function denemeTabloHTML(liste) {
+  if (!liste.length) return '<div class="bg-surface-container-lowest rounded-xl p-6 text-center text-sm text-outline">Henüz deneme kaydı yok.</div>';
+
+  const enIyi  = liste.reduce((a, b) => (parseFloat(a.basari_yuzdesi)||0) > (parseFloat(b.basari_yuzdesi)||0) ? a : b);
+  const ortalama = liste.reduce((s, r) => s + (parseFloat(r.basari_yuzdesi)||0), 0) / liste.length;
+
+  return `
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="font-headline text-xl font-extrabold text-primary">${parseFloat(enIyi.net||0).toFixed(2)}</div>
+        <div class="text-xs text-outline mt-1">En İyi Net</div>
+        <div class="text-xs text-primary/70 mt-0.5 truncate">${enIyi.deneme_adi||''}</div>
+      </div>
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="font-headline text-xl font-extrabold" style="color:${ortalama>=80?'#00661d':ortalama>=60?'#805600':'#ba1a1a'}">%${ortalama.toFixed(1)}</div>
+        <div class="text-xs text-outline mt-1">Ortalama Başarı</div>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+      <div class="px-5 py-4 border-b border-outline-variant/20">
+        <span class="font-headline font-bold text-on-surface text-sm">📝 Deneme Sonuçları (${liste.length})</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="bg-surface-container text-xs font-bold text-outline uppercase tracking-wider border-b border-outline-variant/20">
+              <th class="px-4 py-3 text-left">Tarih</th>
+              <th class="px-4 py-3 text-left">Deneme</th>
+              <th class="px-3 py-3 text-center text-tertiary">D</th>
+              <th class="px-3 py-3 text-center text-error">Y</th>
+              <th class="px-3 py-3 text-center">B</th>
+              <th class="px-3 py-3 text-center text-primary">Net</th>
+              <th class="px-3 py-3 text-center">Başarı %</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${liste.map((r, i) => {
+              const pct = parseFloat(r.basari_yuzdesi)||0;
+              const col = pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+              const bg  = i%2===1?'bg-surface-container/30':'';
+              const tarih = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR') : '—';
+              return `<tr class="border-b border-outline-variant/10 last:border-0 ${bg}">
+                <td class="px-4 py-3 text-xs text-outline">${tarih}</td>
+                <td class="px-4 py-3 font-semibold text-on-surface">${r.deneme_adi||'—'}</td>
+                <td class="px-3 py-3 text-center font-bold text-tertiary">${r.dogru}</td>
+                <td class="px-3 py-3 text-center font-bold text-error">${r.yanlis}</td>
+                <td class="px-3 py-3 text-center text-outline">${r.bos}</td>
+                <td class="px-3 py-3 text-center font-extrabold text-primary">${parseFloat(r.net||0).toFixed(2)}</td>
+                <td class="px-3 py-3 text-center">
+                  <span class="font-extrabold text-xs px-2 py-1 rounded-full" style="background:${col}20;color:${col}">%${pct.toFixed(2)}</span>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 async function loadOgrenciPanel() {
@@ -2396,7 +2522,7 @@ async function loadOgrBasari() {
 
 // ── VELİ PANELİ ──────────────────────────────────────────────
 function veliTab(tab) {
-  ['ozet','odevler','dersler','basari'].forEach(t => {
+  ['ozet','odevler','dersler','denemeler','basari'].forEach(t => {
     document.getElementById('veli-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('vtab-' + t);
     btn.classList.toggle('bg-surface-container-lowest', t === tab);
@@ -2420,10 +2546,11 @@ async function loadVeliPanel() {
   }
 
   // Veri çek
-  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }] = await Promise.all([
+  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
+    sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
   ]);
 
   const odevler    = tumOdevler || [];
@@ -2617,6 +2744,9 @@ async function loadVeliPanel() {
             ${r?`<div class="ml-9 mt-1 text-xs text-outline">✅${r.dogru} ❌${r.yanlis} ⬜${r.bos} / ${r.toplam} soru</div>`:`<div class="ml-9 mt-1 text-xs text-outline/50">Ödev henüz tamamlanmadı</div>`}
           </div>`;}).join('')}
       </div>`;
+
+  // Denemeler sekmesi
+  document.getElementById('veli-tab-denemeler').innerHTML = denemeTabloHTML(denemelerData || []);
 }
 
 // ── DERS PROGRAMI ─────────────────────────────────────────────

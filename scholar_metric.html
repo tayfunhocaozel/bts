@@ -785,6 +785,8 @@ async function initApp() {
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appScreen').classList.remove('hidden');
 
+  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
+
   buildNav();
   updateUserInfo();
 
@@ -1366,7 +1368,7 @@ function ogrenciDuzenle(id) {
   m.querySelector('#od-okul').value   = o.okul         || '';
   m.querySelector('#od-tc').value     = o.tc_no    || '';
   m.querySelector('#od-okulno').value = o.okul_no      || '';
-  m.querySelector('#od-veli').value   = o.veli_adi     || '';
+  m.querySelector('#od-veli').value   = o.veli_ad_soyad     || '';
   m.querySelector('#od-tel').value    = o.veli_telefon|| '';
   m.classList.remove('hidden');
   m.querySelector('#od-ad').focus();
@@ -1384,7 +1386,7 @@ async function ogrenciDuzenleKaydet() {
     okul:          m.querySelector('#od-okul').value.trim(),
     tc_no:     m.querySelector('#od-tc').value.trim(),
     okul_no:       m.querySelector('#od-okulno').value.trim(),
-    veli_adi:      m.querySelector('#od-veli').value.trim(),
+    veli_ad_soyad:      m.querySelector('#od-veli').value.trim(),
     veli_telefon: m.querySelector('#od-tel').value.trim(),
   };
   m.classList.add('hidden');
@@ -1433,7 +1435,7 @@ async function ogrenciEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').insert({
     ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
-    tc_no: tc, okul_no: okulno, veli_adi: veli, veli_telefon: tel, kayit_durumu: 'AKTİF'
+    tc_no: tc, okul_no: okulno, veli_ad_soyad: veli, veli_telefon: tel, kayit_durumu: 'AKTİF'
   });
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Öğrenci eklendi!');
@@ -2312,6 +2314,7 @@ async function programSil(id) {
 
 // ── UTILS ─────────────────────────────────────────────────────
 function logout() {
+  localStorage.removeItem('adaptix_session');
   state = { rol:null, user:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
   document.getElementById('appScreen').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
@@ -2319,6 +2322,19 @@ function logout() {
   document.getElementById('ogrenci-tc').value = '';
   document.getElementById('veli-tel').value = '';
 }
+
+// Sayfa yüklenince oturumu geri yükle
+(function restoreSession() {
+  try {
+    const saved = localStorage.getItem('adaptix_session');
+    if (!saved) return;
+    const { rol, user } = JSON.parse(saved);
+    if (!rol || !user) return;
+    state.rol  = rol;
+    state.user = user;
+    initApp();
+  } catch(e) { localStorage.removeItem('adaptix_session'); }
+})();
 
 function showToast(msg) {
   const t = document.getElementById('toast');

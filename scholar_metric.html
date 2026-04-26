@@ -701,7 +701,7 @@ tailwind.config = {
           <div>
             <p class="text-xs font-bold uppercase tracking-widest text-on-secondary-container opacity-80 mb-1">🎯 LGS'ye Kalan Süre</p>
             <div class="font-headline text-4xl font-extrabold text-on-secondary-container" id="veli-lgs-gun">—</div>
-            <p class="text-xs text-on-secondary-container opacity-70 mt-1">6 Haziran 2026</p>
+            <p class="text-xs text-on-secondary-container opacity-70 mt-1">13 Haziran 2026</p>
           </div>
           <div class="text-5xl">🏆</div>
         </div>
@@ -1862,8 +1862,8 @@ function gunlukMotivasyon(sinif) {
 
 // ── LGS GERİ SAYIM ────────────────────────────────────────────
 function lgsGeriSayim() {
-  // LGS 2026 tarihi (yaklaşık 6 Haziran 2026)
-  const lgs = new Date('2026-06-06');
+  // LGS 2026 tarihi (yaklaşık 13 Haziran 2026)
+  const lgs = new Date('2026-06-13');
   const bugun = new Date();
   bugun.setHours(0,0,0,0);
   const diff = Math.ceil((lgs - bugun) / 86400000);
@@ -1871,7 +1871,7 @@ function lgsGeriSayim() {
   const card = document.getElementById('lgs-countdown-card');
   card.classList.remove('hidden');
   document.getElementById('lgs-gun-sayisi').textContent = diff > 0 ? diff + ' GÜN' : 'Bugün!';
-  document.getElementById('lgs-tarih-label').textContent = '6 Haziran 2026';
+  document.getElementById('lgs-tarih-label').textContent = '13 Haziran 2026';
 
   // İlerleme çubuğu (yaklaşık 365 gün üzerinden)
   const toplamGun = 365;
@@ -2212,7 +2212,7 @@ async function loadVeliPanel() {
   if ((u.sinif||'').includes('8')) {
     const lgsCard = document.getElementById('veli-lgs-card');
     lgsCard.classList.remove('hidden');
-    const diff = Math.ceil((new Date('2026-06-06') - new Date().setHours(0,0,0,0)) / 86400000);
+    const diff = Math.ceil((new Date('2026-06-13') - new Date().setHours(0,0,0,0)) / 86400000);
     document.getElementById('veli-lgs-gun').textContent = diff > 0 ? diff + ' GÜN' : 'Bugün!';
   }
 

@@ -597,7 +597,7 @@ tailwind.config = {
                 class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">
             </div>
           </div>
-          <div class="grid grid-cols-4 gap-3 mb-4">
+          <div class="grid grid-cols-3 gap-3 mb-4">
             <div>
               <label class="block text-xs font-bold text-tertiary mb-1 text-center">Doğru</label>
               <input type="number" id="deneme-dogru" min="0" placeholder="0"
@@ -616,15 +616,13 @@ tailwind.config = {
                 oninput="denemeNetHesapla()"
                 class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-center text-sm">
             </div>
-            <div>
-              <label class="block text-xs font-bold text-outline mb-1 text-center">Toplam Soru</label>
-              <input type="number" id="deneme-toplam" min="0" placeholder="0"
-                oninput="denemeNetHesapla()"
-                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-center text-sm">
-            </div>
           </div>
           <!-- Önizleme -->
           <div id="deneme-onizleme" class="hidden bg-surface-container rounded-xl px-4 py-3 mb-3 flex items-center gap-6 text-sm">
+            <div class="text-center">
+              <div class="text-xs text-outline mb-0.5">Toplam Soru</div>
+              <div class="font-headline font-extrabold text-on-surface" id="deneme-toplam-onizleme">—</div>
+            </div>
             <div class="text-center">
               <div class="text-xs text-outline mb-0.5">Net</div>
               <div class="font-headline font-extrabold text-primary" id="deneme-net-onizleme">—</div>
@@ -1698,18 +1696,20 @@ async function kaynakGuncelle(id, deger) {
 // ── RAPOR ─────────────────────────────────────────────────────
 // ── DENEMELER ─────────────────────────────────────────────────
 function denemeNetHesapla() {
-  const d = parseFloat(document.getElementById('deneme-dogru').value)  || 0;
-  const y = parseFloat(document.getElementById('deneme-yanlis').value) || 0;
-  const t = parseFloat(document.getElementById('deneme-toplam').value) || 0;
+  const d   = parseFloat(document.getElementById('deneme-dogru').value)  || 0;
+  const y   = parseFloat(document.getElementById('deneme-yanlis').value) || 0;
+  const b   = parseFloat(document.getElementById('deneme-bos').value)    || 0;
+  const top = d + y + b;
   const net = d - (y / 3);
-  const pct = t > 0 ? (net / t * 100) : 0;
+  const pct = top > 0 ? (net / top * 100) : 0;
   const onizleme = document.getElementById('deneme-onizleme');
-  if (d || y) {
+  if (d || y || b) {
     onizleme.classList.remove('hidden');
+    document.getElementById('deneme-toplam-onizleme').textContent = top;
     document.getElementById('deneme-net-onizleme').textContent    = net.toFixed(2);
     const basariEl = document.getElementById('deneme-basari-onizleme');
-    basariEl.textContent  = '%' + (t > 0 ? pct.toFixed(2) : '—');
-    basariEl.style.color  = pct >= 80 ? '#00661d' : pct >= 60 ? '#805600' : '#ba1a1a';
+    basariEl.textContent = top > 0 ? '%' + pct.toFixed(2) : '—';
+    basariEl.style.color = pct >= 80 ? '#00661d' : pct >= 60 ? '#805600' : '#ba1a1a';
   } else {
     onizleme.classList.add('hidden');
   }
@@ -1726,7 +1726,7 @@ async function denemeEkle() {
   const d   = parseFloat(document.getElementById('deneme-dogru').value)  || 0;
   const y   = parseFloat(document.getElementById('deneme-yanlis').value) || 0;
   const b   = parseFloat(document.getElementById('deneme-bos').value)    || 0;
-  const top = parseFloat(document.getElementById('deneme-toplam').value) || 0;
+  const top = d + y + b;
   const net = parseFloat((d - y / 3).toFixed(2));
   const pct = top > 0 ? parseFloat((net / top * 100).toFixed(2)) : 0;
 
@@ -1738,7 +1738,7 @@ async function denemeEkle() {
   });
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Deneme eklendi!');
-  ['deneme-adi','deneme-dogru','deneme-yanlis','deneme-bos','deneme-toplam'].forEach(id => document.getElementById(id).value = '');
+  ['deneme-adi','deneme-dogru','deneme-yanlis','deneme-bos'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('deneme-tarih').value = '';
   document.getElementById('deneme-onizleme').classList.add('hidden');
   loadDenemeler();
@@ -1800,7 +1800,7 @@ async function loadDenemeler() {
                   </span>
                 </td>
                 <td class="px-3 py-3 text-center">
-                  <button onclick="denemeKayitSil('${r.id}')" class="text-outline hover:text-error transition-colors text-lg font-bold">×</button>
+                  <button onclick="denemeKayitSil('${r.deneme_id}')" class="text-outline hover:text-error transition-colors text-lg font-bold">×</button>
                 </td>
               </tr>`;
             }).join('')}
@@ -1812,7 +1812,7 @@ async function loadDenemeler() {
 
 async function denemeKayitSil(id) {
   if (!confirm('Bu deneme kaydını silmek istediğinize emin misiniz?')) return;
-  const { error } = await sb.from('denemeler').delete().eq('id', id);
+  const { error } = await sb.from('denemeler').delete().eq('deneme_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('🗑️ Silindi');
   loadDenemeler();

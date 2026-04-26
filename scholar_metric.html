@@ -1732,6 +1732,7 @@ async function denemeEkle() {
 
   showToast('Kaydediliyor...');
   const { error } = await sb.from('denemeler').insert({
+    deneme_id: crypto.randomUUID(),
     ogrenci_id: ogrenciId, tarih, deneme_adi: adi,
     dogru: d, yanlis: y, bos: b, toplam_soru: top,
     net, basari_yuzdesi: pct

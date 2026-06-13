@@ -551,8 +551,56 @@ tailwind.config = {
 
     <!-- ── KAYNAKLAR -->
     <div id="page-kaynaklar" class="page">
-      <!-- Genel Havuz -->
-      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
+
+      <!-- Üst: Yan yana formlar -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+
+        <!-- Havuza Kaynak Ekle -->
+        <div class="card-2xl" style="padding:22px 24px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">add_circle</span>
+            <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Havuza Kaynak Ekle</h2>
+          </div>
+          <input type="text" id="k-ad" placeholder="Kaynak adı" class="field"/>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <input type="text" id="k-yayinevi" placeholder="Yayınevi / Yazar" class="field"/>
+            <select id="k-sinif" class="field">
+              <option>5. Sınıf</option><option>6. Sınıf</option>
+              <option>7. Sınıf</option><option selected>8. Sınıf</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <select id="k-zorluk" class="field">
+              <option>Kolay</option><option selected>Orta</option><option>Zor</option>
+            </select>
+            <input type="number" id="k-konu-sayisi" placeholder="Konu sayısı" class="field"/>
+          </div>
+          <button onclick="kaynakEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:18px;">save</span> Havuza Ekle
+          </button>
+        </div>
+
+        <!-- Öğrenciye Ata -->
+        <div class="card-2xl" style="padding:22px 24px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">link</span>
+            <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Öğrenciye Kaynak Ata</h2>
+          </div>
+          <select id="ata-ogrenci" onchange="ataOgrenciSecildi()" class="field">
+            <option value="">— Öğrenci seçin —</option>
+          </select>
+          <select id="ata-kaynak" class="field">
+            <option value="">— Kaynak seçin —</option>
+          </select>
+          <button onclick="kaynakAta()" class="btn btn-primary" style="width:100%;justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:18px;">link</span> Ata
+          </button>
+          <div id="ogrenci-kaynak-listesi"></div>
+        </div>
+      </div>
+
+      <!-- Alt: Genel Havuz listesi -->
+      <div class="card-2xl" style="padding:22px 24px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
           <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">library_books</span>
           <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Genel Kaynak Havuzu</h2>
@@ -566,49 +614,6 @@ tailwind.config = {
           <input type="text" id="k-filtre-ad" placeholder="Ara..." oninput="renderKaynaklar()" class="field" style="flex:1;"/>
         </div>
         <div id="kaynak-listesi"></div>
-      </div>
-
-      <!-- Yeni Kaynak Ekle -->
-      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">add_circle</span>
-          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Havuza Kaynak Ekle</h2>
-        </div>
-        <input type="text" id="k-ad" placeholder="Kaynak adı" class="field"/>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <input type="text" id="k-yayinevi" placeholder="Yayın evi / Yazar" class="field"/>
-          <select id="k-sinif" class="field">
-            <option>5. Sınıf</option><option>6. Sınıf</option>
-            <option>7. Sınıf</option><option selected>8. Sınıf</option>
-          </select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <select id="k-zorluk" class="field">
-            <option>Kolay</option><option selected>Orta</option><option>Zor</option>
-          </select>
-          <input type="number" id="k-konu-sayisi" placeholder="Konu sayısı" class="field"/>
-        </div>
-        <button onclick="kaynakEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
-          <span class="material-symbols-outlined" style="font-size:18px;">save</span> Havuza Ekle
-        </button>
-      </div>
-
-      <!-- Öğrenciye Ata -->
-      <div class="card-2xl" style="padding:22px 24px;display:flex;flex-direction:column;gap:12px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">link</span>
-          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Öğrenciye Kaynak Ata</h2>
-        </div>
-        <select id="ata-ogrenci" onchange="ataOgrenciSecildi()" class="field">
-          <option value="">— Öğrenci seçin —</option>
-        </select>
-        <select id="ata-kaynak" class="field">
-          <option value="">— Kaynak seçin —</option>
-        </select>
-        <button onclick="kaynakAta()" class="btn btn-primary" style="width:100%;justify-content:center;">
-          <span class="material-symbols-outlined" style="font-size:18px;">link</span> Ata
-        </button>
-        <div id="ogrenci-kaynak-listesi"></div>
       </div>
     </div>
 

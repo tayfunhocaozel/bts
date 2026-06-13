@@ -302,13 +302,15 @@ tailwind.config = {
           </div>
         </div>
         <div>
-          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Ders Görüşü</label>
-          <textarea id="ders-gorus" rows="3" placeholder="Bu ders hakkında notlarınız..."
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">
+            Sorun Alanı <span class="text-outline font-normal">(opsiyonel)</span>
+          </label>
+          <textarea id="ders-gorus" rows="2" placeholder="Örn: EBOB problemlerinde zorlandı, kavram net değil..."
             class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm resize-none"></textarea>
         </div>
         <div>
-          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Sonraki Ders Hatırlatma</label>
-          <textarea id="ders-hatirlatma" rows="2" placeholder="Bir sonraki derse not..."
+          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Sonraki Ders Notu</label>
+          <textarea id="ders-hatirlatma" rows="2" placeholder="Örn: EBOB'u derinleştir, yeni nesil soru çöz..."
             class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm resize-none"></textarea>
         </div>
         <button onclick="dersSave()"
@@ -1178,50 +1180,81 @@ function konuSecildi() {
   }
 
   container.innerHTML = filtered.map((k, i) => `
-    <label class="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-surface-container transition-colors select-none" 
-      onclick="toggleKazanim(event, 'kaz-${i}')">
-      <div class="mt-0.5 w-5 h-5 rounded-md border-2 border-primary/40 flex items-center justify-center flex-shrink-0 transition-all" id="kaz-box-${i}">
-        <span class="material-symbols-outlined text-sm text-primary hidden" id="kaz-check-${i}">check</span>
+    <div class="border-b border-outline-variant/20 last:border-b-0">
+      <label class="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-surface-container transition-colors select-none"
+        onclick="toggleKazanim(event, 'kaz-${i}')">
+        <div class="mt-0.5 w-5 h-5 rounded-md border-2 border-primary/40 flex items-center justify-center flex-shrink-0 transition-all" id="kaz-box-${i}">
+          <span class="material-symbols-outlined text-sm text-primary hidden" id="kaz-check-${i}">check</span>
+        </div>
+        <input type="checkbox" id="kaz-${i}" data-idx="${i}" value="${k.kazanim_kodu||''}" class="hidden">
+        <div>
+          <div class="text-xs font-bold text-primary mb-0.5">${k.kazanim_kodu||''}</div>
+          <div class="text-sm text-on-surface leading-snug">${k.kazanim_aciklamasi||''}</div>
+        </div>
+      </label>
+      <input type="hidden" id="td-${i}" value="tam">
+      <div id="td-btns-${i}" class="flex gap-1.5 px-4 pb-3 -mt-1 opacity-40 pointer-events-none transition-all">
+        <button type="button" onclick="setTD(${i},'tam')" id="td-tam-${i}"
+          class="flex-1 py-1 text-xs font-semibold rounded-lg border-2 transition-all bg-tertiary-container text-tertiary border-tertiary/50">✅ Tam</button>
+        <button type="button" onclick="setTD(${i},'kismi')" id="td-kismi-${i}"
+          class="flex-1 py-1 text-xs font-semibold rounded-lg border-2 transition-all bg-surface-container text-outline border-transparent">⚠️ Kısmi</button>
+        <button type="button" onclick="setTD(${i},'baslandi')" id="td-baslandi-${i}"
+          class="flex-1 py-1 text-xs font-semibold rounded-lg border-2 transition-all bg-surface-container text-outline border-transparent">🔵 Başlandı</button>
       </div>
-      <input type="checkbox" id="kaz-${i}" value="${k.kazanim_kodu||''}" class="hidden">
-      <div>
-        <div class="text-xs font-bold text-primary mb-0.5">${k.kazanim_kodu||''}</div>
-        <div class="text-sm text-on-surface leading-snug">${k.kazanim_aciklamasi||''}</div>
-      </div>
-    </label>`).join('');
+    </div>`).join('');
 }
 
 function toggleKazanim(event, id) {
   event.preventDefault();
-  const cb = document.getElementById(id);
-  const box = document.getElementById(id.replace('kaz-','kaz-box-'));
+  const cb    = document.getElementById(id);
+  const box   = document.getElementById(id.replace('kaz-','kaz-box-'));
   const check = document.getElementById(id.replace('kaz-','kaz-check-'));
+  const tdBtns = document.getElementById('td-btns-' + cb.dataset.idx);
   cb.checked = !cb.checked;
   if (cb.checked) {
     box.classList.add('bg-primary', 'border-primary');
     check.classList.remove('hidden');
+    if (tdBtns) tdBtns.classList.remove('opacity-40', 'pointer-events-none');
   } else {
     box.classList.remove('bg-primary', 'border-primary');
     check.classList.add('hidden');
+    if (tdBtns) tdBtns.classList.add('opacity-40', 'pointer-events-none');
   }
 }
 
+function setTD(idx, val) {
+  document.getElementById('td-' + idx).value = val;
+  ['tam','kismi','baslandi'].forEach(v => {
+    const btn = document.getElementById('td-' + v + '-' + idx);
+    if (!btn) return;
+    btn.className = `flex-1 py-1 text-xs font-semibold rounded-lg border-2 transition-all ${
+      v === val
+        ? v === 'tam'      ? 'bg-tertiary-container text-tertiary border-tertiary/50'
+        : v === 'kismi'    ? 'bg-secondary-container/60 text-secondary border-secondary/30'
+        :                    'bg-primary-fixed text-primary border-primary/30'
+        : 'bg-surface-container text-outline border-transparent'
+    }`;
+  });
+}
+
 async function dersSave() {
-  const ogrenciId = document.getElementById('ders-ogrenci').value;
-  const konu      = document.getElementById('ders-konu').value;
-  const gorus     = document.getElementById('ders-gorus').value;
+  const ogrenciId  = document.getElementById('ders-ogrenci').value;
+  const konu       = document.getElementById('ders-konu').value;
+  const sorunAlani = document.getElementById('ders-gorus').value;
   const hatirlatma = document.getElementById('ders-hatirlatma').value;
-  const secili    = [...document.querySelectorAll('#kazanim-checkboxlar input:checked')].map(c => c.value);
+  const secili     = [...document.querySelectorAll('#kazanim-checkboxlar input[type=checkbox]:checked')]
+    .map(c => ({ kod: c.value, td: document.getElementById('td-' + c.dataset.idx)?.value || 'tam' }));
 
   if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
   if (!konu)      { showToast('⚠️ Konu seçin'); return; }
   if (!secili.length) { showToast('⚠️ En az bir kazanım seçin'); return; }
 
   showToast('Kaydediliyor...');
-  const rows = secili.map(kod => ({
+  const rows = secili.map(s => ({
     ogrenci_id: ogrenciId, tarih: new Date().toISOString().split('T')[0],
-    islenen_konu: konu, kazanim_kodu: kod,
-    ders_gorusu: gorus, sonraki_ders_hatirlatma: hatirlatma
+    islenen_konu: konu, kazanim_kodu: s.kod,
+    tamamlama_durumu: s.td,
+    ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma
   }));
 
   const { error } = await sb.from('dersler').insert(rows);
@@ -2553,7 +2586,7 @@ async function loadOgrDersler() {
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
   const { data: dersler } = await sb.from('dersler')
-    .select('tarih, islenen_konu, kazanim_kodu')
+    .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
     .eq('ogrenci_id', state.user.ogrenci_id)
     .order('tarih', { ascending: false });
 
@@ -2562,34 +2595,57 @@ async function loadOgrDersler() {
     return;
   }
 
-  // Tarihe göre grupla
   const gruplar = {};
   dersler.forEach(d => {
     const k = d.tarih + '||' + (d.islenen_konu || '');
-    if (!gruplar[k]) gruplar[k] = { tarih: d.tarih, konu: d.islenen_konu, kazanimlar: [] };
-    if (d.kazanim_kodu) gruplar[k].kazanimlar.push(d.kazanim_kodu);
+    if (!gruplar[k]) gruplar[k] = { tarih: d.tarih, konu: d.islenen_konu, kazanimlar: [], sorun: d.ders_gorusu || '' };
+    if (d.kazanim_kodu) gruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu || 'tam' });
   });
 
-  const satirlar = Object.values(gruplar);
+  const satirlar  = Object.values(gruplar);
+  const son3      = satirlar.slice(0, 3);
+  const kalanlar  = satirlar.slice(3);
+
+  const tdCss = d => d === 'tam' ? 'bg-tertiary-container text-tertiary' : d === 'kismi' ? 'bg-secondary-container/60 text-secondary' : 'bg-primary-fixed text-primary';
+  const tdLbl = d => d === 'tam' ? '✅ Tam' : d === 'kismi' ? '⚠️ Kısmi' : '🔵 Başlandı';
+
+  const dersKart = d => {
+    const tarihStr = d.tarih ? new Date(d.tarih).toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' }) : '—';
+    return `
+      <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+        <div class="flex items-center gap-3 px-5 py-3.5 border-b border-outline-variant/15">
+          <span class="material-symbols-outlined text-primary text-base">menu_book</span>
+          <div class="flex-1">
+            <div class="text-sm font-bold text-on-surface">${d.konu || '—'}</div>
+            <div class="text-xs text-outline">📅 ${tarihStr}</div>
+          </div>
+        </div>
+        <div class="px-5 py-3 space-y-2">
+          ${d.kazanimlar.map(kaz => `
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs px-2 py-0.5 rounded-full bg-primary-fixed text-primary font-semibold">${kaz.kod}</span>
+              <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${tdCss(kaz.durum)}">${tdLbl(kaz.durum)}</span>
+            </div>`).join('')}
+          ${d.sorun ? `<div class="mt-2 flex items-start gap-1.5 text-xs text-outline">
+            <span class="material-symbols-outlined text-sm text-secondary flex-shrink-0">warning</span>
+            <span>${d.sorun}</span>
+          </div>` : ''}
+        </div>
+      </div>`;
+  };
+
   el.innerHTML = `
-    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
-      <div class="px-5 py-4 border-b border-outline-variant/20">
-        <span class="font-headline font-bold text-on-surface text-sm">📖 İşlenen Dersler (${satirlar.length})</span>
-      </div>
-      ${satirlar.map(d => {
-        const tarihStr = d.tarih ? new Date(d.tarih).toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' }) : '—';
-        return `
-          <div class="px-5 py-4 border-b border-outline-variant/15 last:border-0">
-            <div class="flex items-start gap-3">
-              <div class="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>
-              <div class="flex-1">
-                <div class="text-sm font-bold text-on-surface">${d.konu || '—'}</div>
-                <div class="text-xs text-outline mt-0.5">📅 ${tarihStr}</div>
-                ${d.kazanimlar.length ? `<div class="flex flex-wrap gap-1.5 mt-2">${d.kazanimlar.map(k => `<span class="text-xs px-2 py-0.5 rounded-full bg-primary-fixed text-primary font-semibold">${k}</span>`).join('')}</div>` : ''}
-              </div>
-            </div>
-          </div>`;
-      }).join('')}
+    <div class="space-y-3">
+      <div class="text-xs font-semibold text-outline uppercase tracking-wider px-1 mb-1">Son ${son3.length} Ders</div>
+      ${son3.map(dersKart).join('')}
+      ${kalanlar.length ? `
+        <details class="group">
+          <summary class="cursor-pointer list-none flex items-center gap-1 text-xs font-semibold text-primary py-1">
+            <span class="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
+            Önceki dersler (${kalanlar.length} ders daha)
+          </summary>
+          <div class="space-y-3 mt-2">${kalanlar.map(dersKart).join('')}</div>
+        </details>` : ''}
     </div>`;
 }
 
@@ -2687,7 +2743,7 @@ async function loadVeliPanel() {
   // Veri çek
   const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id),
-    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
+    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
     sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
   ]);
@@ -2835,29 +2891,48 @@ async function loadVeliPanel() {
   const dersGruplar = {};
   dersList.forEach(d => {
     const k = d.tarih + '||' + (d.islenen_konu||'');
-    if (!dersGruplar[k]) dersGruplar[k] = { tarih: d.tarih, konu: d.islened_konu||d.islenen_konu, kazanimlar: [] };
-    if (d.kazanim_kodu) dersGruplar[k].kazanimlar.push(d.kazanim_kodu);
+    if (!dersGruplar[k]) dersGruplar[k] = { tarih: d.tarih, konu: d.islenen_konu, kazanimlar: [], sorun: d.ders_gorusu||'' };
+    if (d.kazanim_kodu) dersGruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu||'tam' });
   });
   const dersSatirlar = Object.values(dersGruplar);
+  const vSon3    = dersSatirlar.slice(0, 3);
+  const vKalanlar = dersSatirlar.slice(3);
+
+  const vTdCss = d => d==='tam'?'bg-tertiary-container text-tertiary':d==='kismi'?'bg-secondary-container/60 text-secondary':'bg-primary-fixed text-primary';
+  const vTdLbl = d => d==='tam'?'✅ Tam':d==='kismi'?'⚠️ Kısmi':'🔵 Başlandı';
+
+  const vDersKart = d => {
+    const ts = d.tarih?new Date(d.tarih).toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'}):'—';
+    return `<div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+      <div class="flex items-center gap-3 px-5 py-3.5 border-b border-outline-variant/15">
+        <span class="material-symbols-outlined text-primary text-base">menu_book</span>
+        <div class="flex-1">
+          <div class="text-sm font-bold text-on-surface">${d.konu||'—'}</div>
+          <div class="text-xs text-outline">📅 ${ts}</div>
+        </div>
+      </div>
+      <div class="px-5 py-3 space-y-2">
+        ${d.kazanimlar.map(kaz=>`<div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs px-2 py-0.5 rounded-full bg-primary-fixed text-primary font-semibold">${kaz.kod}</span>
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold ${vTdCss(kaz.durum)}">${vTdLbl(kaz.durum)}</span>
+        </div>`).join('')}
+        ${d.sorun?`<div class="mt-2 flex items-start gap-1.5 text-xs text-outline">
+          <span class="material-symbols-outlined text-sm text-secondary flex-shrink-0">warning</span>
+          <span>${d.sorun}</span>
+        </div>`:''}
+      </div>
+    </div>`;
+  };
 
   document.getElementById('veli-tab-dersler').innerHTML = !dersSatirlar.length
     ? '<div class="text-sm text-outline text-center py-8">Henüz ders kaydı yok</div>'
-    : `<div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
-        <div class="px-5 py-4 border-b border-outline-variant/20">
-          <span class="font-headline font-bold text-on-surface text-sm">📖 İşlenen Dersler (${dersSatirlar.length})</span>
-        </div>
-        ${dersSatirlar.map(d=>{
-          const tarihStr=d.tarih?new Date(d.tarih).toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'}):'—';
-          return `<div class="px-5 py-4 border-b border-outline-variant/10 last:border-0">
-            <div class="flex items-start gap-3">
-              <div class="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>
-              <div class="flex-1">
-                <div class="text-sm font-bold text-on-surface">${d.konu||'—'}</div>
-                <div class="text-xs text-outline mt-0.5">📅 ${tarihStr}</div>
-                ${d.kazanimlar.length?`<div class="flex flex-wrap gap-1.5 mt-2">${d.kazanimlar.map(k=>`<span class="text-xs px-2 py-0.5 rounded-full bg-primary-fixed text-primary font-semibold">${k}</span>`).join('')}</div>`:''}
-              </div>
-            </div>
-          </div>`;}).join('')}
+    : `<div class="space-y-3">
+        <div class="text-xs font-semibold text-outline uppercase tracking-wider px-1 mb-1">Son ${vSon3.length} Ders</div>
+        ${vSon3.map(vDersKart).join('')}
+        ${vKalanlar.length?`<details class="group"><summary class="cursor-pointer list-none flex items-center gap-1 text-xs font-semibold text-primary py-1">
+          <span class="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
+          Önceki dersler (${vKalanlar.length} ders daha)
+        </summary><div class="space-y-3 mt-2">${vKalanlar.map(vDersKart).join('')}</div></details>`:''}
       </div>`;
 
   // ── BAŞARI TAB ───────────────────────────────────────────────

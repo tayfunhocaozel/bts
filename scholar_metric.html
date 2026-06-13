@@ -2026,6 +2026,38 @@ async function loadRapor() {
 
   const allKonular   = konular.length ? konular : Object.keys(konuMap);
   const islenenSayi  = allKonular.filter(k => konuMap[k]).length;
+
+  // Konu bazlı zaman serisi (tamamlanan ödevler, tarihe göre sıralı)
+  const konuOdevler = {};
+  odevler.forEach(o => {
+    const konu = (o.konu||'').split(' — ')[0];
+    if (!konu) return;
+    const tot = Number(o.toplam)||0;
+    if (!tot) return;
+    if (!konuOdevler[konu]) konuOdevler[konu] = [];
+    konuOdevler[konu].push({
+      tarih: o.tarih,
+      dogru_yuzde:  Math.round((Number(o.dogru)||0)/tot*100),
+      yanlis_yuzde: Math.round((Number(o.yanlis)||0)/tot*100),
+      bos_yuzde:    Math.round((Number(o.bos)||0)/tot*100)
+    });
+  });
+  Object.values(konuOdevler).forEach(arr =>
+    arr.sort((a,b) => (a.tarih||'').localeCompare(b.tarih||''))
+  );
+
+  // Uyarı analizi (her konu için)
+  const uyariSonuclari = {};
+  allKonular.forEach(k => { uyariSonuclari[k] = analizEt(konuOdevler[k]||[]); });
+
+  // Mevcut DB uyarıları (sadece öğretmen)
+  let mevcutUyarilar = [];
+  if (state.rol === 'ogretmen') {
+    const { data: uyD } = await sb.from('konu_uyarilari')
+      .select('*').eq('ogrenci_id', ogrenciId)
+      .order('uyari_tarihi', { ascending: false });
+    mevcutUyarilar = uyD || [];
+  }
   const topDogru     = Object.values(konuMap).reduce((s,r)=>s+r.dogru,0);
   const topYanlis    = Object.values(konuMap).reduce((s,r)=>s+r.yanlis,0);
   const topBos       = Object.values(konuMap).reduce((s,r)=>s+r.bos,0);
@@ -2228,7 +2260,348 @@ async function loadRapor() {
         </tbody>
       </table>
     </div>
-  </div>` : ''}`;
+  </div>` : ''}
+
+  <!-- Konu Bazlı Performans Takibi -->
+  <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] mt-5 border border-outline-variant/20">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-xl">show_chart</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Konu Bazlı Performans Takibi</h2>
+      <span class="ml-auto text-xs text-outline">Konu seçin →</span>
+    </div>
+    <div class="p-4">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div class="lg:col-span-2 space-y-0.5 max-h-80 overflow-y-auto pr-1" id="rapor-konu-listesi">
+          ${allKonular.map(konu => {
+            const uy = uyariSonuclari[konu];
+            const count = (konuOdevler[konu]||[]).length;
+            return `<button onclick="acKonuGrafigi('${konu.replace(/'/g,"&#39;")}')"
+              id="rkbtn-${konu.replace(/\W/g,'_')}"
+              class="w-full flex items-center gap-1.5 px-3 py-2.5 rounded-xl hover:bg-surface-container transition-colors text-left text-sm">
+              ${state.rol==='ogretmen' && uy ? uyariRozetHtml(uy.tip) : '<span class="w-3 flex-shrink-0"></span>'}
+              <span class="flex-1 font-medium text-on-surface truncate">${konu}</span>
+              <span class="text-[10px] text-outline mr-1">${count>0?count:''}</span>
+              <span class="material-symbols-outlined text-sm text-outline/40">chevron_right</span>
+            </button>`;
+          }).join('')}
+        </div>
+        <div class="lg:col-span-3" id="rapor-konu-grafik">
+          <div class="flex flex-col items-center justify-center h-48 text-sm text-outline gap-2">
+            <span class="material-symbols-outlined text-4xl opacity-20">show_chart</span>
+            <span>Konu seçin</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // Rapor verisini global'e yaz (acKonuGrafigi için)
+  window._raporData = {
+    ogrenciId, konuOdevler, uyariSonuclari,
+    uyarilar: mevcutUyarilar, _chart: null, _activeKonu: null
+  };
+
+  // DB uyarı upsert (sadece öğretmen)
+  if (state.rol === 'ogretmen') {
+    const yeniUyarilar = [];
+    const cozulenIds   = [];
+
+    for (const konu of allKonular) {
+      const analiz    = uyariSonuclari[konu];
+      const konuUyar  = mevcutUyarilar.filter(u => u.konu === konu);
+      const acik      = konuUyar.find(u => u.durum === 'acik');
+      const aksiyonlu = konuUyar.find(u => u.durum === 'aksiyon_alindi');
+
+      if (!analiz || analiz.tip === 'basarili') {
+        if (acik) cozulenIds.push(acik.uyari_id);
+      } else {
+        if (!acik) {
+          const yeniDurum = aksiyonlu ? 'kronik_tekrar' : 'acik';
+          yeniUyarilar.push({
+            uyari_id: crypto.randomUUID(), ogrenci_id: ogrenciId,
+            konu, uyari_tipi: analiz.tip,
+            uyari_tarihi: new Date().toISOString().split('T')[0],
+            tetikleyen_deger: analiz.deger, durum: yeniDurum
+          });
+        }
+      }
+    }
+
+    if (yeniUyarilar.length) await sb.from('konu_uyarilari').insert(yeniUyarilar);
+    for (const id of cozulenIds) {
+      await sb.from('konu_uyarilari').update({ durum: 'cozuldu' }).eq('uyari_id', id);
+    }
+
+    if (yeniUyarilar.length || cozulenIds.length) {
+      const { data: guncel } = await sb.from('konu_uyarilari')
+        .select('*').eq('ogrenci_id', ogrenciId).order('uyari_tarihi', { ascending: false });
+      window._raporData.uyarilar = guncel || [];
+    }
+  }
+}
+
+// ── KONU ZAMAN SERİSİ YARDIMCI FONKSİYONLAR ──────────────────
+
+function standardSapma(arr) {
+  if (!arr || arr.length < 2) return 0;
+  const ort = arr.reduce((a,b) => a+b, 0) / arr.length;
+  return Math.sqrt(arr.reduce((s,x) => s + Math.pow(x-ort,2), 0) / arr.length);
+}
+
+function analizEt(gecmis) {
+  if (!gecmis || gecmis.length < 3) return null;
+  const vals     = gecmis.map(o => o.dogru_yuzde);
+  const sonUc    = vals.slice(-3);
+  const ortSonUc = sonUc.reduce((a,b)=>a+b,0) / 3;
+
+  if (ortSonUc < 50) return { tip:'kronik', deger: Math.round(ortSonUc) };
+
+  if (vals.length >= 6) {
+    const oncUc    = vals.slice(-6,-3);
+    const ortOnc   = oncUc.reduce((a,b)=>a+b,0) / 3;
+    if (ortOnc - ortSonUc >= 15) return { tip:'dusus', deger: Math.round(ortOnc-ortSonUc) };
+  }
+
+  if (vals.length >= 4) {
+    const sonDort = vals.slice(-4);
+    const sapma   = standardSapma(sonDort);
+    if (sapma > 20) return { tip:'dalgalanma', deger: Math.round(sapma) };
+  }
+
+  if (ortSonUc >= 75 && standardSapma(sonUc) < 10) return { tip:'basarili', deger: Math.round(ortSonUc) };
+  return null;
+}
+
+function uyariRozetHtml(tip) {
+  const m = {
+    kronik:     { e:'🔴', css:'bg-error-container/80 text-error' },
+    dusus:      { e:'⚠️', css:'bg-secondary-container/80 text-secondary' },
+    dalgalanma: { e:'🟡', css:'bg-secondary-container/40 text-secondary' },
+    basarili:   { e:'🟢', css:'bg-tertiary-container text-tertiary' }
+  }[tip];
+  if (!m) return '<span class="w-3 flex-shrink-0"></span>';
+  return `<span class="text-[9px] px-1 py-0.5 rounded-full font-bold flex-shrink-0 ${m.css}">${m.e}</span>`;
+}
+
+function acKonuGrafigi(konu) {
+  const data = window._raporData;
+  if (!data) return;
+
+  // Aktif buton stili
+  document.querySelectorAll('[id^="rkbtn-"]').forEach(b => {
+    b.classList.remove('bg-surface-container-high', 'text-primary', 'font-bold');
+  });
+  const btn = document.getElementById('rkbtn-' + konu.replace(/\W/g,'_'));
+  if (btn) btn.classList.add('bg-surface-container-high', 'text-primary', 'font-bold');
+
+  const gecmis  = data.konuOdevler[konu] || [];
+  const analiz  = data.uyariSonuclari[konu];
+  const uyarilar = (data.uyarilar||[]).filter(u => u.konu === konu);
+  const panel   = document.getElementById('rapor-konu-grafik');
+  if (!panel) return;
+
+  if (!gecmis.length) {
+    panel.innerHTML = `<div class="flex flex-col items-center justify-center h-48 text-sm text-outline gap-2">
+      <span class="material-symbols-outlined text-3xl opacity-40">assignment</span>
+      <span>"${konu}" için tamamlanan ödev yok</span>
+    </div>`;
+    return;
+  }
+
+  // Uyarı mesajı ve aksiyon UI
+  let uyariHtml = '';
+  if (state.rol === 'ogretmen' && analiz) {
+    const kronikUyari = uyarilar.find(u => u.durum === 'kronik_tekrar');
+    const aktifUyari  = uyarilar.find(u => ['acik','kronik_tekrar'].includes(u.durum));
+    const aksiyonlu   = uyarilar.find(u => u.durum === 'aksiyon_alindi');
+
+    const mesajlar = {
+      kronik:     `🔴 <strong>${konu}</strong> konusunda öğrenci sıkışmış görünüyor. Temelden tekrar önerilir.`,
+      dusus:      `⚠️ <strong>${konu}</strong> konusunda düşüş trendi tespit edildi. Tekrar ders önerilir.`,
+      dalgalanma: `🟡 <strong>${konu}</strong> konusunda tutarsızlık var. Kavram kontrolü önerilir.`,
+      basarili:   `🟢 <strong>${konu}</strong> konusu tam oturmuş görünüyor.`
+    };
+    const cssList = {
+      kronik:'bg-error-container/30 text-error', dusus:'bg-secondary-container/30 text-secondary',
+      dalgalanma:'bg-secondary-container/20 text-secondary', basarili:'bg-tertiary-container/40 text-tertiary'
+    };
+
+    if (kronikUyari && aksiyonlu) {
+      uyariHtml = `<div class="mb-3 p-3 rounded-xl bg-error-container/40 text-xs text-error border border-error/20">
+        🔁 Hocam, <strong>${konu}</strong> konusunda ${aksiyonlu.uyari_tarihi} tarihinde uyarı verilmişti.
+        ${aksiyonlu.aksiyon_tarihi ? `${aksiyonlu.aksiyon_tarihi} tarihinde aksiyon alındı, ama` : 'Aksiyon alındı ama'}
+        öğrenci hâlâ düşük başarılı (%${analiz.deger}). Bu konu kronikleşiyor — farklı bir yaklaşım denenebilir.
+      </div>`;
+    } else if (mesajlar[analiz.tip]) {
+      uyariHtml = `<div class="mb-3 p-3 rounded-xl text-xs ${cssList[analiz.tip]||'bg-surface-container text-on-surface'}">${mesajlar[analiz.tip]}</div>`;
+    }
+
+    if (aktifUyari && analiz.tip !== 'basarili') {
+      uyariHtml += `<div class="mb-3 p-3 rounded-xl bg-surface-container border border-outline-variant/30 text-xs">
+        <div class="font-semibold text-on-surface-variant mb-1.5">📋 Aksiyon Notu</div>
+        <textarea id="aksiyon-not-${aktifUyari.uyari_id}" rows="2"
+          placeholder="Ne yapacaksınız? (Örn: Haftaya temelden başlıyoruz...)"
+          class="w-full px-3 py-2 rounded-lg bg-surface-container-low border-none resize-none text-xs text-on-surface mb-2"></textarea>
+        <button onclick="uyariAksiyonKaydet('${aktifUyari.uyari_id}')"
+          class="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:opacity-90 transition-opacity">
+          ✅ Aksiyon Alındı
+        </button>
+      </div>`;
+    } else if (aksiyonlu && !aktifUyari) {
+      uyariHtml += `<div class="mb-3 p-2.5 rounded-xl bg-tertiary-container/30 text-xs text-tertiary">
+        ✅ Aksiyon alındı${aksiyonlu.aksiyon_tarihi ? ` (${aksiyonlu.aksiyon_tarihi})` : ''}
+        ${aksiyonlu.ogretmen_notu ? `<span class="block mt-0.5 italic opacity-80">"${aksiyonlu.ogretmen_notu}"</span>` : ''}
+      </div>`;
+    }
+  }
+
+  // Chart HTML
+  panel.innerHTML = `
+    <div class="flex items-center gap-2 flex-wrap mb-3">
+      <span class="font-semibold text-sm text-on-surface">${konu}</span>
+      <span class="text-[11px] text-outline">(${gecmis.length} ödev)</span>
+      <div class="flex gap-1.5 ml-auto">
+        <button onclick="toggleKonuLine('dogru')" id="tl-dogru"
+          class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-tertiary-container text-tertiary transition-all">🟢 Doğru</button>
+        <button onclick="toggleKonuLine('yanlis')" id="tl-yanlis"
+          class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-error-container/70 text-error transition-all">🔴 Yanlış</button>
+        <button onclick="toggleKonuLine('bos')" id="tl-bos"
+          class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-secondary-container/70 text-secondary transition-all">🟡 Boş</button>
+      </div>
+    </div>
+    ${uyariHtml}
+    <div style="position:relative;height:190px;">
+      <canvas id="konu-zaman-canvas"></canvas>
+    </div>`;
+
+  // Chart oluştur
+  if (data._chart) { data._chart.destroy(); data._chart = null; }
+  const ctx = document.getElementById('konu-zaman-canvas')?.getContext('2d');
+  if (!ctx) return;
+
+  data._chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: gecmis.map(p => p.tarih ? new Date(p.tarih+'T00:00:00').toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}) : '—'),
+      datasets: [
+        { label:'Doğru %',  data:gecmis.map(p=>p.dogru_yuzde),  borderColor:'#00661d', backgroundColor:'rgba(0,102,29,0.08)',  fill:true, tension:0.4, pointRadius:5 },
+        { label:'Yanlış %', data:gecmis.map(p=>p.yanlis_yuzde), borderColor:'#ba1a1a', backgroundColor:'rgba(186,26,26,0.06)', fill:true, tension:0.4, pointRadius:5 },
+        { label:'Boş %',    data:gecmis.map(p=>p.bos_yuzde),    borderColor:'#805600', backgroundColor:'rgba(128,86,0,0.05)',  fill:true, tension:0.4, pointRadius:5 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend: { display:false },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: %${c.raw}` } }
+      },
+      scales: {
+        y: { min:0, max:100, ticks:{ callback:v=>'%'+v, font:{size:10} }, grid:{color:'rgba(0,0,0,0.05)'} },
+        x: { ticks:{ font:{size:10} } }
+      }
+    }
+  });
+
+  data._activeKonu = konu;
+}
+
+function toggleKonuLine(line) {
+  const chart = window._raporData?._chart;
+  if (!chart) return;
+  const idx = { dogru:0, yanlis:1, bos:2 }[line];
+  if (idx === undefined) return;
+  const meta = chart.getDatasetMeta(idx);
+  meta.hidden = !meta.hidden;
+  chart.update();
+  const btn = document.getElementById('tl-' + line);
+  if (btn) btn.classList.toggle('opacity-40', !!meta.hidden);
+}
+
+async function uyariAksiyonKaydet(uyariId) {
+  const not = document.getElementById('aksiyon-not-' + uyariId)?.value?.trim() || '';
+  const { error } = await sb.from('konu_uyarilari').update({
+    durum: 'aksiyon_alindi',
+    ogretmen_notu: not,
+    aksiyon_tarihi: new Date().toISOString().split('T')[0]
+  }).eq('uyari_id', uyariId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Aksiyon kaydedildi');
+  loadRapor();
+}
+
+// Öğrenci & Veli paneli için basit konu grafik fonksiyonları
+function acOgrKonuGrafigi(konu) {
+  const store = window._ogrKonuData;
+  if (!store) return;
+  document.querySelectorAll('[id^="okbtn-"]').forEach(b => b.classList.remove('bg-surface-container-high','text-primary','font-bold'));
+  const btn = document.getElementById('okbtn-'+konu.replace(/\W/g,'_'));
+  if (btn) btn.classList.add('bg-surface-container-high','text-primary','font-bold');
+  _renderSimpleKonuChart(store.konuOdevler[konu]||[], konu, 'ogr-konu-grafik', store, 'sl');
+}
+
+function acVeliKonuGrafigi(konu) {
+  const store = window._veliKonuData;
+  if (!store) return;
+  document.querySelectorAll('[id^="vkbtn-"]').forEach(b => b.classList.remove('bg-surface-container-high','text-primary','font-bold'));
+  const btn = document.getElementById('vkbtn-'+konu.replace(/\W/g,'_'));
+  if (btn) btn.classList.add('bg-surface-container-high','text-primary','font-bold');
+  _renderSimpleKonuChart(store.konuOdevler[konu]||[], konu, 'veli-konu-grafik', store, 'vl');
+}
+
+function _renderSimpleKonuChart(gecmis, konu, panelId, store, pfx) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  if (!gecmis.length) {
+    panel.innerHTML = `<div class="flex flex-col items-center justify-center h-40 text-sm text-outline gap-2">
+      <span class="material-symbols-outlined text-3xl opacity-40">assignment</span>
+      <span>${konu} için tamamlanan ödev yok</span></div>`;
+    return;
+  }
+  panel.innerHTML = `
+    <div class="flex items-center gap-2 flex-wrap mb-2">
+      <span class="font-semibold text-sm text-on-surface">${konu}</span>
+      <span class="text-[11px] text-outline">(${gecmis.length} ödev)</span>
+      <div class="flex gap-1.5 ml-auto">
+        <button onclick="toggleSimpleLine('dogru','${pfx}')" id="${pfx}-dogru"
+          class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-tertiary-container text-tertiary">🟢 Doğru</button>
+        <button onclick="toggleSimpleLine('yanlis','${pfx}')" id="${pfx}-yanlis"
+          class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-error-container/70 text-error">🔴 Yanlış</button>
+        <button onclick="toggleSimpleLine('bos','${pfx}')" id="${pfx}-bos"
+          class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-secondary-container/70 text-secondary">🟡 Boş</button>
+      </div>
+    </div>
+    <div style="position:relative;height:170px;"><canvas id="${pfx}-canvas"></canvas></div>`;
+
+  if (store._chart) { store._chart.destroy(); store._chart = null; }
+  const ctx = document.getElementById(pfx+'-canvas')?.getContext('2d');
+  if (!ctx) return;
+  store._chart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:gecmis.map(p=>p.tarih?new Date(p.tarih+'T00:00:00').toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}):'—'),
+      datasets:[
+        {label:'Doğru %', data:gecmis.map(p=>p.dogru_yuzde), borderColor:'#00661d',backgroundColor:'rgba(0,102,29,0.08)',fill:true,tension:0.4,pointRadius:5},
+        {label:'Yanlış %',data:gecmis.map(p=>p.yanlis_yuzde),borderColor:'#ba1a1a',backgroundColor:'rgba(186,26,26,0.06)',fill:true,tension:0.4,pointRadius:5},
+        {label:'Boş %',   data:gecmis.map(p=>p.bos_yuzde),  borderColor:'#805600',backgroundColor:'rgba(128,86,0,0.05)',fill:true,tension:0.4,pointRadius:5}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: %${c.raw}`}}},
+      scales:{y:{min:0,max:100,ticks:{callback:v=>'%'+v,font:{size:10}},grid:{color:'rgba(0,0,0,0.04)'}},x:{ticks:{font:{size:10}}}}}
+  });
+  store._pfx = pfx;
+}
+
+function toggleSimpleLine(line, pfx) {
+  const store = [window._ogrKonuData, window._veliKonuData].find(s => s?._pfx === pfx);
+  if (!store?._chart) return;
+  const idx = {dogru:0,yanlis:1,bos:2}[line];
+  if (idx===undefined) return;
+  const meta = store._chart.getDatasetMeta(idx);
+  meta.hidden = !meta.hidden;
+  store._chart.update();
+  const btn = document.getElementById(pfx+'-'+line);
+  if (btn) btn.classList.toggle('opacity-40', !!meta.hidden);
 }
 
 // ── MOTİVASYON MESAJLARI ──────────────────────────────────────
@@ -2677,6 +3050,25 @@ async function loadOgrBasari() {
   const topToplam  = Object.values(konuMap).reduce((s,r)=>s+r.toplam,0);
   const genelPct   = topToplam > 0 ? Math.round(topDogru/topToplam*100) : 0;
 
+  // Zaman serisi verisi (öğrenci paneli için)
+  const ogrKonuOdevler = {};
+  odevler.forEach(o => {
+    const konu = (o.konu||'').split(' — ')[0];
+    if (!konu) return;
+    const tot = Number(o.toplam)||0;
+    if (!tot) return;
+    if (!ogrKonuOdevler[konu]) ogrKonuOdevler[konu] = [];
+    ogrKonuOdevler[konu].push({
+      tarih: o.tarih,
+      dogru_yuzde:  Math.round((Number(o.dogru)||0)/tot*100),
+      yanlis_yuzde: Math.round((Number(o.yanlis)||0)/tot*100),
+      bos_yuzde:    Math.round((Number(o.bos)||0)/tot*100)
+    });
+  });
+  Object.values(ogrKonuOdevler).forEach(arr =>
+    arr.sort((a,b) => (a.tarih||'').localeCompare(b.tarih||''))
+  );
+
   let html = `
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
@@ -2711,8 +3103,42 @@ async function loadOgrBasari() {
       </div>`;
   });
 
-  html += '</div>';
+  html += `</div>
+    <!-- Konu Zaman Serisi (Öğrenci) -->
+    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mt-4 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-outline-variant/20 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-base">show_chart</span>
+        <span class="font-headline font-bold text-sm text-on-surface">Konu Bazlı Performans Grafiği</span>
+        <span class="ml-auto text-xs text-outline">Konu seçin →</span>
+      </div>
+      <div class="p-3">
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <div class="sm:col-span-2 space-y-0.5 max-h-60 overflow-y-auto" id="ogr-konu-listesi">
+            ${allKonular.map(k => {
+              const cnt = (ogrKonuOdevler[k]||[]).length;
+              return `<button onclick="acOgrKonuGrafigi('${k.replace(/'/g,"&#39;")}')"
+                id="okbtn-${k.replace(/\W/g,'_')}"
+                class="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-sm">
+                <span class="flex-1 font-medium text-on-surface truncate">${k}</span>
+                <span class="text-[10px] text-outline">${cnt>0?cnt:''}</span>
+                <span class="material-symbols-outlined text-sm text-outline/40">chevron_right</span>
+              </button>`;
+            }).join('')}
+          </div>
+          <div class="sm:col-span-3" id="ogr-konu-grafik">
+            <div class="flex flex-col items-center justify-center h-40 text-sm text-outline gap-2">
+              <span class="material-symbols-outlined text-3xl opacity-20">show_chart</span>
+              <span>Konu seçin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
   el.innerHTML = html;
+
+  // Öğrenci konu verisini kaydet
+  window._ogrKonuData = { konuOdevler: ogrKonuOdevler, _chart: null };
 }
 
 // ── VELİ PANELİ ──────────────────────────────────────────────
@@ -2797,6 +3223,25 @@ async function loadVeliPanel() {
     konuMap[konu].toplam  += Number(o.toplam)||0;
   });
   const allKonular = konular.length ? konular : Object.keys(konuMap);
+
+  // Veli zaman serisi
+  const veliKonuOdevler = {};
+  tamamlanan.forEach(o => {
+    const konu = (o.konu||'').split(' — ')[0];
+    if (!konu) return;
+    const tot = Number(o.toplam)||0;
+    if (!tot) return;
+    if (!veliKonuOdevler[konu]) veliKonuOdevler[konu] = [];
+    veliKonuOdevler[konu].push({
+      tarih: o.tarih,
+      dogru_yuzde:  Math.round((Number(o.dogru)||0)/tot*100),
+      yanlis_yuzde: Math.round((Number(o.yanlis)||0)/tot*100),
+      bos_yuzde:    Math.round((Number(o.bos)||0)/tot*100)
+    });
+  });
+  Object.values(veliKonuOdevler).forEach(arr =>
+    arr.sort((a,b) => (a.tarih||'').localeCompare(b.tarih||''))
+  );
 
   // ── ÖZET TAB ────────────────────────────────────────────────
   const topDogru  = tamamlanan.reduce((s,o)=>s+(Number(o.dogru)||0),0);
@@ -2957,7 +3402,39 @@ async function loadVeliPanel() {
             </div>
             ${r?`<div class="ml-9 mt-1 text-xs text-outline">✅${r.dogru} ❌${r.yanlis} ⬜${r.bos} / ${r.toplam} soru</div>`:`<div class="ml-9 mt-1 text-xs text-outline/50">Ödev henüz tamamlanmadı</div>`}
           </div>`;}).join('')}
+      </div>
+      <!-- Veli Zaman Serisi -->
+      <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mt-4 overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-outline-variant/20 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-base">show_chart</span>
+          <span class="font-headline font-bold text-sm text-on-surface">Konu Bazlı Performans Grafiği</span>
+          <span class="ml-auto text-xs text-outline">Konu seçin →</span>
+        </div>
+        <div class="p-3">
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div class="sm:col-span-2 space-y-0.5 max-h-60 overflow-y-auto" id="veli-konu-listesi">
+              ${allKonular.map(k => {
+                const cnt = (veliKonuOdevler[k]||[]).length;
+                return `<button onclick="acVeliKonuGrafigi('${k.replace(/'/g,"&#39;")}')"
+                  id="vkbtn-${k.replace(/\W/g,'_')}"
+                  class="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-sm">
+                  <span class="flex-1 font-medium text-on-surface truncate">${k}</span>
+                  <span class="text-[10px] text-outline">${cnt>0?cnt:''}</span>
+                  <span class="material-symbols-outlined text-sm text-outline/40">chevron_right</span>
+                </button>`;
+              }).join('')}
+            </div>
+            <div class="sm:col-span-3" id="veli-konu-grafik">
+              <div class="flex flex-col items-center justify-center h-40 text-sm text-outline gap-2">
+                <span class="material-symbols-outlined text-3xl opacity-20">show_chart</span>
+                <span>Konu seçin</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>`;
+
+  window._veliKonuData = { konuOdevler: veliKonuOdevler, _chart: null, _idPrefix: null };
 
   // Denemeler sekmesi
   const veliDenemeler = denemelerData || [];

@@ -69,10 +69,74 @@ tailwind.config = {
   ::-webkit-scrollbar { width: 0; }
   .glass-header { background: rgba(245,250,255,0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-bottom: 1px solid rgba(192,199,209,0.15); }
   input:focus, select:focus, textarea:focus { outline: none; ring: none; box-shadow: 0 0 0 2px #005d8d; }
-  .nav-item.active { color: #ffffff; font-weight: 700; background: rgba(255,255,255,0.15); }
-  .nav-item.active .nav-icon { color: #ffffff; }
-  .progress-bar { height: 8px; border-radius: 8px; background: #e6eff6; overflow: hidden; }
-  .progress-fill { height: 100%; border-radius: 8px; transition: width 0.8s ease; }
+  /* ── ADAPTIX DESIGN SYSTEM ── */
+  :root {
+    --ink: #0f2230; --ink-soft: #4a6072;
+    --line: #e2edf5;
+    --orange: #f57c00; --orange-600: #e96b00;
+    --card-shadow: 0 1px 2px rgba(1,49,73,.04), 0 8px 24px rgba(1,49,73,.06);
+    --card-shadow-hover: 0 4px 12px rgba(1,49,73,.08), 0 18px 40px rgba(1,49,73,.10);
+  }
+  .card { background:#fff; border-radius:1rem; box-shadow:var(--card-shadow); border:1px solid var(--line); }
+  .card-2xl { border-radius:1.25rem; background:#fff; box-shadow:var(--card-shadow); border:1px solid var(--line); }
+  .card-hover { transition:box-shadow .2s,transform .2s; cursor:pointer; }
+  .card-hover:hover { box-shadow:var(--card-shadow-hover); transform:translateY(-2px); }
+  .btn { display:inline-flex; align-items:center; gap:8px; font-family:Manrope,sans-serif; font-weight:700; font-size:14px; padding:10px 18px; border-radius:12px; border:1px solid transparent; cursor:pointer; transition:all .16s; white-space:nowrap; }
+  .btn .material-symbols-outlined { font-size:20px; }
+  .btn-primary { background:#005d8d; color:#fff; }
+  .btn-primary:hover { background:#004a72; box-shadow:0 6px 16px rgba(0,93,141,.28); }
+  .btn-orange { background:#f57c00; color:#fff; }
+  .btn-orange:hover { background:#e96b00; box-shadow:0 6px 16px rgba(245,124,0,.30); }
+  .btn-ghost { background:#fff; color:#005d8d; border-color:var(--line); }
+  .btn-ghost:hover { background:#f5faff; border-color:#cce5ff; }
+  .btn-soft { background:#cce5ff; color:#004a72; }
+  .btn-soft:hover { filter:brightness(.97); }
+  .badge { display:inline-flex; align-items:center; gap:5px; font-weight:700; font-size:12px; padding:4px 10px; border-radius:999px; font-family:Manrope,sans-serif; }
+  .badge .material-symbols-outlined { font-size:15px; }
+  .badge-green { background:#d6f3df; color:#00661d; }
+  .badge-amber { background:#fff0cc; color:#805600; }
+  .badge-red   { background:#ffdad6; color:#ba1a1a; }
+  .badge-blue  { background:#cce5ff; color:#004a72; }
+  .badge-gray  { background:#eef3f7; color:#4a6072; }
+  .field { width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:#fff; font:inherit; color:#0f2230; transition:border-color .15s,box-shadow .15s; }
+  .field:focus { outline:none; border-color:#005d8d; box-shadow:0 0 0 3px rgba(0,93,141,.12); }
+  .field::placeholder { color:#9bb1c0; }
+  label.lbl { display:block; font-weight:700; font-size:12.5px; color:#4a6072; margin:0 0 6px 2px; font-family:Manrope,sans-serif; }
+  .bar { height:8px; border-radius:999px; background:#e3eef6; overflow:hidden; }
+  .bar > span { display:block; height:100%; border-radius:999px; background:#005d8d; }
+  .sidebar { background:linear-gradient(180deg,#005d8d 0%,#014c74 60%,#013149 100%); color:#fff; width:256px; flex:0 0 256px; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+  .sidebar::after { content:""; position:absolute; right:-60px; top:40px; width:220px; height:220px; background:radial-gradient(circle,rgba(245,124,0,.22),transparent 68%); pointer-events:none; }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:12px; color:rgba(255,255,255,.78); font-weight:600; font-size:14px; cursor:pointer; transition:background .15s,color .15s; position:relative; font-family:Manrope,sans-serif; border:none; background:transparent; width:100%; text-align:left; }
+  .nav-item .material-symbols-outlined { font-size:22px; }
+  .nav-item:hover { background:rgba(255,255,255,.08); color:#fff; }
+  .nav-item.active { background:rgba(255,255,255,.15); color:#fff; }
+  .nav-item.active::before { content:""; position:absolute; left:-10px; top:9px; bottom:9px; width:4px; background:#f57c00; border-radius:0 4px 4px 0; }
+  .tabbar { display:flex; gap:4px; background:#fff; padding:5px; border-radius:14px; border:1px solid var(--line); }
+  .tab { flex:1; text-align:center; padding:9px 14px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13.5px; color:#4a6072; font-family:Manrope,sans-serif; transition:all .15s; display:inline-flex; align-items:center; justify-content:center; gap:7px; border:none; background:transparent; }
+  .tab .material-symbols-outlined { font-size:19px; }
+  .tab:hover { color:#005d8d; }
+  .tab.active { background:#005d8d; color:#fff; box-shadow:0 4px 12px rgba(0,93,141,.22); }
+  .tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
+  .tbl th { text-align:left; font-family:Manrope,sans-serif; font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:#4a6072; padding:10px 14px; border-bottom:1px solid var(--line); }
+  .tbl td { padding:12px 14px; border-bottom:1px solid var(--line); }
+  .tbl tbody tr:last-child td { border-bottom:none; }
+  .tbl tbody tr:hover { background:#f5faff; }
+  .num { font-variant-numeric:tabular-nums; font-weight:600; }
+  .stat-navy  { background:linear-gradient(135deg,#006fa8,#004a72); color:#fff; border:none; }
+  .stat-amber { background:linear-gradient(135deg,#ffc24d,#feb223); color:#5a3d00; border:none; }
+  .stat-green { background:linear-gradient(135deg,#16a046,#008228); color:#fff; border:none; }
+  .stat-orange{ background:linear-gradient(135deg,#ff9836,#f57c00); color:#fff; border:none; }
+  .stat-bg .material-symbols-outlined { font-size:116px; opacity:.16; }
+  .chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:8px; background:#f5faff; border:1px solid var(--line); font-size:11.5px; font-weight:700; color:#004a72; font-family:Manrope,sans-serif; }
+  .seg { display:inline-flex; background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
+  .seg button { border:none; background:transparent; font-family:Manrope,sans-serif; font-weight:700; font-size:12.5px; color:#4a6072; padding:6px 14px; border-radius:999px; cursor:pointer; transition:all .15s; }
+  .seg button.on { background:#005d8d; color:#fff; }
+  .muted { color:#4a6072; }
+  .divider { height:1px; background:var(--line); }
+  .progress-bar { height:8px; border-radius:8px; background:#e6eff6; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:8px; transition:width 0.8s ease; }
+  .fade-in { animation:fade .28s ease; }
+  @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
   .ambient-blob { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; opacity: 0.25; }
   @media print {
     @page { size: A4 portrait; margin: 12mm; }
@@ -118,251 +182,265 @@ tailwind.config = {
 <body class="bg-surface text-on-surface min-h-screen">
 
 <!-- ═══════════════════════════════════════════ LOGIN -->
-<div id="loginScreen" class="min-h-screen flex flex-col relative overflow-hidden">
-  <div class="ambient-blob w-96 h-96 bg-primary-fixed top-[-20%] left-[-15%]"></div>
-  <div class="ambient-blob w-80 h-80 bg-tertiary-container bottom-[-10%] right-[-10%]"></div>
-
-  <header class="flex justify-between items-center px-6 py-4 glass-header z-10">
-    <div class="flex items-center gap-2">
-      <img src="public/adaptix_renk_logo.png" alt="AdaptiX" class="h-9 w-auto">
-    </div>
-  </header>
-
-  <main class="flex-grow flex items-center justify-center p-6 z-10">
-    <div class="w-full max-w-md">
-      <div class="bg-surface-container-lowest rounded-2xl p-8 md:p-10 shadow-[0px_16px_48px_rgba(0,29,49,0.08)] border border-outline-variant/20">
-        <div class="mb-8">
-          <h1 class="font-headline text-2xl font-bold text-on-surface tracking-tight mb-2">Hoş Geldiniz</h1>
-          <p class="text-on-surface-variant text-sm">Eğitim yolculuğunuzda size rehberlik etmek için buradayız.</p>
-        </div>
-
-        <!-- Rol Seçimi -->
-        <div class="flex bg-surface-container rounded-xl p-1 mb-6 gap-1">
-          <button onclick="switchRole('ogretmen')" id="role-ogretmen"
-            class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-surface-container-lowest text-primary shadow-sm">
-            👨‍🏫 Öğretmen
-          </button>
-          <button onclick="switchRole('ogrenci')" id="role-ogrenci"
-            class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-on-surface-variant">
-            🎓 Öğrenci
-          </button>
-          <button onclick="switchRole('veli')" id="role-veli"
-            class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-on-surface-variant">
-            👨‍👩‍👧 Veli
-          </button>
-        </div>
-
-        <!-- Öğretmen Formu -->
-        <div id="form-ogretmen" class="space-y-4">
-          <div>
-            <label class="block text-sm font-semibold text-on-surface-variant mb-2">Şifre</label>
-            <input type="password" id="ogr-sifre" placeholder="••••••••"
-              class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm transition-all"
-              onkeydown="if(event.key==='Enter') doLogin()"/>
-          </div>
-        </div>
-
-        <!-- Öğrenci Formu -->
-        <div id="form-ogrenci" class="space-y-4 hidden">
-          <div>
-            <label class="block text-sm font-semibold text-on-surface-variant mb-2">TC Kimlik Numarası</label>
-            <input type="text" inputmode="numeric" id="ogrenci-tc" placeholder="12345678901"
-              class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm"
-              onkeydown="if(event.key==='Enter') doLogin()"/>
-          </div>
-        </div>
-
-        <!-- Veli Formu -->
-        <div id="form-veli" class="space-y-4 hidden">
-          <div>
-            <label class="block text-sm font-semibold text-on-surface-variant mb-2">Kayıtlı Telefon Numarası</label>
-            <input type="text" inputmode="numeric" id="veli-tel" placeholder="05xxxxxxxxx"
-              class="w-full px-4 py-3.5 rounded-xl bg-surface-container-low border-none text-on-surface placeholder:text-outline/60 text-sm"
-              onkeydown="if(event.key==='Enter') doLogin()"/>
-          </div>
-        </div>
-
-        <button onclick="doLogin()"
-          class="w-full mt-6 py-4 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-base shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all duration-150">
-          Giriş Yap
-        </button>
-
-        <div id="loginError" class="hidden mt-4 p-3 bg-error-container/50 text-error rounded-xl text-sm font-medium text-center"></div>
+<div id="loginScreen" style="min-height:100vh;display:grid;grid-template-columns:1.05fr 1fr;">
+  <!-- Sol: Marka paneli -->
+  <div style="background:linear-gradient(150deg,#005d8d,#013149 70%);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:54px 56px;">
+    <div style="position:absolute;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(245,124,0,.32),transparent 65%);right:-120px;top:-80px;"></div>
+    <div style="position:absolute;width:340px;height:340px;border-radius:50%;border:1px solid rgba(255,255,255,.12);right:60px;bottom:-120px;"></div>
+    <!-- Logo -->
+    <div style="display:flex;align-items:center;gap:12px;position:relative;">
+      <img src="public/adaptix_logo.png" alt="AdaptiX" style="width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.18));">
+      <div>
+        <div style="font-family:Manrope;font-weight:800;font-size:24px;color:#fff;letter-spacing:-.02em;line-height:1;">Adapti<span style="color:#feb223;">X</span></div>
+        <div style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.7);margin-top:3px;">Bireysel Takip Sistemi</div>
       </div>
     </div>
-  </main>
+    <!-- Slogan -->
+    <div style="position:relative;">
+      <h1 style="color:#fff;font-size:38px;line-height:1.12;font-weight:800;margin:0 0 16px;max-width:460px;"><span style="color:#feb223;">Ölçemediğin</span> hiçbir şeyi yönetemezsiniz!</h1>
+      <p style="color:rgba(255,255,255,.82);font-size:15px;max-width:420px;margin:0 0 34px;line-height:1.55;">LGS hazırlık sürecinde ders, ödev ve deneme performansını gerçek zamanlı izleyin.</p>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;gap:13px;align-items:center;color:rgba(255,255,255,.92);font-weight:600;font-size:14px;"><span style="width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">insights</span></span>Net trendi &amp; analiz</div>
+        <div style="display:flex;gap:13px;align-items:center;color:rgba(255,255,255,.92);font-weight:600;font-size:14px;"><span style="width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">task_alt</span></span>Ödev &amp; ders takibi</div>
+        <div style="display:flex;gap:13px;align-items:center;color:rgba(255,255,255,.92);font-weight:600;font-size:14px;"><span style="width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">groups</span></span>Öğretmen · Öğrenci · Veli</div>
+      </div>
+    </div>
+    <p style="color:rgba(255,255,255,.6);font-size:12.5px;margin:0;position:relative;">Dijital Eğitim Çözümleri · © 2026 AdaptiX</p>
+  </div>
+
+  <!-- Sağ: Giriş formu -->
+  <div style="display:flex;align-items:center;justify-content:center;padding:40px;background:var(--surface);">
+    <div style="width:100%;max-width:400px;">
+      <h2 style="font-size:26px;font-weight:800;margin:0 0 5px;color:var(--ink);">Tekrar hoş geldiniz 👋</h2>
+      <p style="margin:0 0 26px;font-size:14px;color:var(--ink-soft);">Devam etmek için rolünüzü seçin.</p>
+
+      <!-- Rol tabları -->
+      <div class="tabbar" style="margin-bottom:20px;">
+        <button class="tab active" id="role-ogretmen" onclick="switchRole('ogretmen')">
+          <span class="material-symbols-outlined">school</span>Öğretmen
+        </button>
+        <button class="tab" id="role-ogrenci" onclick="switchRole('ogrenci')">
+          <span class="material-symbols-outlined">backpack</span>Öğrenci
+        </button>
+        <button class="tab" id="role-veli" onclick="switchRole('veli')">
+          <span class="material-symbols-outlined">diversity_3</span>Veli
+        </button>
+      </div>
+
+      <!-- Öğretmen Formu -->
+      <div id="form-ogretmen">
+        <label class="lbl">Şifre</label>
+        <input type="password" id="ogr-sifre" placeholder="••••••••" class="field"
+          onkeydown="if(event.key==='Enter') doLogin()"/>
+      </div>
+
+      <!-- Öğrenci Formu -->
+      <div id="form-ogrenci" style="display:none;">
+        <label class="lbl">T.C. Kimlik No</label>
+        <input type="text" inputmode="numeric" id="ogrenci-tc" placeholder="12345678901" class="field"
+          onkeydown="if(event.key==='Enter') doLogin()"/>
+      </div>
+
+      <!-- Veli Formu -->
+      <div id="form-veli" style="display:none;">
+        <label class="lbl">Kayıtlı Telefon Numarası</label>
+        <input type="text" inputmode="numeric" id="veli-tel" placeholder="05xxxxxxxxx" class="field"
+          onkeydown="if(event.key==='Enter') doLogin()"/>
+      </div>
+
+      <button onclick="doLogin()" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;font-size:15px;margin-top:20px;">
+        <span class="material-symbols-outlined">login</span> Giriş Yap
+      </button>
+
+      <div id="loginError" style="display:none;margin-top:14px;padding:12px 16px;background:#ffdad6;color:#ba1a1a;border-radius:12px;font-size:13.5px;font-weight:600;text-align:center;"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════ APP -->
-<div id="appScreen" class="hidden min-h-screen pb-20 md:pb-0 md:pl-64">
+<div id="appScreen" style="display:none;height:100vh;overflow:hidden;flex-direction:row;">
 
   <!-- Sidebar (Desktop) -->
-  <aside id="sidebar" class="hidden md:flex flex-col h-screen p-6 fixed left-0 top-0 w-64 bg-primary border-r border-white/10 z-40">
-    <div class="mb-10 px-2">
-      <div class="flex items-center gap-2 mb-1">
-        <img src="public/adaptix_renk_logo.png" alt="AdaptiX" class="h-12 w-auto">
+  <aside id="sidebar" class="sidebar no-print" style="position:fixed;left:0;top:0;height:100vh;z-index:40;display:flex;flex-direction:column;">
+    <!-- Brand -->
+    <div style="display:flex;align-items:center;gap:11px;padding:22px 20px 18px;position:relative;">
+      <img src="public/adaptix_logo.png" alt="" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25));">
+      <div>
+        <div style="font-family:Manrope;font-weight:800;font-size:21px;color:#fff;line-height:1;">Adapti<span style="color:#feb223;">X</span></div>
+        <div style="font-size:10.5px;color:rgba(255,255,255,.6);margin-top:2px;">Bireysel Takip Sistemi</div>
       </div>
-      <div class="text-xs text-white/60 font-medium px-1" id="sidebar-rol-label">—</div>
     </div>
-    <nav class="flex flex-col gap-1 flex-grow" id="sidebarNav"></nav>
-    <div class="border-t border-white/20 pt-4 mt-4">
-      <div class="flex items-center gap-3 px-3 py-2">
-        <div class="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-primary font-headline font-bold text-sm" id="sidebar-avatar">—</div>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-semibold text-white truncate" id="sidebar-name">—</div>
-          <div class="text-xs text-white/60 truncate" id="sidebar-sinif">—</div>
-        </div>
-        <button onclick="logout()" class="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-          <span class="material-symbols-outlined text-white/60 hover:text-white text-xl">logout</span>
-        </button>
+    <!-- Kullanıcı kartı -->
+    <div style="margin:0 14px 16px;display:flex;align-items:center;gap:10px;padding:11px;background:rgba(255,255,255,.1);border-radius:14px;position:relative;">
+      <div id="sidebar-avatar" style="width:38px;height:38px;border-radius:11px;background:#fff;color:#005d8d;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:15px;flex:0 0 auto;">—</div>
+      <div style="min-width:0;">
+        <div id="sidebar-name" style="color:#fff;font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+        <div id="sidebar-rol-label" style="color:rgba(255,255,255,.65);font-size:11px;">—</div>
       </div>
+    </div>
+    <!-- Nav -->
+    <nav id="sidebarNav" style="display:flex;flex-direction:column;gap:4px;padding:0 14px;flex:1;overflow-y:auto;position:relative;"></nav>
+    <!-- Çıkış -->
+    <div style="padding:14px;position:relative;">
+      <button class="nav-item" onclick="logout()" style="color:rgba(255,255,255,.7);">
+        <span class="material-symbols-outlined">logout</span> Çıkış Yap
+      </button>
+      <div style="text-align:center;color:rgba(255,255,255,.5);font-size:10.5px;margin-top:12px;font-weight:600;">Dijital Eğitim Çözümleri</div>
     </div>
   </aside>
 
-  <!-- Top Header (Mobile) -->
-  <header class="glass-header md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-5 py-3">
-    <div class="flex items-center gap-2">
-      <img src="public/adaptix_renk_logo.png" alt="AdaptiX" class="h-7 w-auto">
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="text-xs text-outline font-medium" id="mobile-user-name">—</div>
-      <button onclick="logout()" class="p-1.5">
-        <span class="material-symbols-outlined text-outline text-xl">logout</span>
-      </button>
-    </div>
-  </header>
+  <!-- Sağ taraf: header + içerik -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;background:var(--surface);margin-left:256px;">
 
-  <!-- Main Content -->
-  <main class="pt-16 md:pt-0 px-5 md:px-8 py-6 max-w-3xl">
+    <!-- Sticky Header -->
+    <header id="appHeader" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 30px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;" class="no-print">
+      <div>
+        <h1 id="hdr-title" style="font-size:21px;font-weight:800;margin:0;color:var(--ink);font-family:Manrope,sans-serif;">—</h1>
+        <p id="hdr-sub" style="margin:2px 0 0;font-size:13px;color:var(--ink-soft);">—</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="hdr-role-badge" class="badge badge-blue">—</span>
+        <div id="hdr-avatar" style="width:38px;height:38px;border-radius:11px;background:#005d8d;color:#fff;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:15px;">—</div>
+      </div>
+    </header>
+
+    <!-- Mobile Header (küçük ekran) -->
+    <header class="glass-header no-print" id="mobileHeader" style="display:none;align-items:center;justify-content:space-between;padding:12px 18px;position:sticky;top:0;z-index:40;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <img src="public/adaptix_logo.png" alt="AdaptiX" style="height:28px;width:auto;">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="mobile-user-name" style="font-size:12px;color:var(--ink-soft);font-weight:600;">—</span>
+        <button onclick="logout()" style="padding:6px;background:none;border:none;cursor:pointer;">
+          <span class="material-symbols-outlined" style="font-size:20px;color:var(--ink-soft);">logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="scrollwrap" style="flex:1;padding:26px 30px 40px;overflow-y:auto;">
 
     <!-- ── ÖĞRETMEN PANELİ -->
     <div id="page-dashboard" class="page">
-      <div class="mb-6">
-        <p class="text-outline text-sm font-medium">Merhaba 👋</p>
-        <h1 class="font-headline text-2xl font-bold text-on-surface" id="dash-welcome">—</h1>
+      <div style="margin-bottom:22px;">
+        <p style="font-size:13px;font-weight:600;color:var(--ink-soft);">Merhaba</p>
+        <h2 style="font-family:Manrope;font-size:24px;font-weight:800;margin:2px 0 0;color:var(--ink);" id="dash-welcome">—</h2>
       </div>
 
       <!-- Stats -->
-      <div class="grid grid-cols-3 gap-3 mb-6" id="dashStats">
-        <div class="bg-primary rounded-xl p-4 shadow-[0_4px_16px_rgba(0,93,141,0.35)]">
-          <div class="font-headline text-3xl font-extrabold text-white" id="stat-ogrenci"><div class="spinner"></div></div>
-          <div class="text-xs text-white/70 mt-1 font-medium">Öğrenci</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;" id="dashStats">
+        <div class="card-2xl stat-navy" style="padding:20px 22px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">group</span>
+            <span style="font-size:12px;font-weight:600;opacity:.85;">Öğrenci</span>
+          </div>
+          <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-ogrenci"><div class="spinner"></div></div>
         </div>
-        <div class="bg-secondary-container rounded-xl p-4 shadow-[0_4px_16px_rgba(128,86,0,0.25)]">
-          <div class="font-headline text-3xl font-extrabold text-on-secondary-container" id="stat-bekleyen"><div class="spinner"></div></div>
-          <div class="text-xs text-on-secondary-container/70 mt-1 font-medium">Bekleyen Ödev</div>
+        <div class="card-2xl stat-amber" style="padding:20px 22px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">assignment_late</span>
+            <span style="font-size:12px;font-weight:600;opacity:.85;">Bekleyen Ödev</span>
+          </div>
+          <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-bekleyen"><div class="spinner"></div></div>
         </div>
-        <div class="bg-tertiary-container rounded-xl p-4 shadow-[0_4px_16px_rgba(0,130,40,0.3)]">
-          <div class="font-headline text-3xl font-extrabold text-white" id="stat-ders"><div class="spinner"></div></div>
-          <div class="text-xs text-white/70 mt-1 font-medium">Bu Ay Ders</div>
+        <div class="card-2xl stat-green" style="padding:20px 22px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">menu_book</span>
+            <span style="font-size:12px;font-weight:600;opacity:.85;">Bu Ay Ders</span>
+          </div>
+          <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-ders"><div class="spinner"></div></div>
         </div>
       </div>
 
       <!-- Sınıf Dağılımı -->
-      <div class="bg-primary-fixed rounded-xl p-5 mb-4 shadow-[0_4px_16px_rgba(0,93,141,0.08)]">
-        <h2 class="font-headline font-bold text-base text-primary mb-4">Sınıf Dağılımı</h2>
+      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">bar_chart</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Sınıf Dağılımı</h2>
+        </div>
         <div id="sinif-dagilim"></div>
       </div>
 
       <!-- Bekleyen Ödevler -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
-        <h2 class="font-headline font-bold text-base text-on-surface mb-4">⏳ Bekleyen Ödevler</h2>
+      <div class="card-2xl" style="padding:22px 24px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">schedule</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Bekleyen Ödevler</h2>
+        </div>
         <div id="bekleyen-odevler"></div>
       </div>
     </div>
 
     <!-- ── DERS KAYDET -->
     <div id="page-ders" class="page">
-      <div class="mb-6">
-        <h1 class="font-headline text-2xl font-bold text-on-surface">Ders İşleme</h1>
-        <p class="text-outline text-sm mt-1">İşlenen dersi ve kazanımları kaydet</p>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] space-y-5">
+      <div class="card-2xl" style="padding:24px 26px;display:flex;flex-direction:column;gap:18px;">
         <div>
-          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Öğrenci</label>
-          <select id="ders-ogrenci" onchange="dersOgrenciSecildi()"
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm appearance-none">
+          <label class="lbl">Öğrenci</label>
+          <select id="ders-ogrenci" onchange="dersOgrenciSecildi()" class="field">
             <option value="">— Öğrenci seçin —</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Konu</label>
-          <select id="ders-konu" onchange="konuSecildi()"
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm appearance-none">
+          <label class="lbl">Konu</label>
+          <select id="ders-konu" onchange="konuSecildi()" class="field">
             <option value="">— Önce öğrenci seçin —</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm font-semibold text-on-surface-variant mb-2">
-            Kazanımlar <span class="text-outline font-normal">(birden fazla seçilebilir)</span>
-          </label>
-          <div id="kazanim-checkboxlar" class="bg-surface-container-low rounded-xl max-h-52 overflow-y-auto divide-y divide-outline-variant/20">
-            <div class="p-4 text-sm text-outline">Önce konu seçin</div>
+          <label class="lbl">Kazanımlar <span style="font-weight:400;color:var(--ink-soft);">(birden fazla seçilebilir)</span></label>
+          <div id="kazanim-checkboxlar" style="background:var(--surface);border:1px solid var(--line);border-radius:12px;max-height:220px;overflow-y:auto;">
+            <div style="padding:16px;font-size:13px;color:var(--ink-soft);">Önce konu seçin</div>
           </div>
         </div>
         <div>
-          <label class="block text-sm font-semibold text-on-surface-variant mb-2">
-            Sorun Alanı <span class="text-outline font-normal">(opsiyonel)</span>
-          </label>
-          <textarea id="ders-gorus" rows="2" placeholder="Örn: EBOB problemlerinde zorlandı, kavram net değil..."
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm resize-none"></textarea>
+          <label class="lbl">Sorun Alanı <span style="font-weight:400;color:var(--ink-soft);">(opsiyonel)</span></label>
+          <textarea id="ders-gorus" rows="2" placeholder="Örn: EBOB problemlerinde zorlandı, kavram net değil..." class="field" style="resize:vertical;"></textarea>
         </div>
         <div>
-          <label class="block text-sm font-semibold text-on-surface-variant mb-2">Sonraki Ders Notu</label>
-          <textarea id="ders-hatirlatma" rows="2" placeholder="Örn: EBOB'u derinleştir, yeni nesil soru çöz..."
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm resize-none"></textarea>
+          <label class="lbl">Sonraki Ders Notu</label>
+          <textarea id="ders-hatirlatma" rows="2" placeholder="Örn: EBOB'u derinleştir, yeni nesil soru çöz..." class="field" style="resize:vertical;"></textarea>
         </div>
-        <button onclick="dersSave()"
-          class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
-          <span class="material-symbols-outlined text-sm mr-1">save</span> Dersi Kaydet
+        <button onclick="dersSave()" class="btn btn-primary" style="width:100%;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span> Dersi Kaydet
         </button>
       </div>
     </div>
 
     <!-- ── ÖDEV GİR -->
     <div id="page-odev" class="page">
-      <div class="mb-6">
-        <h1 class="font-headline text-2xl font-bold text-on-surface">Ödev Atama</h1>
-        <p class="text-outline text-sm mt-1">Haftalık ödev planını oluştur</p>
-      </div>
-
       <!-- Öğrenci seçimi -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
-        <label class="block text-sm font-semibold text-on-surface-variant mb-2">Öğrenci</label>
-        <select id="odev-ogrenci" onchange="odevOgrenciSecildi()"
-          class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-on-surface text-sm appearance-none">
+      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
+        <label class="lbl">Öğrenci</label>
+        <select id="odev-ogrenci" onchange="odevOgrenciSecildi()" class="field">
           <option value="">— Öğrenci seçin —</option>
         </select>
       </div>
 
-      <div id="odev-kaynak-uyari" class="hidden mb-4 p-3 bg-secondary-container/30 rounded-xl text-sm text-on-secondary-container font-medium">
+      <div id="odev-kaynak-uyari" style="display:none;margin-bottom:16px;padding:14px 16px;background:#fff8e1;border:1px solid #ffcc02;border-radius:12px;font-size:13px;font-weight:600;color:#5a3d00;">
         ⚠️ Bu öğrenciye henüz kaynak atanmamış. Kaynaklar sayfasından atayın.
       </div>
 
-      <div id="odev-satirlar-alani" class="hidden">
+      <div id="odev-satirlar-alani" style="display:none;">
         <!-- TASLAK TABLO: bu oturumda eklenen ödevler -->
-        <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="font-headline font-bold text-base text-on-surface">📝 Bu Oturumda Eklenenler</h2>
-            <span id="taslak-sayac" class="text-xs font-bold px-2.5 py-1 rounded-full bg-primary-fixed text-primary">0</span>
+        <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Bu Oturumda Eklenenler</h2>
+            <span id="taslak-sayac" class="badge badge-blue">0</span>
           </div>
-          <div id="taslak-liste" class="divide-y divide-outline-variant/20">
-            <div class="py-6 text-center text-sm text-outline">Aşağıdan ödev ekleyip buraya taşıyın</div>
+          <div id="taslak-liste" style="border-top:1px solid var(--line);">
+            <div style="padding:24px 0;text-align:center;font-size:13px;color:var(--ink-soft);">Aşağıdan ödev ekleyip buraya taşıyın</div>
           </div>
-          <button onclick="odevSave()" id="btn-tum-kaydet" disabled
-            class="w-full mt-4 py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            <span class="material-symbols-outlined text-sm mr-1">save</span> Tümünü Kaydet
+          <button onclick="odevSave()" id="btn-tum-kaydet" disabled class="btn btn-primary" style="width:100%;justify-content:center;margin-top:14px;">
+            <span class="material-symbols-outlined" style="font-size:18px;">save</span> Tümünü Kaydet
           </button>
         </div>
 
         <!-- ÖDEV EKLEME FORMU -->
-        <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
-          <h2 class="font-headline font-bold text-base text-on-surface mb-4">➕ Yeni Ödev</h2>
-          <div id="odev-form-alani" class="space-y-3"></div>
-          <button onclick="taslakEkle()"
-            class="w-full mt-3 py-3 bg-gradient-to-br from-tertiary to-tertiary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-tertiary/20 hover:opacity-90 active:scale-[0.98] transition-all">
-            <span class="material-symbols-outlined text-sm mr-1">add</span> Tabloya Ekle
+        <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0 0 16px;color:var(--ink);">Yeni Ödev</h2>
+          <div id="odev-form-alani" style="display:flex;flex-direction:column;gap:12px;"></div>
+          <button onclick="taslakEkle()" class="btn btn-orange" style="width:100%;justify-content:center;margin-top:14px;">
+            <span class="material-symbols-outlined" style="font-size:18px;">add</span> Tabloya Ekle
           </button>
         </div>
 
@@ -373,268 +451,225 @@ tailwind.config = {
 
     <!-- ── ÖĞRENCİLER -->
     <div id="page-ogrenciler" class="page">
-      <div class="mb-6">
-        <h1 class="font-headline text-2xl font-bold text-on-surface">Öğrenciler</h1>
-        <p class="text-outline text-sm mt-1">Öğrenci listesi ve yönetimi</p>
-      </div>
-
       <!-- Filtre -->
-      <div class="flex gap-3 mb-4">
-        <select id="filtre-sinif" onchange="renderOgrenciler()"
-          class="flex-1 px-4 py-3 rounded-xl bg-surface-container-lowest border-none text-sm text-on-surface shadow-[0_2px_8px_rgba(0,29,49,0.05)] appearance-none">
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <select id="filtre-sinif" onchange="renderOgrenciler()" class="field" style="flex:1;">
           <option value="">Tüm Sınıflar</option>
           <option>5. Sınıf</option><option>6. Sınıf</option>
           <option>7. Sınıf</option><option>8. Sınıf</option>
         </select>
-        <input type="text" id="filtre-ad" placeholder="🔍 Ad ara..." oninput="renderOgrenciler()"
-          class="flex-2 px-4 py-3 rounded-xl bg-surface-container-lowest border-none text-sm text-on-surface shadow-[0_2px_8px_rgba(0,29,49,0.05)]" style="flex:2"/>
+        <input type="text" id="filtre-ad" placeholder="Ad ara..." oninput="renderOgrenciler()" class="field" style="flex:2;"/>
       </div>
 
-      <div id="ogrenci-listesi" class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] divide-y divide-outline-variant/20 mb-6"></div>
+      <div id="ogrenci-listesi" class="card-2xl" style="margin-bottom:16px;padding:0;overflow:hidden;"></div>
 
       <!-- Yeni Öğrenci -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
-        <h2 class="font-headline font-bold text-base text-on-surface mb-4">➕ Yeni Öğrenci Ekle</h2>
-        <div class="space-y-3">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Ad Soyad *</label>
-              <input type="text" id="yeni-ad" placeholder="Ali Yılmaz"
-                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm text-on-surface"/>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">TC Kimlik *</label>
-              <input type="number" id="yeni-tc" placeholder="12345678901"
-                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm text-on-surface"/>
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Sınıf</label>
-              <select id="yeni-sinif" class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-                <option>5. Sınıf</option><option>6. Sınıf</option>
-                <option>7. Sınıf</option><option>8. Sınıf</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Şube</label>
-              <input type="text" id="yeni-sube" placeholder="A"
-                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Okul</label>
-              <input type="text" id="yeni-okul" placeholder="Okul adı"
-                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Okul No</label>
-              <input type="number" id="yeni-okulno" placeholder="145"
-                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Veli Adı</label>
-              <input type="text" id="yeni-veli" placeholder="Ahmet Yılmaz"
-                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Veli Telefonu</label>
-              <input type="number" id="yeni-tel" placeholder="5051234567"
-                class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-            </div>
-          </div>
-          <button onclick="ogrenciEkle()"
-            class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
-            Kaydet
-          </button>
+      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">person_add</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Yeni Öğrenci Ekle</h2>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label class="lbl">Ad Soyad *</label><input type="text" id="yeni-ad" placeholder="Ali Yılmaz" class="field"/></div>
+          <div><label class="lbl">TC Kimlik *</label><input type="number" id="yeni-tc" placeholder="12345678901" class="field"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label class="lbl">Sınıf</label>
+            <select id="yeni-sinif" class="field">
+              <option>5. Sınıf</option><option>6. Sınıf</option>
+              <option>7. Sınıf</option><option>8. Sınıf</option>
+            </select>
+          </div>
+          <div><label class="lbl">Şube</label><input type="text" id="yeni-sube" placeholder="A" class="field"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label class="lbl">Okul</label><input type="text" id="yeni-okul" placeholder="Okul adı" class="field"/></div>
+          <div><label class="lbl">Okul No</label><input type="number" id="yeni-okulno" placeholder="145" class="field"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label class="lbl">Veli Adı</label><input type="text" id="yeni-veli" placeholder="Ahmet Yılmaz" class="field"/></div>
+          <div><label class="lbl">Veli Telefonu</label><input type="number" id="yeni-tel" placeholder="5051234567" class="field"/></div>
+        </div>
+        <button onclick="ogrenciEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
+        </button>
       </div>
 
       <!-- Ders Programı -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
-        <h2 class="font-headline font-bold text-base text-on-surface mb-4">🗓️ Ders Programı Ekle</h2>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Öğrenci</label>
-            <select id="program-ogrenci" onchange="loadDersProgrami()"
-              class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-              <option value="">— Öğrenci seçin —</option>
-            </select>
-          </div>
-
-          <!-- Mevcut program -->
-          <div id="mevcut-program" class="hidden">
-            <div class="text-xs font-semibold text-outline uppercase tracking-wider mb-2">Mevcut Program</div>
-            <div id="program-listesi" class="divide-y divide-outline-variant/20 bg-surface-container-low rounded-xl px-3 mb-3"></div>
-          </div>
-
-          <!-- Yeni seans ekle -->
-          <div class="grid grid-cols-3 gap-2">
-            <select id="program-gun"
-              class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-              <option value="">— Gün —</option>
-              <option>Pazartesi</option><option>Salı</option><option>Çarşamba</option>
-              <option>Perşembe</option><option>Cuma</option><option>Cumartesi</option><option>Pazar</option>
-            </select>
-            <input type="time" id="program-baslangic"
-              class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm"
-              placeholder="14:00"/>
-            <input type="time" id="program-bitis"
-              class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm"
-              placeholder="15:00"/>
-          </div>
-          <button onclick="programEkle()"
-            class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
-            + Seans Ekle
-          </button>
+      <div class="card-2xl" style="padding:22px 24px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">calendar_month</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Ders Programı Ekle</h2>
         </div>
+        <div>
+          <label class="lbl">Öğrenci</label>
+          <select id="program-ogrenci" onchange="loadDersProgrami()" class="field">
+            <option value="">— Öğrenci seçin —</option>
+          </select>
+        </div>
+
+        <!-- Mevcut program — JS controls with classList.hidden -->
+        <div id="mevcut-program" class="hidden">
+          <div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Mevcut Program</div>
+          <div id="program-listesi" style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px;margin-bottom:12px;"></div>
+        </div>
+
+        <!-- Seans türü toggle -->
+        <div class="seg">
+          <button id="tip-kalici-btn" onclick="programTipSec('kalici')" class="on">Kalıcı</button>
+          <button id="tip-ek-btn" onclick="programTipSec('ek')">Bu Hafta Özel</button>
+        </div>
+
+        <!-- Gün seçici (kalıcı) -->
+        <div id="program-gun-alani">
+          <select id="program-gun" class="field">
+            <option value="">— Gün —</option>
+            <option>Pazartesi</option><option>Salı</option><option>Çarşamba</option>
+            <option>Perşembe</option><option>Cuma</option><option>Cumartesi</option><option>Pazar</option>
+          </select>
+        </div>
+
+        <!-- Tarih seçici (ek) — JS controls with classList.hidden -->
+        <div id="program-tarih-alani" class="hidden">
+          <input type="date" id="program-tarih" class="field"/>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input type="time" id="program-baslangic" class="field"/>
+          <input type="time" id="program-bitis" class="field"/>
+        </div>
+
+        <!-- Çakışma uyarısı — JS controls with classList.hidden -->
+        <div id="program-cakisma-uyari" class="hidden" style="background:#fff0f0;border:1px solid #ba1a1a;color:#ba1a1a;font-size:12px;font-weight:600;padding:10px 14px;border-radius:10px;"></div>
+
+        <button onclick="programEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:18px;">add</span> Seans Ekle
+        </button>
       </div>
     </div>
 
     <!-- ── KAYNAKLAR -->
     <div id="page-kaynaklar" class="page">
-      <div class="mb-6">
-        <h1 class="font-headline text-2xl font-bold text-on-surface">Kaynak Yönetimi</h1>
-        <p class="text-outline text-sm mt-1">Genel havuz ve öğrenci atamaları</p>
-      </div>
-
       <!-- Genel Havuz -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
-        <h2 class="font-headline font-bold text-base text-on-surface mb-3">📚 Genel Kaynak Havuzu</h2>
-        <div class="flex gap-2 mb-3">
-          <select id="k-filtre-sinif" onchange="renderKaynaklar()"
-            class="flex-1 px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">library_books</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Genel Kaynak Havuzu</h2>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <select id="k-filtre-sinif" onchange="renderKaynaklar()" class="field" style="flex:1;">
             <option value="">Tüm Sınıflar</option>
             <option>5. Sınıf</option><option>6. Sınıf</option>
             <option>7. Sınıf</option><option>8. Sınıf</option>
           </select>
-          <input type="text" id="k-filtre-ad" placeholder="🔍 Ara..." oninput="renderKaynaklar()"
-            class="flex-1 px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm"/>
+          <input type="text" id="k-filtre-ad" placeholder="Ara..." oninput="renderKaynaklar()" class="field" style="flex:1;"/>
         </div>
-        <div id="kaynak-listesi" class="divide-y divide-outline-variant/20"></div>
+        <div id="kaynak-listesi"></div>
       </div>
 
       <!-- Yeni Kaynak Ekle -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
-        <h2 class="font-headline font-bold text-base text-on-surface mb-4">➕ Havuza Kaynak Ekle</h2>
-        <div class="space-y-3">
-          <input type="text" id="k-ad" placeholder="Kaynak adı"
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-          <div class="grid grid-cols-2 gap-3">
-            <input type="text" id="k-yayinevi" placeholder="Yayın evi / Yazar"
-              class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-            <select id="k-sinif" class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-              <option>5. Sınıf</option><option>6. Sınıf</option>
-              <option>7. Sınıf</option><option selected>8. Sınıf</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <select id="k-zorluk" class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-              <option>Kolay</option><option selected>Orta</option><option>Zor</option>
-            </select>
-            <input type="number" id="k-konu-sayisi" placeholder="Konu sayısı"
-              class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm"/>
-          </div>
-          <button onclick="kaynakEkle()"
-            class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
-            Havuza Ekle
-          </button>
+      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">add_circle</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Havuza Kaynak Ekle</h2>
         </div>
+        <input type="text" id="k-ad" placeholder="Kaynak adı" class="field"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input type="text" id="k-yayinevi" placeholder="Yayın evi / Yazar" class="field"/>
+          <select id="k-sinif" class="field">
+            <option>5. Sınıf</option><option>6. Sınıf</option>
+            <option>7. Sınıf</option><option selected>8. Sınıf</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <select id="k-zorluk" class="field">
+            <option>Kolay</option><option selected>Orta</option><option>Zor</option>
+          </select>
+          <input type="number" id="k-konu-sayisi" placeholder="Konu sayısı" class="field"/>
+        </div>
+        <button onclick="kaynakEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span> Havuza Ekle
+        </button>
       </div>
 
       <!-- Öğrenciye Ata -->
-      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
-        <h2 class="font-headline font-bold text-base text-on-surface mb-4">🔗 Öğrenciye Kaynak Ata</h2>
-        <div class="space-y-3">
-          <select id="ata-ogrenci" onchange="ataOgrenciSecildi()"
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-            <option value="">— Öğrenci seçin —</option>
-          </select>
-          <select id="ata-kaynak"
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-            <option value="">— Kaynak seçin —</option>
-          </select>
-          <button onclick="kaynakAta()"
-            class="w-full py-3.5 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all">
-            Ata
-          </button>
+      <div class="card-2xl" style="padding:22px 24px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">link</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Öğrenciye Kaynak Ata</h2>
         </div>
-        <div id="ogrenci-kaynak-listesi" class="mt-4"></div>
+        <select id="ata-ogrenci" onchange="ataOgrenciSecildi()" class="field">
+          <option value="">— Öğrenci seçin —</option>
+        </select>
+        <select id="ata-kaynak" class="field">
+          <option value="">— Kaynak seçin —</option>
+        </select>
+        <button onclick="kaynakAta()" class="btn btn-primary" style="width:100%;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:18px;">link</span> Ata
+        </button>
+        <div id="ogrenci-kaynak-listesi"></div>
       </div>
     </div>
 
     <!-- ── DENEMELER -->
     <div id="page-denemeler" class="page">
-      <div class="mb-5">
-        <h1 class="font-headline text-2xl font-bold text-on-surface">Denemeler</h1>
-        <p class="text-outline text-sm mt-0.5">Öğrenci deneme sınavı sonuçları</p>
-      </div>
-
       <!-- Öğrenci seç + form -->
-      <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] p-5 mb-5">
-        <div class="mb-4">
-          <label class="block text-xs font-bold text-outline uppercase tracking-wider mb-2">Öğrenci</label>
-          <select id="deneme-ogrenci" onchange="loadDenemeler()"
-            class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-            <option value="">— Öğrenci seçin —</option>
-          </select>
-        </div>
+      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
+        <label class="lbl">Öğrenci</label>
+        <select id="deneme-ogrenci" onchange="loadDenemeler()" class="field" style="margin-bottom:18px;">
+          <option value="">— Öğrenci seçin —</option>
+        </select>
 
-        <div class="border-t border-outline-variant/20 pt-4">
-          <div class="text-xs font-bold text-outline uppercase tracking-wider mb-3">Yeni Deneme Ekle</div>
-          <div class="grid grid-cols-2 gap-3 mb-3">
+        <div style="border-top:1px solid var(--line);padding-top:18px;">
+          <div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">Yeni Deneme Ekle</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
             <div>
-              <label class="block text-xs font-semibold text-outline mb-1">Tarih</label>
-              <input type="date" id="deneme-tarih"
-                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">
+              <label class="lbl">Tarih</label>
+              <input type="date" id="deneme-tarih" class="field">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-outline mb-1">Deneme Adı</label>
-              <input type="text" id="deneme-adi" placeholder="örn. TYT Deneme 1"
-                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">
+              <label class="lbl">Deneme Adı</label>
+              <input type="text" id="deneme-adi" placeholder="örn. TYT Deneme 1" class="field">
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-3 mb-4">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
             <div>
-              <label class="block text-xs font-bold text-tertiary mb-1 text-center">Doğru</label>
+              <label class="lbl" style="color:#008228;text-align:center;display:block;">Doğru</label>
               <input type="number" id="deneme-dogru" min="0" placeholder="0"
                 oninput="denemeNetHesapla()"
-                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-2 border-tertiary text-tertiary font-bold text-center text-sm">
+                class="field" style="text-align:center;border-color:#008228;color:#008228;font-weight:700;">
             </div>
             <div>
-              <label class="block text-xs font-bold text-error mb-1 text-center">Yanlış</label>
+              <label class="lbl" style="color:#ba1a1a;text-align:center;display:block;">Yanlış</label>
               <input type="number" id="deneme-yanlis" min="0" placeholder="0"
                 oninput="denemeNetHesapla()"
-                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-2 border-error text-error font-bold text-center text-sm">
+                class="field" style="text-align:center;border-color:#ba1a1a;color:#ba1a1a;font-weight:700;">
             </div>
             <div>
-              <label class="block text-xs font-bold text-outline mb-1 text-center">Boş</label>
+              <label class="lbl" style="text-align:center;display:block;">Boş</label>
               <input type="number" id="deneme-bos" min="0" placeholder="0"
                 oninput="denemeNetHesapla()"
-                class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-center text-sm">
+                class="field" style="text-align:center;">
             </div>
           </div>
-          <!-- Önizleme -->
-          <div id="deneme-onizleme" class="hidden bg-surface-container rounded-xl px-4 py-3 mb-3 flex items-center gap-6 text-sm">
-            <div class="text-center">
-              <div class="text-xs text-outline mb-0.5">Toplam Soru</div>
-              <div class="font-headline font-extrabold text-on-surface" id="deneme-toplam-onizleme">—</div>
+          <!-- Önizleme (JS controls show/hide via classList 'hidden' — Tailwind still loaded) -->
+          <div id="deneme-onizleme" class="hidden" style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:24px;">
+            <div style="text-align:center;">
+              <div style="font-size:11px;color:var(--ink-soft);margin-bottom:2px;">Toplam Soru</div>
+              <div style="font-family:Manrope;font-weight:800;color:var(--ink);" id="deneme-toplam-onizleme">—</div>
             </div>
-            <div class="text-center">
-              <div class="text-xs text-outline mb-0.5">Net</div>
-              <div class="font-headline font-extrabold text-primary" id="deneme-net-onizleme">—</div>
+            <div style="text-align:center;">
+              <div style="font-size:11px;color:var(--ink-soft);margin-bottom:2px;">Net</div>
+              <div style="font-family:Manrope;font-weight:800;color:var(--primary);" id="deneme-net-onizleme">—</div>
             </div>
-            <div class="text-center">
-              <div class="text-xs text-outline mb-0.5">Başarı %</div>
-              <div class="font-headline font-extrabold" id="deneme-basari-onizleme">—</div>
+            <div style="text-align:center;">
+              <div style="font-size:11px;color:var(--ink-soft);margin-bottom:2px;">Başarı %</div>
+              <div style="font-family:Manrope;font-weight:800;" id="deneme-basari-onizleme">—</div>
             </div>
           </div>
-          <button onclick="denemeEkle()"
-            class="w-full py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-headline font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
-            ➕ Deneme Ekle
+          <button onclick="denemeEkle()" class="btn btn-orange" style="width:100%;justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:18px;">add</span> Deneme Ekle
           </button>
         </div>
       </div>
@@ -645,34 +680,33 @@ tailwind.config = {
 
     <!-- ── DERS PROGRAMI -->
     <div id="page-ders-programi" class="page">
-      <div class="mb-5 flex items-center justify-between">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
         <div>
-          <h1 class="font-headline text-2xl font-bold text-on-surface">Ders Programı</h1>
-          <p class="text-outline text-sm mt-0.5">Haftalık özel ders takvimi</p>
+          <h2 style="font-family:Manrope;font-size:20px;font-weight:800;margin:0;color:var(--ink);">Ders Programı</h2>
+          <p style="font-size:13px;color:var(--ink-soft);margin:3px 0 0;">Haftalık özel ders takvimi</p>
         </div>
-        <button onclick="loadHaftalikProgram()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors">
-          <span class="material-symbols-outlined text-base">refresh</span> Yenile
+        <button onclick="loadHaftalikProgram()" class="btn btn-ghost">
+          <span class="material-symbols-outlined" style="font-size:18px;">refresh</span> Yenile
         </button>
       </div>
       <div id="haftalik-grid-container">
-        <div class="flex justify-center py-16"><div class="spinner"></div></div>
+        <div style="display:flex;justify-content:center;padding:64px 0;"><div class="spinner"></div></div>
       </div>
     </div>
 
     <!-- ── RAPOR -->
     <div id="page-rapor" class="page">
-      <div class="flex items-center justify-between mb-4">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div>
-          <h1 class="font-headline text-2xl font-bold text-on-surface">Performans Raporu</h1>
-          <p class="text-outline text-sm mt-0.5">Konu bazlı detaylı analiz</p>
+          <h2 style="font-family:Manrope;font-size:20px;font-weight:800;margin:0;color:var(--ink);">Performans Raporu</h2>
+          <p style="font-size:13px;color:var(--ink-soft);margin:3px 0 0;">Konu bazlı detaylı analiz</p>
         </div>
-        <button onclick="window.print()" class="print-hide flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/80 transition-colors shadow-sm">
-          <span class="material-symbols-outlined text-base">print</span> PDF / Yazdır
+        <button onclick="window.print()" class="btn btn-primary print-hide">
+          <span class="material-symbols-outlined" style="font-size:18px;">print</span> PDF / Yazdır
         </button>
       </div>
-      <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[0_2px_8px_rgba(0,29,49,0.05)] mb-5">
-        <select id="rapor-ogrenci" onchange="loadRapor()"
-          class="w-full px-4 py-3 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
+      <div class="card-2xl" style="padding:18px 20px;margin-bottom:16px;">
+        <select id="rapor-ogrenci" onchange="loadRapor()" class="field">
           <option value="">— Öğrenci seçin —</option>
         </select>
       </div>
@@ -682,89 +716,79 @@ tailwind.config = {
     <!-- ── ÖĞRENCİ PANELI -->
     <div id="page-ogrenci-panel" class="page">
       <!-- Hero Banner -->
-      <div class="relative overflow-hidden bg-gradient-to-br from-primary to-primary-container rounded-2xl p-6 mb-4 text-on-primary shadow-lg">
-        <div class="absolute right-[-8%] top-[-40%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-        <p class="text-xs font-semibold opacity-75 uppercase tracking-widest mb-1">Hoş geldin 👋</p>
-        <h1 class="font-headline text-2xl font-extrabold" id="ogr-welcome-ad">—</h1>
-        <p class="text-sm opacity-75 mt-1" id="ogr-welcome-sinif">—</p>
+      <div class="card-2xl" style="padding:24px 26px;background:linear-gradient(135deg,#005d8d,#013149);color:#fff;border:none;position:relative;overflow:hidden;margin-bottom:16px;">
+        <div style="position:absolute;right:-30px;top:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(245,124,0,.28),transparent 65%);"></div>
+        <p style="font-size:11.5px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px;position:relative;">Hoş geldin</p>
+        <h2 style="font-family:Manrope;font-size:24px;font-weight:800;margin:0;position:relative;" id="ogr-welcome-ad">—</h2>
+        <p style="font-size:13.5px;opacity:.8;margin:4px 0 0;position:relative;" id="ogr-welcome-sinif">—</p>
       </div>
 
-      <!-- LGS Geri Sayım (sadece 8. Sınıf) -->
-      <div id="lgs-countdown-card" class="hidden bg-gradient-to-br from-secondary to-secondary-container rounded-2xl p-5 mb-4 shadow-lg">
-        <div class="flex items-center justify-between">
+      <!-- LGS Geri Sayım (sadece 8. Sınıf) — JS controls with classList.hidden -->
+      <div id="lgs-countdown-card" class="hidden card-2xl" style="padding:22px 24px;background:linear-gradient(135deg,#f57c00,#e96b00);color:#fff;border:none;margin-bottom:16px;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:-16px;bottom:-22px;opacity:.16;font-size:100px;" class="material-symbols-outlined">flag</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;position:relative;">
           <div>
-            <p class="text-xs font-bold uppercase tracking-widest text-on-secondary-container opacity-80 mb-1">🎯 LGS'ye Kalan Süre</p>
-            <div class="font-headline text-4xl font-extrabold text-on-secondary-container" id="lgs-gun-sayisi">—</div>
-            <p class="text-xs text-on-secondary-container opacity-70 mt-1">Her gün bir adım daha yakınsın!</p>
+            <p style="font-size:11px;font-weight:700;opacity:.9;margin:0 0 4px;">LGS'ye Kalan Süre</p>
+            <div style="font-family:Manrope;font-size:40px;font-weight:800;line-height:1;" id="lgs-gun-sayisi">—</div>
+            <p style="font-size:11.5px;opacity:.85;margin:4px 0 0;">Her gün bir adım daha yakınsın!</p>
           </div>
-          <div class="text-right">
-            <div class="text-5xl">🏆</div>
-            <div class="text-xs text-on-secondary-container opacity-70 mt-1" id="lgs-tarih-label"></div>
+          <div style="text-align:right;">
+            <div style="font-size:48px;">🏆</div>
+            <div style="font-size:11px;opacity:.75;margin-top:4px;" id="lgs-tarih-label"></div>
           </div>
         </div>
-        <div class="mt-3 bg-black/10 rounded-full h-2">
-          <div id="lgs-progress-bar" class="h-2 rounded-full bg-on-secondary-container/80 transition-all"></div>
+        <div style="margin-top:12px;background:rgba(0,0,0,.15);border-radius:99px;height:6px;">
+          <div id="lgs-progress-bar" style="height:6px;border-radius:99px;background:rgba(255,255,255,.85);transition:width .4s;"></div>
         </div>
-        <div class="flex justify-between text-xs text-on-secondary-container opacity-60 mt-1">
+        <div style="display:flex;justify-content:space-between;font-size:11px;opacity:.7;margin-top:5px;">
           <span>Bugün</span>
           <span id="lgs-progress-label"></span>
         </div>
       </div>
 
       <!-- Motivasyon Kartı -->
-      <div class="bg-surface-container-lowest rounded-2xl p-5 mb-4 shadow-[0_2px_8px_rgba(0,29,49,0.06)] border-l-4 border-primary">
-        <p class="text-xs font-bold uppercase tracking-widest text-primary mb-2">💡 Günün Motivasyonu</p>
-        <p class="text-sm font-semibold text-on-surface leading-relaxed" id="motivasyon-mesaj">—</p>
-        <p class="text-xs text-outline mt-2" id="motivasyon-kaynak"></p>
+      <div class="card-2xl" style="padding:18px 22px;margin-bottom:16px;border-left:4px solid var(--primary);display:flex;align-items:center;gap:14px;">
+        <span style="width:42px;height:42px;border-radius:12px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto;" class="material-symbols-outlined ico-fill">auto_awesome</span>
+        <div>
+          <p style="font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.06em;margin:0 0 4px;">Günün Motivasyonu</p>
+          <p style="font-size:14px;font-weight:700;color:var(--ink);line-height:1.5;margin:0;" id="motivasyon-mesaj">—</p>
+          <p style="font-size:12px;color:var(--ink-soft);margin:4px 0 0;" id="motivasyon-kaynak"></p>
+        </div>
       </div>
 
       <!-- Hedefim -->
-      <div class="bg-surface-container-lowest rounded-2xl p-5 mb-5 shadow-[0_2px_8px_rgba(0,29,49,0.06)]">
-        <p class="text-xs font-bold uppercase tracking-widest text-tertiary mb-3">🎯 Hedefim</p>
-        <textarea id="ogr-hedef-input" rows="2" placeholder="Hedefini buraya yaz... (Örn: LGS'de matematik bölümünü tam yapacağım!)"
-          class="w-full px-4 py-3 rounded-xl bg-surface-container text-sm text-on-surface resize-none border border-outline-variant/30 focus:outline-none focus:ring-2 focus:ring-tertiary placeholder:text-outline/50"></textarea>
-        <div class="flex justify-end mt-2">
-          <button onclick="hedefKaydet()"
-            class="px-4 py-2 rounded-full text-xs font-bold bg-tertiary text-on-primary hover:bg-tertiary/80 transition-colors shadow-sm">
-            💾 Kaydet
+      <div class="card-2xl" style="padding:18px 22px;margin-bottom:16px;">
+        <p style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">Hedefim</p>
+        <textarea id="ogr-hedef-input" rows="2" placeholder="Hedefini buraya yaz... (Örn: LGS'de matematik bölümünü tam yapacağım!)" class="field" style="resize:vertical;"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+          <button onclick="hedefKaydet()" class="btn btn-orange">
+            <span class="material-symbols-outlined" style="font-size:17px;">save</span> Kaydet
           </button>
         </div>
       </div>
 
       <!-- Tab -->
-      <div class="flex bg-surface-container rounded-xl p-1 mb-5 gap-1">
-        <button onclick="ogrTab('odevler')" id="tab-odevler"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-surface-container-lowest text-primary shadow-sm">
-          📋 Ödevlerim
-        </button>
-        <button onclick="ogrTab('denemeler')" id="tab-denemeler"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
-          📝 Denemeler
-        </button>
-        <button onclick="ogrTab('dersler')" id="tab-dersler"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
-          📖 Derslerim
-        </button>
-        <button onclick="ogrTab('basari')" id="tab-basari"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
-          📊 Başarım
-        </button>
+      <div class="tabbar" style="margin-bottom:16px;">
+        <button onclick="ogrTab('odevler')" id="tab-odevler" class="tab active">Ödevlerim</button>
+        <button onclick="ogrTab('denemeler')" id="tab-denemeler" class="tab">Denemeler</button>
+        <button onclick="ogrTab('dersler')" id="tab-dersler" class="tab">Derslerim</button>
+        <button onclick="ogrTab('basari')" id="tab-basari" class="tab">Başarım</button>
       </div>
 
       <div id="ogr-tab-odevler">
         <!-- İstatistikler -->
-        <div class="grid grid-cols-3 gap-3 mb-5">
-          <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
-            <div class="font-headline text-2xl font-extrabold text-error" id="ogr-stat-bekleyen">—</div>
-            <div class="text-xs text-outline mt-1">Bekleyen</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+          <div class="card-2xl stat-orange" style="padding:16px;text-align:center;">
+            <div style="font-family:Manrope;font-size:28px;font-weight:800;line-height:1;" id="ogr-stat-bekleyen">—</div>
+            <div style="font-size:11.5px;opacity:.85;margin-top:5px;font-weight:600;">Bekleyen</div>
           </div>
-          <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
-            <div class="font-headline text-2xl font-extrabold text-tertiary" id="ogr-stat-tamamlanan">—</div>
-            <div class="text-xs text-outline mt-1">Tamamlanan</div>
+          <div class="card-2xl stat-green" style="padding:16px;text-align:center;">
+            <div style="font-family:Manrope;font-size:28px;font-weight:800;line-height:1;" id="ogr-stat-tamamlanan">—</div>
+            <div style="font-size:11.5px;opacity:.85;margin-top:5px;font-weight:600;">Tamamlanan</div>
           </div>
-          <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
-            <div class="font-headline text-2xl font-extrabold text-primary" id="ogr-stat-basari">—</div>
-            <div class="text-xs text-outline mt-1">Başarı</div>
+          <div class="card-2xl stat-navy" style="padding:16px;text-align:center;">
+            <div style="font-family:Manrope;font-size:28px;font-weight:800;line-height:1;" id="ogr-stat-basari">—</div>
+            <div style="font-size:11.5px;opacity:.85;margin-top:5px;font-weight:600;">Başarı</div>
           </div>
         </div>
         <div id="ogr-bekleyen-bolum"></div>
@@ -772,14 +796,13 @@ tailwind.config = {
       </div>
 
       <div id="ogr-tab-denemeler" class="hidden">
-        <div id="ogr-denemeler-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
+        <div id="ogr-denemeler-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
       </div>
       <div id="ogr-tab-dersler" class="hidden">
-        <div id="ogr-dersler-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
+        <div id="ogr-dersler-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
       </div>
-
       <div id="ogr-tab-basari" class="hidden">
-        <div id="ogr-basari-content"><div class="flex justify-center py-12"><div class="spinner"></div></div></div>
+        <div id="ogr-basari-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -787,51 +810,36 @@ tailwind.config = {
     <div id="page-veli-panel" class="page">
 
       <!-- Hero -->
-      <div class="relative overflow-hidden bg-gradient-to-br from-primary to-primary-container rounded-2xl p-6 mb-4 text-on-primary shadow-lg">
-        <div class="absolute right-[-8%] top-[-40%] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-        <p class="text-xs font-semibold opacity-75 uppercase tracking-widest mb-1">Takip Paneli 👨‍👩‍👧</p>
-        <h1 class="font-headline text-2xl font-extrabold" id="veli-cocuk-adi">—</h1>
-        <p class="text-sm opacity-75 mt-1" id="veli-cocuk-sinif">—</p>
-        <p class="text-xs opacity-60 mt-1" id="veli-son-aktivite"></p>
+      <div class="card-2xl" style="padding:24px 26px;background:linear-gradient(135deg,#005d8d,#013149);color:#fff;border:none;position:relative;overflow:hidden;margin-bottom:16px;">
+        <div style="position:absolute;right:-30px;top:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(245,124,0,.28),transparent 65%);"></div>
+        <p style="font-size:11.5px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px;position:relative;">Takip Paneli</p>
+        <h2 style="font-family:Manrope;font-size:24px;font-weight:800;margin:0;position:relative;" id="veli-cocuk-adi">—</h2>
+        <p style="font-size:13.5px;opacity:.8;margin:4px 0 0;position:relative;" id="veli-cocuk-sinif">—</p>
+        <p style="font-size:12px;opacity:.6;margin:4px 0 0;position:relative;" id="veli-son-aktivite"></p>
       </div>
 
       <!-- LGS (8. Sınıf) -->
-      <div id="veli-lgs-card" class="hidden bg-gradient-to-br from-secondary to-secondary-container rounded-2xl p-5 mb-4 shadow-lg">
-        <div class="flex items-center justify-between">
+      <div id="veli-lgs-card" class="hidden card-2xl" style="padding:22px 24px;background:linear-gradient(135deg,#f57c00,#e96b00);color:#fff;border:none;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
           <div>
-            <p class="text-xs font-bold uppercase tracking-widest text-on-secondary-container opacity-80 mb-1">🎯 LGS'ye Kalan Süre</p>
-            <div class="font-headline text-4xl font-extrabold text-on-secondary-container" id="veli-lgs-gun">—</div>
-            <p class="text-xs text-on-secondary-container opacity-70 mt-1">13 Haziran 2026</p>
+            <p style="font-size:11px;font-weight:700;opacity:.9;margin:0 0 4px;">LGS'ye Kalan Süre</p>
+            <div style="font-family:Manrope;font-size:40px;font-weight:800;line-height:1;" id="veli-lgs-gun">—</div>
+            <p style="font-size:11.5px;opacity:.85;margin:4px 0 0;">13 Haziran 2026</p>
           </div>
-          <div class="text-5xl">🏆</div>
+          <div style="font-size:48px;">🏆</div>
         </div>
       </div>
 
       <!-- Aylık Özet -->
-      <div id="veli-aylik-ozet" class="grid grid-cols-3 gap-3 mb-4"></div>
+      <div id="veli-aylik-ozet" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
 
       <!-- Tabs -->
-      <div class="flex bg-surface-container rounded-xl p-1 mb-5 gap-1">
-        <button onclick="veliTab('ozet')" id="vtab-ozet"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all bg-surface-container-lowest text-primary shadow-sm">
-          📊 Özet
-        </button>
-        <button onclick="veliTab('odevler')" id="vtab-odevler"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
-          📋 Ödevler
-        </button>
-        <button onclick="veliTab('dersler')" id="vtab-dersler"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
-          📖 Dersler
-        </button>
-        <button onclick="veliTab('denemeler')" id="vtab-denemeler"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
-          📝 Denemeler
-        </button>
-        <button onclick="veliTab('basari')" id="vtab-basari"
-          class="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all text-on-surface-variant">
-          🏅 Başarı
-        </button>
+      <div class="tabbar" style="margin-bottom:16px;">
+        <button onclick="veliTab('ozet')" id="vtab-ozet" class="tab active">Özet</button>
+        <button onclick="veliTab('odevler')" id="vtab-odevler" class="tab">Ödevler</button>
+        <button onclick="veliTab('dersler')" id="vtab-dersler" class="tab">Dersler</button>
+        <button onclick="veliTab('denemeler')" id="vtab-denemeler" class="tab">Denemeler</button>
+        <button onclick="veliTab('basari')" id="vtab-basari" class="tab">Başarı</button>
       </div>
 
       <div id="veli-tab-ozet"></div>
@@ -841,10 +849,11 @@ tailwind.config = {
       <div id="veli-tab-basari" class="hidden"></div>
     </div>
 
-  </main>
+    </main>
+  </div><!-- /sağ taraf -->
 
   <!-- Bottom Nav (Mobile) -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-header flex justify-around py-2 z-40" id="bottomNav"></nav>
+  <nav style="display:none;" id="bottomNav" class="no-print"></nav>
 </div>
 
 <!-- Toast -->
@@ -880,19 +889,21 @@ let activeRole = 'ogretmen';
 function switchRole(rol) {
   activeRole = rol;
   ['ogretmen','ogrenci','veli'].forEach(r => {
-    const btn = document.getElementById('role-' + r);
+    const btn  = document.getElementById('role-' + r);
     const form = document.getElementById('form-' + r);
-    btn.classList.toggle('bg-surface-container-lowest', r === rol);
-    btn.classList.toggle('text-primary', r === rol);
-    btn.classList.toggle('shadow-sm', r === rol);
-    btn.classList.toggle('text-on-surface-variant', r !== rol);
-    form.classList.toggle('hidden', r !== rol);
+    if (btn)  btn.classList.toggle('active', r === rol);
+    if (form) form.style.display = r === rol ? '' : 'none';
   });
+}
+
+function _hideLoginError() {
+  const el = document.getElementById('loginError');
+  if (el) el.style.display = 'none';
 }
 
 async function doLogin() {
   const errEl = document.getElementById('loginError');
-  errEl.classList.add('hidden');
+  errEl.style.display = 'none';
 
   try {
     if (activeRole === 'ogretmen') {
@@ -935,13 +946,13 @@ async function doLogin() {
 function showError(msg) {
   const el = document.getElementById('loginError');
   el.textContent = msg;
-  el.classList.remove('hidden');
+  el.style.display = 'block';
 }
 
 // ── INIT ──────────────────────────────────────────────────────
 async function initApp() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('appScreen').classList.remove('hidden');
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'flex';
 
   localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
 
@@ -967,14 +978,28 @@ function updateUserInfo() {
              state.rol === 'ogrenci'  ? (state.user.ad_soyad || state.user.ogrenci_id) :
              (state.user.ad_soyad || '') + ' — Veli';
   const sinif = state.user.sinif || '';
+  const rolLabel = state.rol === 'ogretmen' ? 'Dijital Eğitim Çözümleri' :
+                   state.rol === 'ogrenci'  ? 'Öğrenci' : 'Veli';
+  const rolBadge = state.rol === 'ogretmen' ? 'Öğretmen' :
+                   state.rol === 'ogrenci'  ? 'Öğrenci'  : 'Veli';
+  const badgeClass = state.rol === 'ogretmen' ? 'badge badge-blue' :
+                     state.rol === 'ogrenci'  ? 'badge badge-green' : 'badge badge-amber';
 
-  document.getElementById('sidebar-name').textContent = ad;
-  document.getElementById('sidebar-sinif').textContent = sinif;
-  document.getElementById('sidebar-avatar').textContent = ad.charAt(0).toUpperCase();
-  document.getElementById('mobile-user-name').textContent = ad.split(' ')[0];
-  document.getElementById('sidebar-rol-label').textContent =
-    state.rol === 'ogretmen' ? 'Dijital Eğitim Çözümleri' :
-    state.rol === 'ogrenci' ? 'Öğrenci' : 'Veli';
+  const sName = document.getElementById('sidebar-name');
+  const sSinif = document.getElementById('sidebar-sinif');
+  const sAvatar = document.getElementById('sidebar-avatar');
+  const sRol = document.getElementById('sidebar-rol-label');
+  const mobileUser = document.getElementById('mobile-user-name');
+  if (sName)   sName.textContent   = ad;
+  if (sSinif)  sSinif.textContent  = sinif;
+  if (sAvatar) sAvatar.textContent = ad.charAt(0).toUpperCase();
+  if (sRol)    sRol.textContent    = rolLabel;
+  if (mobileUser) mobileUser.textContent = ad.split(' ')[0];
+
+  const hdrAvatar = document.getElementById('hdr-avatar');
+  const hdrBadge  = document.getElementById('hdr-role-badge');
+  if (hdrAvatar) hdrAvatar.textContent = ad.charAt(0).toUpperCase();
+  if (hdrBadge)  { hdrBadge.textContent = rolBadge + ' paneli'; hdrBadge.className = badgeClass; }
 }
 
 function buildNav() {
@@ -1001,22 +1026,26 @@ function buildNav() {
   pages.forEach(p => {
     // Sidebar
     const sEl = document.createElement('button');
-    sEl.className = 'nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/75 hover:bg-white/10 transition-colors text-sm font-semibold w-full text-left';
+    sEl.className = 'nav-item';
     sEl.dataset.page = p.id;
-    sEl.innerHTML = `<span class="material-symbols-outlined nav-icon text-xl">${p.icon}</span>${p.label}`;
+    sEl.innerHTML = `<span class="material-symbols-outlined">${p.icon}</span>${p.label}`;
     sEl.onclick = () => goPage(p.id);
     sidebarNav.appendChild(sEl);
-
-    // Bottom Nav
-    const bEl = document.createElement('button');
-    bEl.className = 'nav-item flex flex-col items-center gap-0.5 px-3 py-1 text-on-surface-variant text-xs font-semibold';
-    bEl.dataset.page = p.id;
-    bEl.innerHTML = `<span class="material-symbols-outlined nav-icon text-xl">${p.icon}</span><span>${p.label}</span>`;
-    bEl.onclick = () => goPage(p.id);
-    bottomNav.appendChild(bEl);
   });
 }
 
+const PAGE_TITLES = {
+  'dashboard':    ['Ana Sayfa',     'Genel bakış ve günlük özet'],
+  'ders':         ['Ders Kaydet',   'Konu ve kazanım bazlı ders girişi'],
+  'odev':         ['Ödev Gir',      'Öğrenciye ödev atama'],
+  'ogrenciler':   ['Öğrenciler',    'Kayıtlı öğrenci listesi'],
+  'kaynaklar':    ['Kaynaklar',     'Ders kaynakları ve yönetim'],
+  'denemeler':    ['Denemeler',     'TYT/LGS deneme sonuçları'],
+  'ders-programi':['Ders Programı', 'Haftalık ders takvimi'],
+  'rapor':        ['Rapor',         'Öğrenci performans raporu'],
+  'ogrenci-panel':['Öğrenci Paneli','Ödevler, dersler ve başarı'],
+  'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
+};
 function goPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -1025,6 +1054,11 @@ function goPage(id) {
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   if (id === 'ders-programi') loadHaftalikProgram();
+  const [title, sub] = PAGE_TITLES[id] || [id, ''];
+  const hdrTitle = document.getElementById('hdr-title');
+  const hdrSub   = document.getElementById('hdr-sub');
+  if (hdrTitle) hdrTitle.textContent = title;
+  if (hdrSub)   hdrSub.textContent   = sub;
   window.scrollTo(0, 0);
 }
 
@@ -1254,7 +1288,7 @@ async function odevOgrenciSecildi() {
   // Taslağı sıfırla
   state._odevTaslaklari = [];
 
-  if (!ogrenciId) { alan.classList.add('hidden'); uyari.classList.add('hidden'); return; }
+  if (!ogrenciId) { alan.style.display = 'none'; uyari.style.display = 'none'; return; }
 
   const [kazRes, kayRes] = await Promise.all([
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(sinif||'').replace(/[^0-9]/g,'')}%`).order('konu'),
@@ -1266,11 +1300,11 @@ async function odevOgrenciSecildi() {
   state._odevSinif = sinif;
 
   if (!state._odevKaynaklar.length) {
-    uyari.classList.remove('hidden');
-    alan.classList.add('hidden');
+    uyari.style.display = 'block';
+    alan.style.display  = 'none';
   } else {
-    uyari.classList.add('hidden');
-    alan.classList.remove('hidden');
+    uyari.style.display = 'none';
+    alan.style.display  = 'block';
     renderOdevForm();
     renderTaslakTablo();
     loadBekleyenOdevlerForOgrenci(ogrenciId);
@@ -2003,14 +2037,8 @@ async function loadRapor() {
 
   const allKonular   = konular.length ? konular : Object.keys(konuMap);
   const islenenSayi  = allKonular.filter(k => konuMap[k]).length;
-  const topDogru     = Object.values(konuMap).reduce((s,r)=>s+r.dogru,0);
-  const topYanlis    = Object.values(konuMap).reduce((s,r)=>s+r.yanlis,0);
-  const topBos       = Object.values(konuMap).reduce((s,r)=>s+r.bos,0);
-  const topToplam    = Object.values(konuMap).reduce((s,r)=>s+r.toplam,0);
-  const genelPct     = topToplam > 0 ? Math.round(topDogru/topToplam*100) : 0;
-  const tamamPct     = allKonular.length > 0 ? Math.round(islenenSayi/allKonular.length*100) : 0;
 
-  // Konu bazlı zaman serisi
+  // Konu bazlı zaman serisi (tamamlanan ödevler, tarihe göre sıralı)
   const konuOdevler = {};
   odevler.forEach(o => {
     const konu = (o.konu||'').split(' — ')[0];
@@ -2029,9 +2057,11 @@ async function loadRapor() {
     arr.sort((a,b) => (a.tarih||'').localeCompare(b.tarih||''))
   );
 
+  // Uyarı analizi (her konu için)
   const uyariSonuclari = {};
   allKonular.forEach(k => { uyariSonuclari[k] = analizEt(konuOdevler[k]||[]); });
 
+  // Mevcut DB uyarıları (sadece öğretmen)
   let mevcutUyarilar = [];
   if (state.rol === 'ogretmen') {
     const { data: uyD } = await sb.from('konu_uyarilari')
@@ -2039,6 +2069,12 @@ async function loadRapor() {
       .order('uyari_tarihi', { ascending: false });
     mevcutUyarilar = uyD || [];
   }
+  const topDogru     = Object.values(konuMap).reduce((s,r)=>s+r.dogru,0);
+  const topYanlis    = Object.values(konuMap).reduce((s,r)=>s+r.yanlis,0);
+  const topBos       = Object.values(konuMap).reduce((s,r)=>s+r.bos,0);
+  const topToplam    = Object.values(konuMap).reduce((s,r)=>s+r.toplam,0);
+  const genelPct     = topToplam > 0 ? Math.round(topDogru/topToplam*100) : 0;
+  const tamamPct     = allKonular.length > 0 ? Math.round(islenenSayi/allKonular.length*100) : 0;
 
   // Donut chart SVG
   const donutPct = tamamPct;
@@ -2670,10 +2706,7 @@ function ogrTab(tab) {
   ['odevler','denemeler','dersler','basari'].forEach(t => {
     document.getElementById('ogr-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('tab-' + t);
-    btn.classList.toggle('bg-surface-container-lowest', t === tab);
-    btn.classList.toggle('text-primary', t === tab);
-    btn.classList.toggle('shadow-sm', t === tab);
-    btn.classList.toggle('text-on-surface-variant', t !== tab);
+    btn.classList.toggle('active', t === tab);
   });
   if (tab === 'basari')   loadOgrBasari();
   if (tab === 'dersler')  loadOgrDersler();
@@ -3091,13 +3124,13 @@ async function loadOgrBasari() {
           <div class="sm:col-span-2 space-y-0.5 max-h-60 overflow-y-auto" id="ogr-konu-listesi">
             ${allKonular.map(k => {
               const cnt = (ogrKonuOdevler[k]||[]).length;
-              return \`<button onclick="acOgrKonuGrafigi('\${k.replace(/'/g,"&#39;")}')"
-                id="okbtn-\${k.replace(/\\W/g,'_')}"
+              return `<button onclick="acOgrKonuGrafigi('${k.replace(/'/g,"&#39;")}')"
+                id="okbtn-${k.replace(/\W/g,'_')}"
                 class="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors text-left text-sm">
-                <span class="flex-1 font-medium text-on-surface truncate">\${k}</span>
-                <span class="text-[10px] text-outline">\${cnt>0?cnt:''}</span>
+                <span class="flex-1 font-medium text-on-surface truncate">${k}</span>
+                <span class="text-[10px] text-outline">${cnt>0?cnt:''}</span>
                 <span class="material-symbols-outlined text-sm text-outline/40">chevron_right</span>
-              </button>\`;
+              </button>`;
             }).join('')}
           </div>
           <div class="sm:col-span-3" id="ogr-konu-grafik">
@@ -3121,10 +3154,7 @@ function veliTab(tab) {
   ['ozet','odevler','dersler','denemeler','basari'].forEach(t => {
     document.getElementById('veli-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('vtab-' + t);
-    btn.classList.toggle('bg-surface-container-lowest', t === tab);
-    btn.classList.toggle('text-primary', t === tab);
-    btn.classList.toggle('shadow-sm', t === tab);
-    btn.classList.toggle('text-on-surface-variant', t !== tab);
+    btn.classList.toggle('active', t === tab);
   });
 }
 
@@ -3315,7 +3345,7 @@ async function loadVeliPanel() {
     if (d.kazanim_kodu) dersGruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu||'tam' });
   });
   const dersSatirlar = Object.values(dersGruplar);
-  const vSon3     = dersSatirlar.slice(0, 3);
+  const vSon3    = dersSatirlar.slice(0, 3);
   const vKalanlar = dersSatirlar.slice(3);
 
   const vTdCss = d => d==='tam'?'bg-tertiary-container text-tertiary':d==='kismi'?'bg-secondary-container/60 text-secondary':'bg-primary-fixed text-primary';
@@ -3434,38 +3464,110 @@ async function loadDersProgrami() {
   const gunSira = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
   programlar.sort((a,b) => gunSira.indexOf(a.gun) - gunSira.indexOf(b.gun));
 
-  liste.innerHTML = programlar.map(p => `
+  liste.innerHTML = programlar.map(p => {
+    const isEk = p.tip === 'ek';
+    const rozetBg = isEk ? 'bg-secondary-container/40 text-on-secondary-container' : 'bg-primary-fixed text-primary';
+    const rozetLabel = isEk ? `📅 ${p.tarih ? new Date(p.tarih).toLocaleDateString('tr-TR',{day:'2-digit',month:'short'}) : p.gun}` : `🔁 ${p.gun}`;
+    return `
     <div class="flex items-center justify-between py-2.5">
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-primary-fixed text-primary">${p.gun}</span>
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${rozetBg}">${rozetLabel}</span>
         <span class="text-sm font-semibold text-on-surface">${p.baslangic?.substring(0,5)} – ${p.bitis?.substring(0,5)}</span>
       </div>
       <button onclick="programSil('${p.program_id}')"
-        class="text-xs text-error hover:underline font-medium">Sil</button>
-    </div>`).join('');
+        class="text-xs text-error hover:underline font-medium flex-shrink-0 ml-2">Sil</button>
+    </div>`;
+  }).join('');
+}
+
+// ── DERS PROGRAMI TİP TOGGLE ──────────────────────────────────
+let _programTip = 'kalici';
+
+function programTipSec(tip) {
+  _programTip = tip;
+  const kaliciBtn = document.getElementById('tip-kalici-btn');
+  const ekBtn     = document.getElementById('tip-ek-btn');
+  const gunAlani  = document.getElementById('program-gun-alani');
+  const tarihAlani = document.getElementById('program-tarih-alani');
+
+  if (tip === 'kalici') {
+    kaliciBtn.classList.add('on');
+    ekBtn.classList.remove('on');
+    gunAlani.classList.remove('hidden');
+    tarihAlani.classList.add('hidden');
+  } else {
+    ekBtn.classList.add('on');
+    kaliciBtn.classList.remove('on');
+    tarihAlani.classList.remove('hidden');
+    gunAlani.classList.add('hidden');
+  }
+  document.getElementById('program-cakisma-uyari').classList.add('hidden');
+}
+
+// ── ÇAKIŞMA KONTROLÜ ──────────────────────────────────────────
+async function checkCakisma(gun, baslangic, bitis, tip, tarih, excludeId = null) {
+  const { data } = await sb.from('ders_programi').select('*').eq('gun', gun);
+  const toMin = t => { const [h, m] = t.substring(0,5).split(':').map(Number); return h*60+m; };
+  const yB = toMin(baslangic), yE = toMin(bitis);
+
+  for (const p of (data || [])) {
+    if (p.program_id === excludeId) continue;
+    // kalici vs kalici: her zaman çakışır
+    // ek vs ek: sadece aynı tarihteyse çakışır
+    // kalici vs ek: farklı haftada olabilir, skip
+    if (tip === 'ek' && p.tip === 'ek' && p.tarih !== tarih) continue;
+    if (tip === 'kalici' && p.tip === 'ek') continue;
+
+    const pB = toMin(p.baslangic), pE = toMin(p.bitis);
+    if (yB < pE && yE > pB) {
+      const ogr = state.ogrenciler.find(o => o.ogrenci_id === p.ogrenci_id);
+      return `Bu saatte zaten ${ogr?.ad_soyad || 'başka bir öğrenci'} ile dersiniz var (${p.baslangic?.substring(0,5)}–${p.bitis?.substring(0,5)}). Lütfen saatleri kontrol edin.`;
+    }
+  }
+  return null;
 }
 
 async function programEkle() {
   const ogrenciId = document.getElementById('program-ogrenci').value;
-  const gun       = document.getElementById('program-gun').value;
   const baslangic = document.getElementById('program-baslangic').value;
   const bitis     = document.getElementById('program-bitis').value;
+  const uyariEl   = document.getElementById('program-cakisma-uyari');
+  uyariEl.classList.add('hidden');
+
+  let gun = '', tarih = null;
+  if (_programTip === 'kalici') {
+    gun = document.getElementById('program-gun').value;
+    if (!gun) { showToast('⚠️ Gün seçin'); return; }
+  } else {
+    tarih = document.getElementById('program-tarih').value;
+    if (!tarih) { showToast('⚠️ Tarih seçin'); return; }
+    const d = new Date(tarih);
+    gun = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][d.getDay()];
+  }
 
   if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
-  if (!gun)       { showToast('⚠️ Gün seçin'); return; }
   if (!baslangic || !bitis) { showToast('⚠️ Saat girin'); return; }
   if (baslangic >= bitis)   { showToast('⚠️ Bitiş saati başlangıçtan sonra olmalı'); return; }
 
-  showToast('Kaydediliyor...');
-  const { error } = await sb.from('ders_programi').insert({
-    ogrenci_id: ogrenciId, gun, baslangic, bitis
-  });
+  const cakisma = await checkCakisma(gun, baslangic, bitis, _programTip, tarih);
+  if (cakisma) {
+    uyariEl.textContent = '⚠️ ' + cakisma;
+    uyariEl.classList.remove('hidden');
+    return;
+  }
 
+  showToast('Kaydediliyor...');
+  const kayit = { ogrenci_id: ogrenciId, gun, baslangic, bitis, tip: _programTip };
+  if (_programTip === 'ek') kayit.tarih = tarih;
+
+  const { error } = await sb.from('ders_programi').insert(kayit);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Seans eklendi!');
   document.getElementById('program-gun').value = '';
+  document.getElementById('program-tarih').value = '';
   document.getElementById('program-baslangic').value = '';
   document.getElementById('program-bitis').value = '';
+  uyariEl.classList.add('hidden');
   loadDersProgrami();
 }
 
@@ -3530,6 +3632,7 @@ function renderHaftalikGrid(pazartesi) {
   const topPx  = t => (toMin(t) - START_H*60) / 60 * PX_SAAT;
   const hautPx = (b,e) => Math.max(28, (toMin(e)-toMin(b)) / 60 * PX_SAAT);
 
+  // İstatistik şeridi
   const sinifSayac = {};
   state._haftalikProgram.forEach(p => {
     const s = ogrMap[p.ogrenci_id]?.sinif || '—';
@@ -3551,15 +3654,18 @@ function renderHaftalikGrid(pazartesi) {
       }).join('')}
     </div>`;
 
+  // Hafta etiketi
   const haftaBitis = new Date(pazartesi); haftaBitis.setDate(pazartesi.getDate()+6);
   const fmt = d => d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'});
   const haftaLabel = pazartesi
     ? `<div class="text-xs text-outline font-medium mb-3">📅 ${fmt(pazartesi)} – ${fmt(haftaBitis)}</div>`
     : '';
 
+  // Saat etiketleri
   const saatler = [];
   for (let h = START_H; h <= END_H; h++) saatler.push(h);
 
+  // Grid
   const gridHtml = `
     <div class="overflow-x-auto rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] border border-outline-variant/20">
       <div style="min-width:660px;">
@@ -3593,8 +3699,11 @@ function renderHaftalikGrid(pazartesi) {
           ${GUNLER.map((gun, gi) => {
             const seanslar = state._haftalikProgram.filter(p => p.gun === gun);
             return `<div class="relative border-l border-outline-variant/10" style="height:${TOPLAM_YK}px;">
+              <!-- Saat çizgileri -->
               ${saatler.map(h => `<div class="absolute left-0 right-0 border-t border-outline-variant/15" style="top:${(h-START_H)*PX_SAAT}px"></div>`).join('')}
+              <!-- Yarım saat çizgileri -->
               ${saatler.slice(0,-1).map(h => `<div class="absolute left-0 right-0 border-t border-outline-variant/07" style="top:${(h-START_H)*PX_SAAT+PX_SAAT/2}px; border-style:dashed;"></div>`).join('')}
+              <!-- Seanslar -->
               ${seanslar.map(p => {
                 const ogr = ogrMap[p.ogrenci_id];
                 const r   = sinifRenk(ogr?.sinif);
@@ -3628,8 +3737,8 @@ function programKartaTikla(ogrenciId) {
 function logout() {
   localStorage.removeItem('adaptix_session');
   state = { rol:null, user:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
-  document.getElementById('appScreen').classList.add('hidden');
-  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'grid';
   document.getElementById('ogr-sifre').value = '';
   document.getElementById('ogrenci-tc').value = '';
   document.getElementById('veli-tel').value = '';

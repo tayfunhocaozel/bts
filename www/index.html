@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 tailwind.config = {
   darkMode: "class",
@@ -1717,6 +1718,70 @@ async function kaynakGuncelle(id, deger) {
 
 // ── RAPOR ─────────────────────────────────────────────────────
 // ── DENEMELER ─────────────────────────────────────────────────
+function renderTrendChart(liste, canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || liste.length < 2) return;
+  if (canvas._chart) canvas._chart.destroy();
+
+  const sorted = [...liste].sort((a, b) => new Date(a.tarih) - new Date(b.tarih));
+  const labels  = sorted.map(r => new Date(r.tarih).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }));
+  const netData = sorted.map(r => parseFloat(r.net) || 0);
+  const pctData = sorted.map(r => parseFloat(r.basari_yuzdesi) || 0);
+  const dotColors = pctData.map(v => v >= 80 ? '#00661d' : v >= 60 ? '#805600' : '#ba1a1a');
+
+  canvas._chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Net',
+        data: netData,
+        borderColor: '#005d8d',
+        backgroundColor: 'rgba(0,93,141,0.07)',
+        borderWidth: 2.5,
+        pointBackgroundColor: dotColors,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        tension: 0.35,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#141d22',
+          titleFont: { family: 'Manrope', weight: 'bold', size: 12 },
+          bodyFont: { family: 'Inter', size: 11 },
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            title: items => sorted[items[0].dataIndex].deneme_adi || labels[items[0].dataIndex],
+            label: item => {
+              const r = sorted[item.dataIndex];
+              return [`Net: ${parseFloat(r.net||0).toFixed(2)}`, `Başarı: %${parseFloat(r.basari_yuzdesi||0).toFixed(1)}`];
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          ticks: { font: { family: 'Inter', size: 11 }, color: '#707881' }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Inter', size: 10 }, color: '#707881', maxRotation: 0 }
+        }
+      }
+    }
+  });
+}
+
 function denemeNetHesapla() {
   const d   = parseFloat(document.getElementById('deneme-dogru').value)  || 0;
   const y   = parseFloat(document.getElementById('deneme-yanlis').value) || 0;
@@ -1784,7 +1849,16 @@ async function loadDenemeler() {
     return;
   }
 
-  el.innerHTML = `
+  const trendKart = liste.length >= 2 ? `
+    <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] p-5 mb-5">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-primary text-xl">trending_up</span>
+        <h2 class="font-headline font-bold text-base text-on-surface">Net Trendi</h2>
+      </div>
+      <canvas id="ogretmen-trend-canvas" height="140"></canvas>
+    </div>` : '';
+
+  el.innerHTML = trendKart + `
     <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
       <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
         <span class="font-headline font-bold text-on-surface text-sm">📋 Deneme Sonuçları</span>
@@ -1831,6 +1905,8 @@ async function loadDenemeler() {
         </table>
       </div>
     </div>`;
+
+  if (liste.length >= 2) renderTrendChart(liste, 'ogretmen-trend-canvas');
 }
 
 async function denemeKayitSil(id) {
@@ -2186,16 +2262,27 @@ async function loadOgrDenemeler() {
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
   const { data } = await sb.from('denemeler').select('*')
     .eq('ogrenci_id', state.user.ogrenci_id).order('tarih', { ascending: false });
-  el.innerHTML = denemeTabloHTML(data || []);
+  const liste = data || [];
+  el.innerHTML = denemeTabloHTML(liste, 'ogr-trend-canvas');
+  if (liste.length >= 2) renderTrendChart(liste, 'ogr-trend-canvas');
 }
 
-function denemeTabloHTML(liste) {
+function denemeTabloHTML(liste, trendId) {
   if (!liste.length) return '<div class="bg-surface-container-lowest rounded-xl p-6 text-center text-sm text-outline">Henüz deneme kaydı yok.</div>';
 
   const enIyi  = liste.reduce((a, b) => (parseFloat(a.basari_yuzdesi)||0) > (parseFloat(b.basari_yuzdesi)||0) ? a : b);
   const ortalama = liste.reduce((s, r) => s + (parseFloat(r.basari_yuzdesi)||0), 0) / liste.length;
 
-  return `
+  const trendHtml = (trendId && liste.length >= 2) ? `
+    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] p-4 mb-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-primary text-lg">trending_up</span>
+        <span class="font-headline font-bold text-sm text-on-surface">Net Trendi</span>
+      </div>
+      <canvas id="${trendId}" height="140"></canvas>
+    </div>` : '';
+
+  return trendHtml + `
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
         <div class="font-headline text-xl font-extrabold text-primary">${parseFloat(enIyi.net||0).toFixed(2)}</div>
@@ -2756,7 +2843,9 @@ async function loadVeliPanel() {
       </div>`;
 
   // Denemeler sekmesi
-  document.getElementById('veli-tab-denemeler').innerHTML = denemeTabloHTML(denemelerData || []);
+  const veliDenemeler = denemelerData || [];
+  document.getElementById('veli-tab-denemeler').innerHTML = denemeTabloHTML(veliDenemeler, 'veli-trend-canvas');
+  if (veliDenemeler.length >= 2) renderTrendChart(veliDenemeler, 'veli-trend-canvas');
 }
 
 // ── DERS PROGRAMI ─────────────────────────────────────────────

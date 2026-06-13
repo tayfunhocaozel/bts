@@ -641,6 +641,22 @@ tailwind.config = {
       <div id="deneme-liste"></div>
     </div>
 
+    <!-- ── DERS PROGRAMI -->
+    <div id="page-ders-programi" class="page">
+      <div class="mb-5 flex items-center justify-between">
+        <div>
+          <h1 class="font-headline text-2xl font-bold text-on-surface">Ders Programı</h1>
+          <p class="text-outline text-sm mt-0.5">Haftalık özel ders takvimi</p>
+        </div>
+        <button onclick="loadHaftalikProgram()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors">
+          <span class="material-symbols-outlined text-base">refresh</span> Yenile
+        </button>
+      </div>
+      <div id="haftalik-grid-container">
+        <div class="flex justify-center py-16"><div class="spinner"></div></div>
+      </div>
+    </div>
+
     <!-- ── RAPOR -->
     <div id="page-rapor" class="page">
       <div class="flex items-center justify-between mb-4">
@@ -844,7 +860,8 @@ let state = {
   ogrenciler: [], kazanimlar: [], kaynaklar: [],
   _dersKazanimlar: [],
   _odevKazanimlar: [], _odevKaynaklar: [], _odevSinif: '',
-  _odevTaslaklari: []
+  _odevTaslaklari: [],
+  _haftalikProgram: []
 };
 
 const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
@@ -965,8 +982,9 @@ function buildNav() {
     { id: 'odev',       icon: 'assignment',    label: 'Ödev Gir' },
     { id: 'ogrenciler', icon: 'group',         label: 'Öğrenciler' },
     { id: 'kaynaklar',  icon: 'library_books', label: 'Kaynaklar' },
-    { id: 'denemeler',  icon: 'quiz',          label: 'Denemeler' },
-    { id: 'rapor',      icon: 'analytics',     label: 'Rapor' },
+    { id: 'denemeler',    icon: 'quiz',           label: 'Denemeler' },
+    { id: 'ders-programi', icon: 'calendar_month', label: 'Ders Programı' },
+    { id: 'rapor',        icon: 'analytics',      label: 'Rapor' },
   ] : state.rol === 'ogrenci' ? [
     { id: 'ogrenci-panel', icon: 'dashboard', label: 'Panel' },
   ] : [
@@ -1004,6 +1022,7 @@ function goPage(id) {
   });
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
+  if (id === 'ders-programi') loadHaftalikProgram();
   window.scrollTo(0, 0);
 }
 
@@ -2905,6 +2924,154 @@ async function programSil(id) {
   await sb.from('ders_programi').delete().eq('program_id', id);
   showToast('✅ Seans silindi');
   loadDersProgrami();
+}
+
+// ── HAFTALIk PROGRAM SAYFASI ──────────────────────────────────
+async function loadHaftalikProgram() {
+  const el = document.getElementById('haftalik-grid-container');
+  if (!el) return;
+  el.innerHTML = '<div class="flex justify-center py-16"><div class="spinner"></div></div>';
+
+  const { data } = await sb.from('ders_programi').select('*');
+
+  const bugun = new Date();
+  const haftaGunu = bugun.getDay();
+  const pazartesi = new Date(bugun);
+  pazartesi.setDate(bugun.getDate() - (haftaGunu === 0 ? 6 : haftaGunu - 1));
+  pazartesi.setHours(0, 0, 0, 0);
+  const pazar = new Date(pazartesi);
+  pazar.setDate(pazartesi.getDate() + 6);
+  pazar.setHours(23, 59, 59, 999);
+
+  state._haftalikProgram = (data || []).filter(p => {
+    if (!p.tip || p.tip === 'kalici') return true;
+    if (p.tip === 'ek' && p.tarih) {
+      const t = new Date(p.tarih + 'T00:00:00');
+      return t >= pazartesi && t <= pazar;
+    }
+    return false;
+  });
+
+  renderHaftalikGrid(pazartesi);
+}
+
+function renderHaftalikGrid(pazartesi) {
+  const el = document.getElementById('haftalik-grid-container');
+  if (!el) return;
+
+  const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+  const START_H = 7, END_H = 21;
+  const PX_SAAT = 64;
+  const TOPLAM_YK = (END_H - START_H) * PX_SAAT;
+
+  const ogrMap = {};
+  state.ogrenciler.forEach(o => ogrMap[o.ogrenci_id] = o);
+
+  const sinifRenk = sinif => {
+    const s = (sinif || '').replace(/\s/g,'').toLowerCase();
+    if (s.includes('8')) return { bg:'rgba(0,93,141,0.13)',   brd:'#005d8d', txt:'#005d8d' };
+    if (s.includes('7')) return { bg:'rgba(0,102,29,0.13)',   brd:'#00661d', txt:'#00661d' };
+    if (s.includes('6')) return { bg:'rgba(128,86,0,0.13)',   brd:'#805600', txt:'#805600' };
+    if (s.includes('5')) return { bg:'rgba(186,26,26,0.13)',  brd:'#ba1a1a', txt:'#ba1a1a' };
+    return               { bg:'rgba(64,72,80,0.10)',   brd:'#404850', txt:'#404850' };
+  };
+
+  const toMin  = t => { const [h,m] = t.substring(0,5).split(':').map(Number); return h*60+m; };
+  const topPx  = t => (toMin(t) - START_H*60) / 60 * PX_SAAT;
+  const hautPx = (b,e) => Math.max(28, (toMin(e)-toMin(b)) / 60 * PX_SAAT);
+
+  const sinifSayac = {};
+  state._haftalikProgram.forEach(p => {
+    const s = ogrMap[p.ogrenci_id]?.sinif || '—';
+    sinifSayac[s] = (sinifSayac[s]||0) + 1;
+  });
+
+  const statsHtml = `
+    <div class="flex gap-2 mb-4 flex-wrap">
+      <div class="bg-primary-fixed rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-sm">
+        <span class="font-headline text-2xl font-extrabold text-primary">${state._haftalikProgram.length}</span>
+        <span class="text-xs text-outline font-medium">Haftalık<br>Seans</span>
+      </div>
+      ${Object.entries(sinifSayac).sort().map(([sinif, sayi]) => {
+        const r = sinifRenk(sinif);
+        return `<div class="rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-sm" style="background:${r.bg}">
+          <span class="font-headline text-2xl font-extrabold" style="color:${r.txt}">${sayi}</span>
+          <span class="text-xs font-medium" style="color:${r.txt}">${sinif}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  const haftaBitis = new Date(pazartesi); haftaBitis.setDate(pazartesi.getDate()+6);
+  const fmt = d => d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'});
+  const haftaLabel = pazartesi
+    ? `<div class="text-xs text-outline font-medium mb-3">📅 ${fmt(pazartesi)} – ${fmt(haftaBitis)}</div>`
+    : '';
+
+  const saatler = [];
+  for (let h = START_H; h <= END_H; h++) saatler.push(h);
+
+  const gridHtml = `
+    <div class="overflow-x-auto rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] border border-outline-variant/20">
+      <div style="min-width:660px;">
+
+        <!-- Gün başlıkları -->
+        <div class="grid bg-primary" style="grid-template-columns:48px repeat(7,1fr);">
+          <div class="py-2"></div>
+          ${GUNLER.map((g,i) => {
+            const tarih = new Date(pazartesi);
+            tarih.setDate(pazartesi.getDate() + i);
+            const bugunMu = tarih.toDateString() === new Date().toDateString();
+            return `<div class="py-2 text-center text-xs font-bold border-l border-white/10 ${bugunMu?'bg-white/20':''}">
+              <div class="text-white">${g.substring(0,3)}</div>
+              <div class="text-white/60 text-[10px]">${tarih.getDate()}</div>
+            </div>`;
+          }).join('')}
+        </div>
+
+        <!-- Grid gövdesi -->
+        <div class="grid bg-surface-container-lowest" style="grid-template-columns:48px repeat(7,1fr); height:${TOPLAM_YK}px; position:relative;">
+
+          <!-- Saat etiketleri -->
+          <div class="relative border-r border-outline-variant/20">
+            ${saatler.map(h => `
+              <div class="absolute right-2 text-[10px] text-outline/50 font-medium" style="top:${(h-START_H)*PX_SAAT - 7}px">
+                ${String(h).padStart(2,'0')}:00
+              </div>`).join('')}
+          </div>
+
+          <!-- 7 gün kolonu -->
+          ${GUNLER.map((gun, gi) => {
+            const seanslar = state._haftalikProgram.filter(p => p.gun === gun);
+            return `<div class="relative border-l border-outline-variant/10" style="height:${TOPLAM_YK}px;">
+              ${saatler.map(h => `<div class="absolute left-0 right-0 border-t border-outline-variant/15" style="top:${(h-START_H)*PX_SAAT}px"></div>`).join('')}
+              ${saatler.slice(0,-1).map(h => `<div class="absolute left-0 right-0 border-t border-outline-variant/07" style="top:${(h-START_H)*PX_SAAT+PX_SAAT/2}px; border-style:dashed;"></div>`).join('')}
+              ${seanslar.map(p => {
+                const ogr = ogrMap[p.ogrenci_id];
+                const r   = sinifRenk(ogr?.sinif);
+                const top = topPx(p.baslangic);
+                const hgt = hautPx(p.baslangic, p.bitis);
+                const isEk = p.tip === 'ek';
+                return `<div onclick="programKartaTikla('${p.ogrenci_id}')"
+                  class="absolute left-1 right-1 rounded-lg px-1.5 py-1 cursor-pointer hover:opacity-75 transition-opacity overflow-hidden select-none"
+                  style="top:${top}px; height:${hgt}px; background:${r.bg}; border-left:3px solid ${r.brd};">
+                  <div class="text-[11px] font-bold leading-tight truncate" style="color:${r.txt}">${ogr?.ad_soyad||'—'}</div>
+                  ${hgt > 36 ? `<div class="text-[10px] leading-tight" style="color:${r.txt};opacity:0.7">${ogr?.sinif||''}</div>` : ''}
+                  ${hgt > 50 ? `<div class="text-[10px] font-medium leading-tight" style="color:${r.txt};opacity:0.6">${p.baslangic?.substring(0,5)}–${p.bitis?.substring(0,5)}</div>` : ''}
+                  ${isEk ? `<div class="text-[9px] font-bold uppercase tracking-wide" style="color:${r.txt};opacity:0.5">ek</div>` : ''}
+                </div>`;
+              }).join('')}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+
+  el.innerHTML = statsHtml + haftaLabel + gridHtml;
+}
+
+function programKartaTikla(ogrenciId) {
+  goPage('ogrenciler');
+  setTimeout(() => ogrenciDuzenle(ogrenciId), 150);
 }
 
 // ── UTILS ─────────────────────────────────────────────────────

@@ -138,6 +138,59 @@ tailwind.config = {
   .fade-in { animation:fade .28s ease; }
   @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
   .ambient-blob { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; opacity: 0.25; }
+  /* Mobil-only öğeler: varsayılan gizli */
+  #menu-toggle { display: none; align-items: center; justify-content: center; }
+  #sidebar-overlay { display: none; }
+  #login-mobile-brand { display: none; }
+
+  /* ── MOBİL ── */
+  @media (max-width: 768px) {
+    /* Login: sol panel gizle, form tam ekran */
+    #loginScreen { grid-template-columns: 1fr !important; }
+    #loginScreen > div:first-child { display: none !important; }
+    #loginScreen > div:last-child { padding: 32px 20px !important; align-items: flex-start !important; min-height: 100vh; justify-content: flex-start !important; padding-top: 48px !important; }
+    #login-mobile-brand { display: flex !important; }
+
+    /* Sidebar: gizle, hamburger ile aç */
+    #sidebar { transform: translateX(-100%); transition: transform .28s cubic-bezier(.4,0,.2,1); box-shadow: none; }
+    #sidebar.mob-open { transform: translateX(0); box-shadow: 8px 0 40px rgba(1,49,73,.28); }
+    #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(1,49,73,.45); z-index: 35; }
+    #sidebar-overlay.mob-open { display: block; }
+
+    /* Ana alan: sidebar yok, margin sıfır */
+    #app-main { margin-left: 0 !important; }
+    #menu-toggle { display: flex !important; }
+    #hdr-sub { display: none; }
+    #hdr-role-badge { display: none; }
+    #appHeader { padding: 12px 16px !important; }
+
+    /* İçerik padding küçült */
+    .scrollwrap { padding: 14px 14px 36px !important; }
+
+    /* Dashboard stat grid: 3 → 2 sütun */
+    #dashStats { grid-template-columns: 1fr 1fr !important; }
+    #dashStats > .card-2xl:last-child { grid-column: 1 / -1; }
+
+    /* Kaynaklar üst grid: yan yana → alt alta */
+    #kaynaklar-top-grid { grid-template-columns: 1fr !important; }
+
+    /* Veli aylık özet */
+    #veli-aylik-ozet { grid-template-columns: 1fr 1fr !important; }
+
+    /* Öğrenci istatistik grid */
+    #ogr-stat-grid { grid-template-columns: 1fr 1fr !important; }
+    #ogr-stat-grid > div:last-child { grid-column: 1 / -1; }
+
+    /* Form 2-sütunlu grid'ler → tek sütun */
+    .mob-stack { grid-template-columns: 1fr !important; }
+
+    /* Tab bar font küçült */
+    .tab { font-size: 11.5px !important; padding: 8px 5px !important; gap: 4px !important; }
+    .tab .material-symbols-outlined { font-size: 17px !important; }
+
+    /* Kart iç padding küçült */
+    .card-2xl { border-radius: 1rem !important; }
+  }
   @media print {
     @page { size: A4 portrait; margin: 12mm; }
     body, html { background: white !important; }
@@ -211,6 +264,11 @@ tailwind.config = {
   <!-- Sağ: Giriş formu -->
   <div style="display:flex;align-items:center;justify-content:center;padding:40px;background:var(--surface);">
     <div style="width:100%;max-width:400px;">
+      <!-- Mobil logo (sadece küçük ekranda görünür) -->
+      <div id="login-mobile-brand" style="flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:28px;">
+        <img src="public/adaptix_logo.png" alt="AdaptiX" style="height:36px;width:auto;">
+        <p style="margin:0;font-size:12.5px;color:var(--ink-soft);">Bireysel Takip Sistemi</p>
+      </div>
       <h2 style="font-size:26px;font-weight:800;margin:0 0 5px;color:var(--ink);">Tekrar hoş geldiniz 👋</h2>
       <p style="margin:0 0 26px;font-size:14px;color:var(--ink-soft);">Devam etmek için rolünüzü seçin.</p>
 
@@ -260,6 +318,9 @@ tailwind.config = {
 <!-- ═══════════════════════════════════════════ APP -->
 <div id="appScreen" style="display:none;height:100vh;overflow:hidden;flex-direction:row;">
 
+  <!-- Mobil overlay -->
+  <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
   <!-- Sidebar (Desktop) -->
   <aside id="sidebar" class="sidebar no-print" style="position:fixed;left:0;top:0;height:100vh;z-index:40;display:flex;flex-direction:column;">
     <!-- Brand -->
@@ -290,13 +351,18 @@ tailwind.config = {
   </aside>
 
   <!-- Sağ taraf: header + içerik -->
-  <div style="flex:1;display:flex;flex-direction:column;min-width:0;background:var(--surface);margin-left:256px;">
+  <div id="app-main" style="flex:1;display:flex;flex-direction:column;min-width:0;background:var(--surface);margin-left:256px;">
 
     <!-- Sticky Header -->
     <header id="appHeader" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 30px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;" class="no-print">
-      <div>
-        <h1 id="hdr-title" style="font-size:21px;font-weight:800;margin:0;color:var(--ink);font-family:Manrope,sans-serif;">—</h1>
-        <p id="hdr-sub" style="margin:2px 0 0;font-size:13px;color:var(--ink-soft);">—</p>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button id="menu-toggle" onclick="toggleSidebar()" style="width:38px;height:38px;border:none;background:none;cursor:pointer;border-radius:10px;color:var(--ink);" title="Menü">
+          <span class="material-symbols-outlined" style="font-size:24px;display:block;">menu</span>
+        </button>
+        <div>
+          <h1 id="hdr-title" style="font-size:21px;font-weight:800;margin:0;color:var(--ink);font-family:Manrope,sans-serif;">—</h1>
+          <p id="hdr-sub" style="margin:2px 0 0;font-size:13px;color:var(--ink-soft);">—</p>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:12px;">
         <span id="hdr-role-badge" class="badge badge-blue">—</span>
@@ -469,11 +535,11 @@ tailwind.config = {
           <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">person_add</span>
           <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Yeni Öğrenci Ekle</h2>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label class="lbl">Ad Soyad *</label><input type="text" id="yeni-ad" placeholder="Ali Yılmaz" class="field"/></div>
           <div><label class="lbl">TC Kimlik *</label><input type="number" id="yeni-tc" placeholder="12345678901" class="field"/></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label class="lbl">Sınıf</label>
             <select id="yeni-sinif" class="field">
@@ -483,11 +549,11 @@ tailwind.config = {
           </div>
           <div><label class="lbl">Şube</label><input type="text" id="yeni-sube" placeholder="A" class="field"/></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label class="lbl">Okul</label><input type="text" id="yeni-okul" placeholder="Okul adı" class="field"/></div>
           <div><label class="lbl">Okul No</label><input type="number" id="yeni-okulno" placeholder="145" class="field"/></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div><label class="lbl">Veli Adı</label><input type="text" id="yeni-veli" placeholder="Ahmet Yılmaz" class="field"/></div>
           <div><label class="lbl">Veli Telefonu</label><input type="number" id="yeni-tel" placeholder="5051234567" class="field"/></div>
         </div>
@@ -535,7 +601,7 @@ tailwind.config = {
           <input type="date" id="program-tarih" class="field"/>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <input type="time" id="program-baslangic" class="field"/>
           <input type="time" id="program-bitis" class="field"/>
         </div>
@@ -553,7 +619,7 @@ tailwind.config = {
     <div id="page-kaynaklar" class="page">
 
       <!-- Üst: Yan yana formlar -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
+      <div id="kaynaklar-top-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start;">
 
         <!-- Havuza Kaynak Ekle -->
         <div class="card-2xl" style="padding:22px 24px;display:flex;flex-direction:column;gap:12px;">
@@ -562,14 +628,14 @@ tailwind.config = {
             <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Havuza Kaynak Ekle</h2>
           </div>
           <input type="text" id="k-ad" placeholder="Kaynak adı" class="field"/>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <input type="text" id="k-yayinevi" placeholder="Yayınevi / Yazar" class="field"/>
             <select id="k-sinif" class="field">
               <option>5. Sınıf</option><option>6. Sınıf</option>
               <option>7. Sınıf</option><option selected>8. Sınıf</option>
             </select>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <select id="k-zorluk" class="field">
               <option>Kolay</option><option selected>Orta</option><option>Zor</option>
             </select>
@@ -628,7 +694,7 @@ tailwind.config = {
 
         <div style="border-top:1px solid var(--line);padding-top:18px;">
           <div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">Yeni Deneme Ekle</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
             <div>
               <label class="lbl">Tarih</label>
               <input type="date" id="deneme-tarih" class="field">
@@ -782,7 +848,7 @@ tailwind.config = {
 
       <div id="ogr-tab-odevler">
         <!-- İstatistikler -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+        <div id="ogr-stat-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
           <div class="card-2xl stat-orange" style="padding:16px;text-align:center;">
             <div style="font-family:Manrope;font-size:28px;font-weight:800;line-height:1;" id="ogr-stat-bekleyen">—</div>
             <div style="font-size:11.5px;opacity:.85;margin-top:5px;font-weight:600;">Bekleyen</div>
@@ -1064,6 +1130,14 @@ function goPage(id) {
   const hdrSub   = document.getElementById('hdr-sub');
   if (hdrTitle) hdrTitle.textContent = title;
   if (hdrSub)   hdrSub.textContent   = sub;
+  // Mobilde sidebar'ı kapat
+  if (window.innerWidth <= 768) {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('sidebar-overlay');
+    if (sb) sb.classList.remove('mob-open');
+    if (ov) ov.classList.remove('mob-open');
+    document.body.style.overflow = '';
+  }
   window.scrollTo(0, 0);
 }
 
@@ -3739,6 +3813,15 @@ function programKartaTikla(ogrenciId) {
 }
 
 // ── UTILS ─────────────────────────────────────────────────────
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const isOpen = sidebar.classList.contains('mob-open');
+  sidebar.classList.toggle('mob-open', !isOpen);
+  overlay.classList.toggle('mob-open', !isOpen);
+  document.body.style.overflow = isOpen ? '' : 'hidden';
+}
+
 function logout() {
   localStorage.removeItem('adaptix_session');
   state = { rol:null, user:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };

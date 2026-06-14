@@ -897,7 +897,7 @@ tailwind.config = {
           <div>
             <p style="font-size:11px;font-weight:700;opacity:.9;margin:0 0 4px;">LGS'ye Kalan Süre</p>
             <div style="font-family:Manrope;font-size:40px;font-weight:800;line-height:1;" id="veli-lgs-gun">—</div>
-            <p style="font-size:11.5px;opacity:.85;margin:4px 0 0;">13 Haziran 2026</p>
+            <p style="font-size:11.5px;opacity:.85;margin:4px 0 0;">13 Mart 2027</p>
           </div>
           <div style="font-size:48px;">🏆</div>
         </div>
@@ -2749,8 +2749,7 @@ function gunlukMotivasyon(sinif) {
 
 // ── LGS GERİ SAYIM ────────────────────────────────────────────
 function lgsGeriSayim() {
-  // LGS 2026 tarihi (yaklaşık 13 Haziran 2026)
-  const lgs = new Date('2026-06-13');
+  const lgs = new Date('2027-03-13');
   const bugun = new Date();
   bugun.setHours(0,0,0,0);
   const diff = Math.ceil((lgs - bugun) / 86400000);
@@ -2758,14 +2757,15 @@ function lgsGeriSayim() {
   const card = document.getElementById('lgs-countdown-card');
   card.classList.remove('hidden');
   document.getElementById('lgs-gun-sayisi').textContent = diff > 0 ? diff + ' GÜN' : 'Bugün!';
-  document.getElementById('lgs-tarih-label').textContent = '13 Haziran 2026';
+  document.getElementById('lgs-tarih-label').textContent = '13 Mart 2027';
 
-  // İlerleme çubuğu (yaklaşık 365 gün üzerinden)
-  const toplamGun = 365;
+  // İlerleme çubuğu (1 Eylül 2026 okul başlangıcından LGS'ye kadar)
+  const baslangic = new Date('2026-09-01');
+  const toplamGun = Math.ceil((lgs - baslangic) / 86400000);
   const gecenGun = Math.max(0, toplamGun - diff);
   const pct = Math.min(100, Math.round(gecenGun / toplamGun * 100));
   document.getElementById('lgs-progress-bar').style.width = pct + '%';
-  document.getElementById('lgs-progress-label').textContent = 'LGS 2026';
+  document.getElementById('lgs-progress-label').textContent = 'LGS 2027';
 }
 
 // ── HEDEF ─────────────────────────────────────────────────────
@@ -3248,7 +3248,7 @@ async function loadVeliPanel() {
   if ((u.sinif||'').includes('8')) {
     const lgsCard = document.getElementById('veli-lgs-card');
     lgsCard.classList.remove('hidden');
-    const diff = Math.ceil((new Date('2026-06-13') - new Date().setHours(0,0,0,0)) / 86400000);
+    const diff = Math.ceil((new Date('2027-03-13') - new Date().setHours(0,0,0,0)) / 86400000);
     document.getElementById('veli-lgs-gun').textContent = diff > 0 ? diff + ' GÜN' : 'Bugün!';
   }
 

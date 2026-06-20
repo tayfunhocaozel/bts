@@ -449,6 +449,10 @@ tailwind.config = {
           </select>
         </div>
         <div>
+          <label class="lbl">Ders Tarihi</label>
+          <input type="date" id="ders-tarih" class="field">
+        </div>
+        <div>
           <label class="lbl">Konu</label>
           <select id="ders-konu" onchange="konuSecildi()" class="field">
             <option value="">— Önce öğrenci seçin —</option>
@@ -1140,6 +1144,7 @@ function goPage(id) {
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   if (id === 'ders-programi') loadHaftalikProgram();
+  if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = new Date().toISOString().split('T')[0]; }
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
   const hdrSub   = document.getElementById('hdr-sub');
@@ -1365,7 +1370,7 @@ async function dersSave() {
     if (delErr) { showToast('❌ Güncelleme hatası: ' + delErr.message); return; }
   }
 
-  const tarih = edit ? edit.tarih : new Date().toISOString().split('T')[0];
+  const tarih = edit ? edit.tarih : (document.getElementById('ders-tarih').value || new Date().toISOString().split('T')[0]);
   const rows = secili.map(s => ({
     ogrenci_id: ogrenciId, tarih,
     islenen_konu: konu, kazanim_kodu: s.kod,
@@ -1385,6 +1390,7 @@ async function dersSave() {
   document.getElementById('ders-hatirlatma').value = '';
   document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
   document.getElementById('ders-konu').value = '';
+  document.getElementById('ders-tarih').value = new Date().toISOString().split('T')[0];
   loadDersGecmisi();
 }
 
@@ -1495,6 +1501,7 @@ async function dersDuzenleAc(idx) {
 
   document.getElementById('ders-gorus').value = rows[0].ders_gorusu || '';
   document.getElementById('ders-hatirlatma').value = rows[0].sonraki_ders_hatirlatma || '';
+  document.getElementById('ders-tarih').value = g.tarih;
 
   state._dersEditSession = { ogrenciId, tarih: g.tarih, konu: g.konu };
 

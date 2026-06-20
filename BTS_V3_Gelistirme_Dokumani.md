@@ -1,20 +1,23 @@
 # AdaptiX BTS V3 — Geliştirme Dokümanı
 
-**Hazırlanma Tarihi:** 13 Haziran 2026
-**Sürüm:** BTS V2 → V3
-**Geliştirici:** Tayfun Hoca + Claude (Sonnet 4.6)
-**İlgili Dosyalar:** `scholar_metric.html`, `www/index.html`
-**GitHub Commit:** `3e4438f` (master → main)
+**Hazırlanma Tarihi:** 13 Haziran 2026  
+**Son Güncelleme:** 20 Haziran 2026  
+**Sürüm:** BTS V2 → V3  
+**Geliştirici:** Tayfun Hoca + Claude (Sonnet 4.6)  
+**İlgili Dosyalar:** `scholar_metric.html`, `www/index.html`  
+**GitHub Commit:** `0f585c0` (son)
 
 ---
 
 ## Özet
 
-Bu sürümde üç büyük özellik eklendi:
+Bu sürümde beş büyük özellik eklendi:
 
 1. **Ders Programı Modülü** — Haftalık seans grid görünümü
 2. **Ders Kaydet İyileştirmeleri** — Kazanım bazlı tamamlama durumu + alan yeniden isimlendirme
 3. **Konu Bazlı Zaman Serisi ve Proaktif Uyarı Sistemi** — Üç panelde konu grafikleri + öğretmene otomatik uyarılar
+4. **Ders Kayıt Yönetimi** — Kaydedilmiş dersleri düzenleme ve silme
+5. **Hızlı Navigasyon** — Dashboard kartı ve öğrenci listesinden doğrudan sayfa yönlendirme
 
 ---
 
@@ -213,22 +216,94 @@ CREATE POLICY "authenticated_konu_uyarilari" ON konu_uyarilari
 
 ---
 
-## 4. Teknik Notlar
+## 4. Ders Kayıt Yönetimi (Düzenle / Sil)
+
+### 4.1 Genel Akış
+
+Öğretmen, ders kaydettikten sonra "Kayıtlı Dersler" bölümünden geçmiş dersleri düzenleyebilir veya silebilir. Şema değişikliği gerekmez; mevcut `tarih + ogrenci_id + islenen_konu` üçlüsü oturum anahtarı olarak kullanılır.
+
+### 4.2 UI Değişiklikleri
+
+- **"Kayıtlı Dersler" bölümü** — Ders Kaydet sayfasında, form kartının altına eklendi. Öğrenci seçildiğinde otomatik yüklenir; ders sayısı rozet olarak gösterilir.
+- Her ders kartında **Düzenle** ve **Sil** butonu bulunur.
+- **Ders Tarihi** input alanı — Form'a eklendi. Bugünün tarihi varsayılan; değiştirilebilir. Kaydet sonrasında bugüne sıfırlanır.
+
+### 4.3 Sil Akışı
+
+```
+confirm() → sb.from('dersler').delete()
+  .eq('ogrenci_id', id).eq('tarih', tarih).eq('islenen_konu', konu)
+→ loadDersGecmisi()
+```
+
+### 4.4 Düzenle Akışı
+
+1. Mevcut satırlar `kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma` ile çekilir
+2. Konu select'e set edilir, `konuSecildi()` çağrılarak checkboxlar render edilir
+3. İlgili kazanımlar işaretlenir, TD durumları restore edilir
+4. Textarea'lar ve tarih alanı doldurulur
+5. `state._dersEditSession = { ogrenciId, tarih, konu }` ile edit modu aktif edilir
+6. Kaydet butonu "Dersi Güncelle" olarak güncellenir
+7. **Kaydet:** eski satırlar silinir, yeni satırlar orijinal tarih üzerinden insert edilir
+
+### 4.5 State Değişkenleri
+
+| Değişken | Tip | Açıklama |
+|---|---|---|
+| `state._dersGecmisGruplar` | array | Gruplanan ders oturumları (index ile erişilir) |
+| `state._dersEditSession` | object \| null | `{ ogrenciId, tarih, konu }` — edit modu |
+
+### 4.6 Yeni Fonksiyonlar
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `loadDersGecmisi()` | Seçili öğrencinin derslerini çeker, gruplar, render eder |
+| `dersSil(idx)` | Onay sonrası `_dersGecmisGruplar[idx]`'e karşılık gelen satırları siler |
+| `dersDuzenleAc(idx)` | Formu mevcut ders verileriyle doldurur, edit modunu aktif eder |
+
+### 4.7 `dersSave()` Güncelleme
+
+Edit modunda `state._dersEditSession` dolu ise önce eski satırlar silinir, ardından form değerleriyle yeni satırlar orijinal tarih üzerinden insert edilir. Edit modu temizlenir, buton metni "Dersi Kaydet"e döner.
+
+---
+
+## 5. Hızlı Navigasyon İyileştirmeleri
+
+### 5.1 Dashboard → Öğrenciler
+
+Anasayfadaki **Öğrenci** stat kartına `onclick="goPage('ogrenciler')"` ve `cursor:pointer` eklendi.
+
+### 5.2 Öğrenciler Listesi → Rapor
+
+`renderOgrenciler()` fonksiyonunda her satırın sol kısmı (avatar + ad/sınıf) tıklanabilir `div`'e alındı:
+
+```javascript
+onclick="goRaporFor('${o.ogrenci_id}')"
+```
+
+Sağdaki **✏️ Düzenle** butonu etkilenmedi. `goRaporFor(id)` fonksiyonu zaten mevcuttu; `rapor-ogrenci` select'ini set edip `loadRapor()` çağırır.
+
+---
+
+## 6. Teknik Notlar
 
 - Chart.js 4.4.4 CDN üzerinden mevcut — yeni import gerekmedi
 - `_renderSimpleKonuChart` öğrenci (`pfx='sl'`) ve veli (`pfx='vl'`) için `id` çakışmasını önler
 - `store._pfx` alanı `toggleSimpleLine` fonksiyonunun doğru store'u bulmasını sağlar
-- Tüm değişiklikler `scholar_metric.html` ve `www/index.html`'de eşzamanlı uygulandı
+- Ders oturumu silinirken `tarih + islened_konu` grup anahtarı kullanılır — aynı gün aynı konuya iki farklı oturum girilmesi desteklenmez (pratikte gereksiz)
 
 ---
 
-## 5. Commit Geçmişi (Bu Sürüm)
+## 7. Commit Geçmişi (Bu Sürüm)
 
 | Hash | Açıklama |
 |---|---|
 | `3707423` | Ders Programı: haftalık grid ve tüm JS fonksiyonları eklendi |
 | `12be139` | Ders Kaydet: kazanım bazlı tamamlama durumu + sorun alanı eklendi |
 | `3e4438f` | Konu bazlı zaman serisi + proaktif uyarı sistemi eklendi |
+| `4631212` | Ders kayıtlarına düzenle ve sil desteği eklendi |
+| `004f635` | Ders Kaydet formuna tarih alanı eklendi |
+| `0f585c0` | Hızlı navigasyon: öğrenci kartı ve liste tıklamaları |
 
 ---
 

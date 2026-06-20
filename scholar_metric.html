@@ -468,9 +468,20 @@ tailwind.config = {
           <label class="lbl">Sonraki Ders Notu</label>
           <textarea id="ders-hatirlatma" rows="2" placeholder="Örn: EBOB'u derinleştir, yeni nesil soru çöz..." class="field" style="resize:vertical;"></textarea>
         </div>
-        <button onclick="dersSave()" class="btn btn-primary" style="width:100%;justify-content:center;">
+        <button onclick="dersSave()" id="btn-ders-kaydet" class="btn btn-primary" style="width:100%;justify-content:center;">
           <span class="material-symbols-outlined" style="font-size:18px;">save</span> Dersi Kaydet
         </button>
+      </div>
+
+      <!-- Son Dersler -->
+      <div id="ders-gecmis-wrapper" style="display:none;margin-top:16px;">
+        <div class="card-2xl" style="padding:20px 24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Kayıtlı Dersler</h2>
+            <span id="ders-gecmis-sayac" class="badge badge-blue">0</span>
+          </div>
+          <div id="ders-gecmis-liste"></div>
+        </div>
       </div>
     </div>
 
@@ -943,6 +954,8 @@ let state = {
   rol: null, user: null,
   ogrenciler: [], kazanimlar: [], kaynaklar: [],
   _dersKazanimlar: [],
+  _dersGecmisGruplar: [],
+  _dersEditSession: null,
   _odevKazanimlar: [], _odevKaynaklar: [], _odevSinif: '',
   _odevTaslaklari: [],
   _haftalikProgram: []
@@ -1254,6 +1267,8 @@ async function dersOgrenciSecildi() {
     konuSel.innerHTML = '<option value="">— Konu bulunamadı —</option>';
     showToast(`⚠️ ${sinif} için kazanım bulunamadı`);
   }
+
+  loadDersGecmisi();
 }
 
 function konuSecildi() {
@@ -1342,8 +1357,17 @@ async function dersSave() {
   if (!secili.length) { showToast('⚠️ En az bir kazanım seçin'); return; }
 
   showToast('Kaydediliyor...');
+
+  const edit = state._dersEditSession;
+  if (edit) {
+    const { error: delErr } = await sb.from('dersler').delete()
+      .eq('ogrenci_id', edit.ogrenciId).eq('tarih', edit.tarih).eq('islenen_konu', edit.konu);
+    if (delErr) { showToast('❌ Güncelleme hatası: ' + delErr.message); return; }
+  }
+
+  const tarih = edit ? edit.tarih : new Date().toISOString().split('T')[0];
   const rows = secili.map(s => ({
-    ogrenci_id: ogrenciId, tarih: new Date().toISOString().split('T')[0],
+    ogrenci_id: ogrenciId, tarih,
     islenen_konu: konu, kazanim_kodu: s.kod,
     tamamlama_durumu: s.td,
     ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma
@@ -1351,11 +1375,134 @@ async function dersSave() {
 
   const { error } = await sb.from('dersler').insert(rows);
   if (error) { showToast('❌ Hata: ' + error.message); return; }
-  showToast('✅ Ders kaydedildi!');
+
+  showToast(edit ? '✅ Ders güncellendi!' : '✅ Ders kaydedildi!');
+  state._dersEditSession = null;
+  const btn = document.getElementById('btn-ders-kaydet');
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">save</span> Dersi Kaydet';
+
   document.getElementById('ders-gorus').value = '';
   document.getElementById('ders-hatirlatma').value = '';
   document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
   document.getElementById('ders-konu').value = '';
+  loadDersGecmisi();
+}
+
+async function loadDersGecmisi() {
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const wrapper = document.getElementById('ders-gecmis-wrapper');
+  const el = document.getElementById('ders-gecmis-liste');
+  if (!ogrenciId || !el) { if (wrapper) wrapper.style.display = 'none'; return; }
+
+  wrapper.style.display = '';
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div>';
+
+  const { data } = await sb.from('dersler')
+    .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
+    .eq('ogrenci_id', ogrenciId)
+    .order('tarih', { ascending: false })
+    .limit(60);
+
+  if (!data || !data.length) {
+    document.getElementById('ders-gecmis-sayac').textContent = '0';
+    el.innerHTML = '<div style="padding:16px;font-size:13px;color:var(--ink-soft);text-align:center;">Henüz ders kaydı yok.</div>';
+    return;
+  }
+
+  const gruplar = {};
+  data.forEach(d => {
+    const k = d.tarih + '||' + (d.islenen_konu || '');
+    if (!gruplar[k]) gruplar[k] = { tarih: d.tarih, konu: d.islenen_konu || '', kazanimlar: [], sorun: d.ders_gorusu || '' };
+    if (d.kazanim_kodu) gruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu || 'tam' });
+  });
+
+  state._dersGecmisGruplar = Object.values(gruplar);
+  document.getElementById('ders-gecmis-sayac').textContent = state._dersGecmisGruplar.length;
+
+  const tdCss = d => d === 'tam' ? 'background:#e8f5e9;color:#2e7d32;' : d === 'kismi' ? 'background:#fff3e0;color:#e65100;' : 'background:#e3f2fd;color:#1565c0;';
+  const tdLbl = d => d === 'tam' ? '✅ Tam' : d === 'kismi' ? '⚠️ Kısmi' : '🔵 Başlandı';
+
+  el.innerHTML = state._dersGecmisGruplar.map((g, i) => {
+    const tarihStr = g.tarih ? new Date(g.tarih).toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' }) : '—';
+    return `
+      <div style="border-bottom:1px solid var(--line);padding:12px 0;last:border-0;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;">${g.konu || '—'}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">📅 ${tarihStr}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button onclick="dersDuzenleAc(${i})"
+              style="display:flex;align-items:center;gap:4px;padding:5px 10px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;">
+              <span class="material-symbols-outlined" style="font-size:15px;">edit</span> Düzenle
+            </button>
+            <button onclick="dersSil(${i})"
+              style="display:flex;align-items:center;gap:4px;padding:5px 10px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid #fca5a5;background:#fff5f5;color:#dc2626;cursor:pointer;">
+              <span class="material-symbols-outlined" style="font-size:15px;">delete</span> Sil
+            </button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+          ${g.kazanimlar.map(k => `
+            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface);border:1px solid var(--line);color:var(--ink);">${k.kod}</span>
+            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;${tdCss(k.durum)}">${tdLbl(k.durum)}</span>
+          `).join('')}
+        </div>
+        ${g.sorun ? `<div style="margin-top:6px;font-size:12px;color:var(--ink-soft);">⚠️ ${g.sorun}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function dersSil(idx) {
+  const g = state._dersGecmisGruplar[idx];
+  if (!g) return;
+  if (!confirm(`"${g.konu}" konusunu (${g.tarih}) silmek istediğinize emin misiniz?`)) return;
+
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const { error } = await sb.from('dersler').delete()
+    .eq('ogrenci_id', ogrenciId).eq('tarih', g.tarih).eq('islenen_konu', g.konu);
+  if (error) { showToast('❌ Hata: ' + error.message); return; }
+  showToast('🗑️ Ders silindi');
+  loadDersGecmisi();
+}
+
+async function dersDuzenleAc(idx) {
+  const g = state._dersGecmisGruplar[idx];
+  if (!g) return;
+
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const { data: rows } = await sb.from('dersler')
+    .select('kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
+    .eq('ogrenci_id', ogrenciId).eq('tarih', g.tarih).eq('islenen_konu', g.konu);
+
+  if (!rows || !rows.length) return;
+
+  // Konuyu seç ve checkboxları render et
+  document.getElementById('ders-konu').value = g.konu;
+  konuSecildi();
+
+  // Kazanım map: kod → td durumu
+  const kazMap = {};
+  rows.forEach(r => { if (r.kazanim_kodu) kazMap[r.kazanim_kodu] = r.tamamlama_durumu || 'tam'; });
+
+  // Checkboxları işaretle
+  document.querySelectorAll('#kazanim-checkboxlar input[type=checkbox]').forEach(cb => {
+    if (kazMap[cb.value] !== undefined && !cb.checked) {
+      toggleKazanim({ preventDefault: () => {} }, 'kaz-' + cb.dataset.idx);
+      setTD(cb.dataset.idx, kazMap[cb.value]);
+    }
+  });
+
+  document.getElementById('ders-gorus').value = rows[0].ders_gorusu || '';
+  document.getElementById('ders-hatirlatma').value = rows[0].sonraki_ders_hatirlatma || '';
+
+  state._dersEditSession = { ogrenciId, tarih: g.tarih, konu: g.konu };
+
+  const btn = document.getElementById('btn-ders-kaydet');
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">edit</span> Dersi Güncelle';
+
+  document.getElementById('page-ders').scrollIntoView({ behavior: 'smooth' });
+  showToast('✏️ Düzenleme modu — değişiklikleri kaydedin');
 }
 
 // ── ÖDEV GİR ──────────────────────────────────────────────────

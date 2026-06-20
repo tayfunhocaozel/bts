@@ -397,7 +397,7 @@ tailwind.config = {
 
       <!-- Stats -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;" id="dashStats">
-        <div class="card-2xl stat-navy" style="padding:20px 22px;">
+        <div class="card-2xl stat-navy" style="padding:20px 22px;cursor:pointer;" onclick="goPage('ogrenciler')">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">group</span>
             <span style="font-size:12px;font-weight:600;opacity:.85;">Öğrenci</span>
@@ -1797,16 +1797,18 @@ function renderOgrenciler() {
   if (!filtered.length) { el.innerHTML = '<div class="p-4 text-sm text-outline">Öğrenci bulunamadı</div>'; return; }
 
   el.innerHTML = filtered.map(o => `
-    <div class="flex items-center gap-3 px-4 py-3">
-      <div class="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center font-headline font-bold text-primary text-sm flex-shrink-0">
-        ${(o.ad_soyad||'?').charAt(0)}
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-sm font-semibold text-on-surface truncate">${o.ad_soyad||'—'}</div>
-        <div class="text-xs text-outline">${o.sinif||'—'} — ${o.ogrenci_id}</div>
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/10 last:border-0">
+      <div onclick="goRaporFor('${o.ogrenci_id}')" class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-75 transition-opacity">
+        <div class="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center font-headline font-bold text-primary text-sm flex-shrink-0">
+          ${(o.ad_soyad||'?').charAt(0)}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-on-surface truncate">${o.ad_soyad||'—'}</div>
+          <div class="text-xs text-outline">${o.sinif||'—'} — ${o.ogrenci_id}</div>
+        </div>
       </div>
       <button onclick="ogrenciDuzenle('${o.ogrenci_id}')"
-        class="text-xs font-bold px-3 py-1.5 rounded-full bg-tertiary-container text-on-tertiary-container hover:bg-tertiary hover:text-on-tertiary transition-colors">
+        class="text-xs font-bold px-3 py-1.5 rounded-full bg-tertiary-container text-on-tertiary-container hover:bg-tertiary hover:text-on-tertiary transition-colors flex-shrink-0">
         ✏️ Düzenle
       </button>
     </div>`).join('');

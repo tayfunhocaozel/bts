@@ -3422,15 +3422,18 @@ function lgsGeriSayim() {
 
 // ── HEDEF ─────────────────────────────────────────────────────
 function hedefYukle() {
-  const key = 'hedef_' + state.user.ogrenci_id;
-  const hedef = localStorage.getItem(key) || '';
-  document.getElementById('ogr-hedef-input').value = hedef;
+  const el = document.getElementById('ogr-hedef-input');
+  if (el) el.value = state.user.hedef || '';
 }
 
-function hedefKaydet() {
-  const key = 'hedef_' + state.user.ogrenci_id;
+async function hedefKaydet() {
   const hedef = document.getElementById('ogr-hedef-input').value.trim();
-  localStorage.setItem(key, hedef);
+  const { error } = await sb.from('ogrenciler')
+    .update({ hedef })
+    .eq('ogrenci_id', state.user.ogrenci_id);
+  if (error) { showToast('❌ Hedef kaydedilemedi'); return; }
+  state.user.hedef = hedef;
+  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
   showToast('🎯 Hedef kaydedildi!');
 }
 

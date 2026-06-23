@@ -1,23 +1,25 @@
 # AdaptiX BTS V3 — Geliştirme Dokümanı
 
 **Hazırlanma Tarihi:** 13 Haziran 2026  
-**Son Güncelleme:** 20 Haziran 2026  
+**Son Güncelleme:** 23 Haziran 2026  
 **Sürüm:** BTS V2 → V3  
 **Geliştirici:** Tayfun Hoca + Claude (Sonnet 4.6)  
 **İlgili Dosyalar:** `scholar_metric.html`, `www/index.html`  
-**GitHub Commit:** `0f585c0` (son)
+**GitHub Commit:** `7ac8de7` (son)
 
 ---
 
 ## Özet
 
-Bu sürümde beş büyük özellik eklendi:
+Bu sürümde yedi büyük özellik eklendi:
 
 1. **Ders Programı Modülü** — Haftalık seans grid görünümü
 2. **Ders Kaydet İyileştirmeleri** — Kazanım bazlı tamamlama durumu + alan yeniden isimlendirme
 3. **Konu Bazlı Zaman Serisi ve Proaktif Uyarı Sistemi** — Üç panelde konu grafikleri + öğretmene otomatik uyarılar
 4. **Ders Kayıt Yönetimi** — Kaydedilmiş dersleri düzenleme ve silme
 5. **Hızlı Navigasyon** — Dashboard kartı ve öğrenci listesinden doğrudan sayfa yönlendirme
+6. **Rapor Ödev Analizi** — Rapor sayfasında ödev istatistik kartları ve filtrelenmiş liste
+7. **Bekleyen Ödev Yönetim Modali** — Dashboard'dan tüm bekleyen ödevleri tek ekranda işleme
 
 ---
 
@@ -285,16 +287,104 @@ Sağdaki **✏️ Düzenle** butonu etkilenmedi. `goRaporFor(id)` fonksiyonu zat
 
 ---
 
-## 6. Teknik Notlar
+## 6. Rapor Ödev Analizi
+
+### 6.1 Genel
+
+Rapor sayfasında "Ders Akışı" bölümünün altına "Ödevler" başlıklı bir analiz bölümü eklendi.
+
+### 6.2 İstatistik Kartları
+
+| Kart | Renk | Tıklanabilir |
+|---|---|---|
+| Toplam | Gri | — |
+| Tamamlanan | Yeşil (#00661d) | ✅ — liste toggle |
+| Yapılmadı | Kırmızı (#ba1a1a) | ✅ — liste toggle |
+| Eksik | Turuncu (#805600) | ✅ — liste toggle |
+
+### 6.3 Filtrelenmiş Ödev Listesi
+
+Karta tıklayınca kartın altında o duruma ait ödevler açılır/kapanır. Kolonlar: **Gün | Kaynak | Konu | Durum**.
+
+- `TAMAMLANDI` satırlarında `dogru/yanlis/bos/toplam` null değilse `D: X  Y: X  B: X  Top: X` gösterilir.
+- Öğretmen rolünde her satırda **↺ Tekrar Ver** butonu: `goPage('odev')` çağırır, ödev formunu o ödevin kaynak/konu/kazanım verileriyle önceden doldurur.
+
+### 6.4 `loadRapor()` Değişiklikleri
+
+- `odevler` sorgusu artık tüm durumları çeker (durum filtresi kaldırıldı).
+- `tamamlananOdevler = tumOdevler.filter(o => o.durum === 'TAMAMLANDI')` — konu analizi bu alt küme üzerinden çalışır.
+- `select('*')` yerine explicit sütun listesi: `odev_id, ogrenci_id, gun, kaynak, konu, kazanim, durum, verilis_tarihi, dogru, yanlis, bos, toplam` — gelecekteki şema değişikliklerine karşı güvenli.
+- Hata durumunda `console.error` ile loglama eklendi.
+- `window._raporData`'ya `tumOdevler` ve `_rol` alanları eklendi.
+
+### 6.5 Yeni Fonksiyonlar
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `toggleRaporOdevFiltre(durum)` | Seçili duruma göre listeyi render eder, toggle açar/kapar |
+| `raporTekrarVerByIdx(i)` | `_raporOdevFiltreListesi[i]`'den veriyi alıp `raporTekrarVer` çağırır |
+| `raporTekrarVer(ogrenciId, kaynak, konu, kazanim)` | Ödev Gir sayfasına geçer ve formu önceden doldurur |
+
+---
+
+## 7. Bekleyen Ödev Yönetim Modali
+
+### 7.1 Giriş Noktası
+
+Dashboard'daki **Bekleyen Ödev** stat kartına `onclick="acBekleyenModal()"` ve `cursor:pointer` eklendi. Sadece `ogretmen` rolünde çalışır.
+
+### 7.2 Modal Yapısı
+
+`fixed inset-0 z-50` tam ekran overlay, `max-w-2xl` iç kart, `max-h-[90vh] overflow-y-auto` kaydırılabilir liste. Başlıkta anlık sayaç (`id="bm-sayac"`).
+
+### 7.3 Veri Sorgusu
+
+```js
+sb.from('odevler').select('*')
+  .eq('durum', 'BEKLİYOR')
+  .order('verilis_tarihi', { ascending: true })  // eskiden yeniye
+```
+
+`state.ogrenciler` map'i üzerinden `ogrenci_id → ad_soyad` çözümlenir.
+
+### 7.4 Satır Eylemleri
+
+| Buton | Davranış |
+|---|---|
+| ✓ Yapıldı | Satır içi D/Y/B/Toplam alanları açılır; Doğru inputuna odaklanılır |
+| Kaydet | `durum='TAMAMLANDI'`, D/Y/B/Toplam güncellenir; satır listeden kalkar |
+| Eksik | `durum='EKSİK'`; satır anında kalkar |
+| Yapılmadı | `durum='YAPILMADI'`; satır anında kalkar |
+
+Kaydet toast'ı yüzde doğru oranını gösterir (`%73 doğru`). Tüm satırlar işlenince `🎉 Tüm ödevler işlendi!` mesajı çıkar.
+
+### 7.5 Sayaç Senkronizasyonu
+
+`bmSayacGuncelle()` hem modal başlığındaki `bm-sayac`'ı hem dashboard'daki `stat-bekleyen`'i günceller.
+
+### 7.6 Yeni Fonksiyonlar
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `acBekleyenModal()` | Modali açar, DB'den bekleyen ödevleri çeker, listeler |
+| `bekleyenModalYapildi(id)` | D/Y/B panelini toggle eder, Doğru inputuna focus verir |
+| `bekleyenModalDurumGuncelle(id, durum)` | EKSİK/YAPILMADI günceller, satırı kaldırır |
+| `bekleyenModalDybKaydet(id)` | D/Y/B değerleriyle TAMAMLANDI kaydeder, satırı kaldırır |
+| `bmSayacGuncelle()` | Modal ve dashboard sayaçlarını DOM'dan sayarak günceller |
+
+---
+
+## 8. Teknik Notlar
 
 - Chart.js 4.4.4 CDN üzerinden mevcut — yeni import gerekmedi
 - `_renderSimpleKonuChart` öğrenci (`pfx='sl'`) ve veli (`pfx='vl'`) için `id` çakışmasını önler
 - `store._pfx` alanı `toggleSimpleLine` fonksiyonunun doğru store'u bulmasını sağlar
-- Ders oturumu silinirken `tarih + islened_konu` grup anahtarı kullanılır — aynı gün aynı konuya iki farklı oturum girilmesi desteklenmez (pratikte gereksiz)
+- Ders oturumu silinirken `tarih + islenen_konu` grup anahtarı kullanılır — aynı gün aynı konuya iki farklı oturum desteklenmez
+- `loadRapor()` içinde `odevler` sorgusuna `ORDER BY` eklenmemeli: `verilis_tarihi` null olan eski kayıtlar Supabase hatasına yol açar, `data: null` döner ve tüm rapor boşalır
 
 ---
 
-## 7. Commit Geçmişi (Bu Sürüm)
+## 9. Commit Geçmişi (Bu Sürüm)
 
 | Hash | Açıklama |
 |---|---|
@@ -304,6 +394,10 @@ Sağdaki **✏️ Düzenle** butonu etkilenmedi. `goRaporFor(id)` fonksiyonu zat
 | `4631212` | Ders kayıtlarına düzenle ve sil desteği eklendi |
 | `004f635` | Ders Kaydet formuna tarih alanı eklendi |
 | `0f585c0` | Hızlı navigasyon: öğrenci kartı ve liste tıklamaları |
+| `805c7dd` | Rapor: Ödev Analizi bölümü eklendi |
+| `e52faa8` | Dashboard: Bekleyen Ödev kartına modal eklendi |
+| `1b738fd` | Fix: loadRapor odevler sorgusunda tarih → verilis_tarihi |
+| `7ac8de7` | Fix: loadRapor odevler sorgusundan ORDER BY kaldırıldı |
 
 ---
 

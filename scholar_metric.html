@@ -200,7 +200,8 @@ tailwind.config = {
     main { padding: 0 !important; max-width: 100% !important; }
     .page { display: none !important; }
     #page-rapor { display: block !important; }
-    #rapor-content { font-size: 10px !important; }
+    #rapor-content { display: none !important; }
+    #rapor-print-view { display: block !important; }
     #rapor-content .rounded-2xl { border-radius: 4px !important; }
     #rapor-content .shadow-\[0_4px_16px_rgba\(0\2c 29\2c 49\2c 0\.06\)\] { box-shadow: none !important; border: 1px solid #c0c7d1 !important; }
     #rapor-content .gap-5 { gap: 6px !important; }
@@ -799,6 +800,7 @@ tailwind.config = {
         </select>
       </div>
       <div id="rapor-content"></div>
+      <div id="rapor-print-view" style="display:none;"></div>
     </div>
 
     <!-- ── ÖĞRENCİ PANELI -->
@@ -2381,7 +2383,7 @@ async function loadRapor() {
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
     sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam').eq('ogrenci_id', ogrenciId),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
-    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
@@ -2455,10 +2457,12 @@ async function loadRapor() {
   const dersGrup = {};
   dersler.forEach(d => {
     const k = d.tarih+'||'+(d.islenen_konu||'');
-    if (!dersGrup[k]) dersGrup[k] = { tarih:d.tarih, konu:d.islenen_konu, kazanimlar:[] };
+    if (!dersGrup[k]) dersGrup[k] = { tarih:d.tarih, konu:d.islenen_konu, kazanimlar:[], tamamlamaDurumu: d.tamamlama_durumu||'tam' };
     if (d.kazanim_kodu) dersGrup[k].kazanimlar.push(d.kazanim_kodu);
   });
-  const dersSatir = Object.values(dersGrup).slice(0, 15);
+  const dersGrupArr    = Object.values(dersGrup);
+  const dersOturumSayisi = dersGrupArr.length;
+  const dersSatir      = dersGrupArr.slice(0, 15);
 
   // Tarih
   const bugun = new Date().toLocaleDateString('tr-TR');
@@ -2479,7 +2483,7 @@ async function loadRapor() {
       </div>
       <div class="text-right">
         <div class="text-xs text-outline">${bugun}</div>
-        <div class="text-xs font-semibold text-primary mt-1">${dersler.length} ders kaydı</div>
+        <div class="text-xs font-semibold text-primary mt-1">${dersOturumSayisi} ders oturumu</div>
       </div>
     </div>
   </div>
@@ -2711,6 +2715,15 @@ async function loadRapor() {
     </div>
   </div>`;
 
+  // Print görünümünü render et
+  renderRaporPrintHTML({
+    ogr, dersOturumSayisi, dersSatir,
+    tumOdevler, tamamlananOdevler, denemeler,
+    konuMap, allKonular,
+    topDogru, topYanlis, topBos, topToplam, genelPct,
+    odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi
+  });
+
   // Rapor verisini global'e yaz (acKonuGrafigi için)
   window._raporData = {
     ogrenciId, konuOdevler, uyariSonuclari,
@@ -2755,6 +2768,231 @@ async function loadRapor() {
       window._raporData.uyarilar = guncel || [];
     }
   }
+}
+
+// ── RAPOR PRINT VIEW ─────────────────────────────────────────
+function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi }) {
+  const el = document.getElementById('rapor-print-view');
+  if (!el) return;
+
+  const raporTarihi = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+  const initials = (ogr?.ad_soyad || '?').split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+
+  const konuBasarilar = allKonular
+    .filter(k => konuMap[k] && konuMap[k].toplam > 0)
+    .map(k => ({ konu: k, pct: Math.round(konuMap[k].dogru / konuMap[k].toplam * 100) }))
+    .sort((a, b) => b.pct - a.pct);
+
+  function calcTrend() {
+    if (denemeler.length < 4) return 'stabil';
+    const r = denemeler.slice(0, 3).map(d => parseFloat(d.basari_yuzdesi) || 0);
+    const p = denemeler.slice(3, 6).map(d => parseFloat(d.basari_yuzdesi) || 0);
+    const rA = r.reduce((a, b) => a + b, 0) / r.length;
+    const pA = p.reduce((a, b) => a + b, 0) / p.length;
+    return rA - pA >= 5 ? 'yukselis' : pA - rA >= 5 ? 'dusus' : 'stabil';
+  }
+  const trend = calcTrend();
+  const enIyi   = konuBasarilar[0];
+  const enDusuk = [...konuBasarilar].reverse()[0];
+  let sistemMetin = '';
+  if (enIyi)   sistemMetin += `${enIyi.konu} konusunda güçlü bir performans sergileniyor (%${enIyi.pct}). `;
+  if (enDusuk && enDusuk.pct < 60) sistemMetin += `${enDusuk.konu} konusuna odaklanılması önerilir. `;
+  if (trend === 'yukselis') sistemMetin += 'Deneme performansı son dönemde yükseliş eğiliminde — bu güzel gidiş!';
+  else if (trend === 'dusus') sistemMetin += 'Deneme performansında düşüş gözlemleniyor, ek çalışma planlanmalı.';
+  else sistemMetin += 'Deneme performansı istikrarlı seyrediyor.';
+  if (!sistemMetin.trim()) sistemMetin = 'Henüz yeterli veri bulunmamaktadır.';
+
+  const son6 = dersSatir.slice(0, 6);
+
+  const secBas = (txt) =>
+    `<div style="font-size:8pt;font-weight:800;color:#005d8d;text-transform:uppercase;letter-spacing:0.08em;border-left:3px solid #005d8d;padding-left:7px;margin-bottom:8px;">${txt}</div>`;
+
+  el.innerHTML = `
+    <!-- HEADER -->
+    <div style="background:#005d8d;color:white;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0;">
+      <div style="display:flex;align-items:center;gap:11px;">
+        <div style="width:36px;height:36px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:18px;font-weight:900;color:#005d8d;font-family:Manrope,sans-serif;">A</span>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:800;letter-spacing:-0.3px;font-family:Manrope,sans-serif;">AdaptiX BTS</div>
+          <div style="font-size:9px;opacity:0.75;">Bireysel Takip Sistemi</div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;font-weight:700;opacity:0.9;font-family:Manrope,sans-serif;">Performans Raporu</div>
+        <div style="font-size:9px;opacity:0.65;margin-top:2px;">${raporTarihi}</div>
+      </div>
+    </div>
+
+    <!-- ÖĞRENCİ BANDI -->
+    <div style="background:#e8f4fb;border-bottom:0.5px solid #b5d4f4;padding:11px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;">
+      <div style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;">
+        <div style="width:40px;height:40px;background:#005d8d;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:14px;font-weight:800;color:white;font-family:Manrope,sans-serif;">${initials}</span>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#141d22;font-family:Manrope,sans-serif;">${ogr?.ad_soyad || '—'}</div>
+          <div style="font-size:9pt;color:#185fa5;margin-top:1px;">${[ogr?.sinif, ogr?.sube, ogr?.okul].filter(Boolean).join(' · ') || '—'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        ${[{ label:'Ders', val:dersOturumSayisi }, { label:'Ödev', val:tumOdevler.length }, { label:'Deneme', val:denemeler.length }].map(m =>
+          `<div style="background:white;border-radius:7px;padding:7px 13px;text-align:center;border:0.5px solid #b5d4f4;">
+            <div style="font-size:15px;font-weight:800;color:#005d8d;font-family:Manrope,sans-serif;">${m.val}</div>
+            <div style="font-size:8pt;color:#5a7fa8;margin-top:1px;">${m.label}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- ÖDEV İSTATİSTİKLERİ -->
+    <div style="padding:13px 22px 8px;">
+      ${secBas('Ödev İstatistikleri')}
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;">
+        ${[
+          { label:'Toplam Ödev',  val:tumOdevler.length,    bg:'#f5faff', col:'#141d22' },
+          { label:'Tamamlanan',   val:odevTamamlananSayi,   bg:'#f0f9f4', col:'#00661d' },
+          { label:'Eksik',        val:odevEksikSayi,        bg:'#fff8f0', col:'#805600' },
+          { label:'Yapılmadı',    val:odevYapilmadiSayi,    bg:'#fff0f0', col:'#ba1a1a' }
+        ].map(k =>
+          `<div style="background:${k.bg};border-radius:7px;padding:9px 13px;border:0.5px solid ${k.col}25;">
+            <div style="font-size:17px;font-weight:800;color:${k.col};font-family:Manrope,sans-serif;">${k.val}</div>
+            <div style="font-size:8pt;color:${k.col};opacity:0.8;margin-top:2px;">${k.label}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- KONU ANALİZİ + BAŞARI GRAFİKLERİ -->
+    <div style="padding:8px 22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div>
+        ${secBas('Konu Analizi')}
+        <table style="border-collapse:collapse;width:100%;font-size:8pt;font-family:Inter,sans-serif;">
+          <thead>
+            <tr style="background:#005d8d;color:white;">
+              <th style="padding:5px 8px;text-align:left;font-weight:700;">Konu</th>
+              <th style="padding:5px 5px;text-align:center;width:28px;">D</th>
+              <th style="padding:5px 5px;text-align:center;width:28px;">Y</th>
+              <th style="padding:5px 5px;text-align:center;width:28px;">B</th>
+              <th style="padding:5px 5px;text-align:center;width:38px;">Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${allKonular.map((konu, i) => {
+              const r = konuMap[konu];
+              const net = r && r.toplam > 0 ? (r.dogru - r.yanlis / 3).toFixed(1) : '—';
+              return `<tr style="border-bottom:0.5px solid #e8f4fb;${i%2===1?'background:#f9fbfd;':''}">
+                <td style="padding:4px 8px;color:#141d22;">${konu}</td>
+                <td style="padding:4px 5px;text-align:center;font-weight:700;color:#00661d;">${r?r.dogru:'—'}</td>
+                <td style="padding:4px 5px;text-align:center;font-weight:700;color:#ba1a1a;">${r?r.yanlis:'—'}</td>
+                <td style="padding:4px 5px;text-align:center;color:#888;">${r?r.bos:'—'}</td>
+                <td style="padding:4px 5px;text-align:center;font-weight:700;color:#141d22;">${net}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f5faff;border-top:1.5px solid #b5d4f4;">
+              <td style="padding:5px 8px;font-weight:800;color:#141d22;">Genel Toplam</td>
+              <td style="padding:5px 5px;text-align:center;font-weight:800;color:#00661d;">${topDogru}</td>
+              <td style="padding:5px 5px;text-align:center;font-weight:800;color:#ba1a1a;">${topYanlis}</td>
+              <td style="padding:5px 5px;text-align:center;color:#888;">${topBos}</td>
+              <td style="padding:5px 5px;text-align:center;font-weight:800;color:#141d22;">${topToplam>0?(topDogru-topYanlis/3).toFixed(1):'—'}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div>
+        ${secBas('Konu Başarı Analizi')}
+        ${konuBasarilar.length === 0
+          ? '<div style="font-size:9pt;color:#888;text-align:center;padding:20px 0;">Henüz veri yok</div>'
+          : konuBasarilar.map(({ konu, pct }) => {
+              const col = pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
+              return `<div style="margin-bottom:7px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                  <span style="font-size:8pt;color:#141d22;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;">${konu}</span>
+                  <span style="font-size:8pt;font-weight:700;color:${col};">%${pct}</span>
+                </div>
+                <div style="background:#e8f4fb;height:10px;border-radius:4px;overflow:hidden;">
+                  <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;"></div>
+                </div>
+              </div>`;
+            }).join('')}
+      </div>
+    </div>
+
+    <!-- DENEME SONUÇLARI -->
+    ${denemeler.length ? `
+    <div style="padding:8px 22px;">
+      ${secBas('Deneme Sonuçları')}
+      <table style="border-collapse:collapse;width:100%;font-size:8pt;font-family:Inter,sans-serif;">
+        <thead>
+          <tr style="background:#005d8d;color:white;">
+            <th style="padding:5px 8px;text-align:left;font-weight:700;">Deneme Adı</th>
+            <th style="padding:5px 8px;text-align:left;font-weight:700;width:65px;">Tarih</th>
+            <th style="padding:5px 5px;text-align:center;font-weight:700;width:26px;">D</th>
+            <th style="padding:5px 5px;text-align:center;font-weight:700;width:26px;">Y</th>
+            <th style="padding:5px 5px;text-align:center;font-weight:700;width:26px;">B</th>
+            <th style="padding:5px 5px;text-align:center;font-weight:700;width:36px;">Net</th>
+            <th style="padding:5px 8px;text-align:center;font-weight:700;width:55px;">Başarı</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${denemeler.map((r, i) => {
+            const pct = parseFloat(r.basari_yuzdesi)||0;
+            const badgeBg  = pct>=80?'#EAF3DE':pct>=60?'#FAEEDA':'#FCEBEB';
+            const badgeCol = pct>=80?'#3B6D11':pct>=60?'#854F0B':'#A32D2D';
+            const tarih = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR') : '—';
+            const net = (parseFloat(r.dogru||0) - parseFloat(r.yanlis||0)/3).toFixed(1);
+            return `<tr style="border-bottom:0.5px solid #e8f4fb;${i%2===1?'background:#f9fbfd;':''}">
+              <td style="padding:4px 8px;font-weight:600;color:#141d22;">${r.deneme_adi||'—'}</td>
+              <td style="padding:4px 8px;color:#707881;">${tarih}</td>
+              <td style="padding:4px 5px;text-align:center;font-weight:700;color:#00661d;">${r.dogru}</td>
+              <td style="padding:4px 5px;text-align:center;font-weight:700;color:#ba1a1a;">${r.yanlis}</td>
+              <td style="padding:4px 5px;text-align:center;color:#888;">${r.bos}</td>
+              <td style="padding:4px 5px;text-align:center;font-weight:700;color:#141d22;">${net}</td>
+              <td style="padding:4px 8px;text-align:center;">
+                <span style="background:${badgeBg};color:${badgeCol};font-size:7.5pt;font-weight:700;padding:2px 7px;border-radius:10px;">%${pct.toFixed(1)}</span>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>` : ''}
+
+    <!-- DERS AKIŞI + SİSTEM DEĞERLENDİRMESİ -->
+    <div style="padding:8px 22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div>
+        ${secBas('Son İşlenen Konular')}
+        ${son6.length === 0
+          ? '<div style="font-size:9pt;color:#888;text-align:center;padding:16px 0;">Henüz ders kaydı yok</div>'
+          : son6.map(d => {
+              const tarihStr = d.tarih ? new Date(d.tarih).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+              const td = d.tamamlamaDurumu;
+              const rozet = td==='kismi'
+                ? `<span style="background:#fff8f0;color:#805600;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;">Kısmi</span>`
+                : td==='baslandi'
+                ? `<span style="background:#f0f0f0;color:#555;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;">Başlandı</span>`
+                : '';
+              return `<div style="background:#f5faff;border-radius:6px;padding:5px 8px;margin-bottom:5px;">
+                <span style="font-size:8pt;font-weight:700;color:#005d8d;">${tarihStr}</span>
+                <span style="font-size:8pt;font-weight:600;color:#141d22;margin-left:6px;">${d.konu||'—'}</span>${rozet}
+                ${d.kazanimlar&&d.kazanimlar.length?`<div style="font-size:7pt;color:#185fa5;margin-top:1px;">${d.kazanimlar.join(' · ')}</div>`:''}
+              </div>`;
+            }).join('')}
+      </div>
+      <div>
+        ${secBas('Sistem Değerlendirmesi')}
+        <div style="background:#f0f9f4;border:0.5px solid #9FE1CB;border-radius:8px;padding:12px 14px;">
+          <p style="font-size:9pt;color:#1d3a2a;line-height:1.65;margin:0;font-family:Inter,sans-serif;">${sistemMetin}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="background:#f5faff;border-top:0.5px solid #b5d4f4;padding:9px 22px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;border-radius:0 0 8px 8px;">
+      <span style="font-size:8.5pt;color:#185fa5;font-family:Inter,sans-serif;">AdaptiX BTS · Tayfun Hoca · Dijital Eğitim Çözümleri</span>
+      <span style="font-size:8.5pt;color:#aaa;">${raporTarihi}</span>
+    </div>
+  `;
 }
 
 // ── RAPOR ÖDEV ANALİZİ ────────────────────────────────────────

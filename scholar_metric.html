@@ -404,7 +404,7 @@ tailwind.config = {
           </div>
           <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-ogrenci"><div class="spinner"></div></div>
         </div>
-        <div class="card-2xl stat-amber" style="padding:20px 22px;">
+        <div class="card-2xl stat-amber" style="padding:20px 22px;cursor:pointer;" onclick="acBekleyenModal()">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">assignment_late</span>
             <span style="font-size:12px;font-weight:600;opacity:.85;">Bekleyen Ödev</span>
@@ -1751,6 +1751,137 @@ async function durumDegistir(odevId, yeniDurum) {
   showToast('✅ Durum güncellendi');
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
+}
+
+// ── BEKLEYENLERİ YÖNETİ MODAL ─────────────────────────────────
+async function acBekleyenModal() {
+  if (state.rol !== 'ogretmen') return;
+  const modal = document.getElementById('bekleyen-modal');
+  const liste = document.getElementById('bm-liste');
+  modal.classList.remove('hidden');
+  liste.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+
+  const { data } = await sb.from('odevler')
+    .select('*').eq('durum', 'BEKLİYOR')
+    .order('verilis_tarihi', { ascending: true });
+
+  const odevler = data || [];
+  document.getElementById('bm-sayac').textContent = odevler.length;
+
+  if (!odevler.length) {
+    liste.innerHTML = '<div class="flex flex-col items-center justify-center py-16 text-outline"><div class="text-4xl mb-3">🎉</div><div class="text-sm font-semibold">Bekleyen ödev yok!</div></div>';
+    return;
+  }
+
+  const ogrMap = {};
+  state.ogrenciler.forEach(o => { ogrMap[o.ogrenci_id] = o.ad_soyad; });
+
+  liste.innerHTML = odevler.map(o => {
+    const ad   = ogrMap[o.ogrenci_id] || '—';
+    const konu = (o.konu||'—').split(' — ')[0];
+    const id   = o.odev_id;
+    return `
+      <div id="bm-row-${id}" class="border-b border-outline-variant/10 last:border-0">
+        <div class="flex items-start gap-2 px-4 py-3">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-bold text-on-surface truncate">${ad}</div>
+            <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+              <span class="text-xs text-outline">${o.gun||'—'}</span>
+              <span class="text-xs font-medium text-on-surface-variant">${o.kaynak||'—'}</span>
+              <span class="text-xs text-primary">${konu}</span>
+            </div>
+          </div>
+          <div class="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+            <button onclick="bekleyenModalYapildi('${id}')"
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              style="background:#e8f5e9;color:#00661d;">✓ Yapıldı</button>
+            <button onclick="bekleyenModalDurumGuncelle('${id}','EKSİK')"
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              style="background:#fff3e0;color:#805600;">Eksik</button>
+            <button onclick="bekleyenModalDurumGuncelle('${id}','YAPILMADI')"
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              style="background:#fce8e8;color:#ba1a1a;">Yapılmadı</button>
+          </div>
+        </div>
+        <div id="bm-dyb-${id}" style="display:none;" class="px-4 pb-3">
+          <div class="bg-surface-container rounded-xl p-3">
+            <div class="grid grid-cols-4 gap-2 mb-2">
+              <div>
+                <div class="text-xs font-semibold mb-1" style="color:#00661d;">Doğru</div>
+                <input id="bm-d-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1" style="color:#ba1a1a;">Yanlış</div>
+                <input id="bm-y-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1 text-outline">Boş</div>
+                <input id="bm-b-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1 text-outline">Toplam</div>
+                <input id="bm-t-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+            </div>
+            <div class="flex justify-end gap-2">
+              <button onclick="bekleyenModalYapildi('${id}')"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">İptal</button>
+              <button onclick="bekleyenModalDybKaydet('${id}')"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary/80 transition-colors">Kaydet</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function bekleyenModalYapildi(id) {
+  const dyb = document.getElementById('bm-dyb-' + id);
+  if (!dyb) return;
+  const show = dyb.style.display === 'none';
+  dyb.style.display = show ? '' : 'none';
+  if (show) document.getElementById('bm-d-' + id)?.focus();
+}
+
+async function bekleyenModalDurumGuncelle(id, durum) {
+  showToast('Güncelleniyor...');
+  const { error } = await sb.from('odevler').update({ durum }).eq('odev_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  document.getElementById('bm-row-' + id)?.remove();
+  bmSayacGuncelle();
+  showToast(durum === 'EKSİK' ? '⚠️ Eksik işaretlendi' : '❌ Yapılmadı işaretlendi');
+}
+
+async function bekleyenModalDybKaydet(id) {
+  const d = parseInt(document.getElementById('bm-d-' + id)?.value) || 0;
+  const y = parseInt(document.getElementById('bm-y-' + id)?.value) || 0;
+  const b = parseInt(document.getElementById('bm-b-' + id)?.value) || 0;
+  const t = parseInt(document.getElementById('bm-t-' + id)?.value) || (d + y + b) || 0;
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('odevler').update({
+    durum: 'TAMAMLANDI', dogru: d, yanlis: y, bos: b, toplam: t
+  }).eq('odev_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  document.getElementById('bm-row-' + id)?.remove();
+  bmSayacGuncelle();
+  const pct = t > 0 ? Math.round(d / t * 100) : 0;
+  showToast(`✅ Kaydedildi (%${pct} doğru)`);
+}
+
+function bmSayacGuncelle() {
+  const kalan = document.querySelectorAll('#bm-liste [id^="bm-row-"]').length;
+  const el = document.getElementById('bm-sayac');
+  if (el) el.textContent = kalan;
+  if (kalan === 0) {
+    document.getElementById('bm-liste').innerHTML =
+      '<div class="flex flex-col items-center justify-center py-16 text-outline"><div class="text-4xl mb-3">🎉</div><div class="text-sm font-semibold">Tüm ödevler işlendi!</div></div>';
+  }
+  const statEl = document.getElementById('stat-bekleyen');
+  if (statEl) statEl.textContent = kalan;
 }
 
 function odevSonucGir(odevId) {
@@ -4241,5 +4372,22 @@ function showToast(msg) {
     </div>
   </div>
 </div>
+
+<!-- Bekleyen Ödevler Modal -->
+<div id="bekleyen-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <div class="bg-surface rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined ico-fill text-primary" style="font-size:20px;">assignment_late</span>
+        <span class="font-headline font-bold text-base text-on-surface">Bekleyen Ödevler</span>
+        <span id="bm-sayac" class="text-xs font-bold px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container">0</span>
+      </div>
+      <button onclick="document.getElementById('bekleyen-modal').classList.add('hidden')"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors text-lg font-bold">✕</button>
+    </div>
+    <div id="bm-liste" class="overflow-y-auto flex-1"></div>
+  </div>
+</div>
+
 </body>
 </html>

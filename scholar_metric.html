@@ -2379,12 +2379,13 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).order('verilis_tarihi', { ascending: false }),
+    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam').eq('ogrenci_id', ogrenciId),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
+  if (odevRes.error) console.error('Rapor ödev sorgu hatası:', odevRes.error.message);
   const tumOdevler        = odevRes.data || [];
   const tamamlananOdevler = tumOdevler.filter(o => o.durum === 'TAMAMLANDI');
   const kazData  = kazRes.data   || [];

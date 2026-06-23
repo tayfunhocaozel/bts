@@ -2379,7 +2379,7 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).order('verilis_tarihi', { ascending: false }),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),

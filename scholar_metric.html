@@ -200,6 +200,7 @@ tailwind.config = {
     main { padding: 0 !important; max-width: 100% !important; }
     .page { display: none !important; }
     #page-rapor { display: block !important; }
+    #rapor-sayfa-baslik, #rapor-ogrenci-secim { display: none !important; }
     #rapor-content { display: none !important; }
     #rapor-print-view { display: block !important; }
     #rapor-content .rounded-2xl { border-radius: 4px !important; }
@@ -785,7 +786,7 @@ tailwind.config = {
 
     <!-- ── RAPOR -->
     <div id="page-rapor" class="page">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div id="rapor-sayfa-baslik" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div>
           <h2 style="font-family:Manrope;font-size:20px;font-weight:800;margin:0;color:var(--ink);">Performans Raporu</h2>
           <p style="font-size:13px;color:var(--ink-soft);margin:3px 0 0;">Konu bazlı detaylı analiz</p>
@@ -794,7 +795,7 @@ tailwind.config = {
           <span class="material-symbols-outlined" style="font-size:18px;">print</span> PDF / Yazdır
         </button>
       </div>
-      <div class="card-2xl" style="padding:18px 20px;margin-bottom:16px;">
+      <div id="rapor-ogrenci-secim" class="card-2xl" style="padding:18px 20px;margin-bottom:16px;">
         <select id="rapor-ogrenci" onchange="loadRapor()" class="field">
           <option value="">— Öğrenci seçin —</option>
         </select>

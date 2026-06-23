@@ -2248,13 +2248,14 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).eq('durum','TAMAMLANDI'),
+    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
-  const odevler  = odevRes.data  || [];
+  const tumOdevler        = odevRes.data || [];
+  const tamamlananOdevler = tumOdevler.filter(o => o.durum === 'TAMAMLANDI');
   const kazData  = kazRes.data   || [];
   const dersler  = dersRes.data  || [];
   const denemeler = denemeRes.data || [];
@@ -2262,7 +2263,7 @@ async function loadRapor() {
 
   // Konu istatistikleri
   const konuMap = {};
-  odevler.forEach(o => {
+  tamamlananOdevler.forEach(o => {
     const konu = (o.konu||'').split(' — ')[0];
     if (!konu) return;
     if (!konuMap[konu]) konuMap[konu] = { dogru:0, yanlis:0, bos:0, toplam:0 };
@@ -2277,7 +2278,7 @@ async function loadRapor() {
 
   // Konu bazlı zaman serisi (tamamlanan ödevler, tarihe göre sıralı)
   const konuOdevler = {};
-  odevler.forEach(o => {
+  tamamlananOdevler.forEach(o => {
     const konu = (o.konu||'').split(' — ')[0];
     if (!konu) return;
     const tot = Number(o.toplam)||0;
@@ -2329,6 +2330,11 @@ async function loadRapor() {
 
   // Tarih
   const bugun = new Date().toLocaleDateString('tr-TR');
+
+  // Ödev istatistikleri
+  const odevTamamlananSayi = tamamlananOdevler.length;
+  const odevYapilmadiSayi  = tumOdevler.filter(o => o.durum === 'YAPILMADI').length;
+  const odevEksikSayi      = tumOdevler.filter(o => o.durum === 'EKSİK').length;
 
   el.innerHTML = `
   <!-- Başlık -->
@@ -2466,6 +2472,36 @@ async function loadRapor() {
     </div>
   </div>
 
+  <!-- Ödev Analizi -->
+  <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mt-5">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-xl">assignment</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Ödevler</h2>
+      <span class="ml-auto text-xs text-outline">${tumOdevler.length} ödev</span>
+    </div>
+    <div class="p-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-2xl p-4 bg-surface-container">
+          <div class="text-xs font-semibold text-outline uppercase tracking-wide mb-1">Toplam</div>
+          <div class="font-headline text-2xl font-extrabold text-on-surface">${tumOdevler.length}</div>
+        </div>
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-80 transition-opacity" style="background:#e8f5e9;" onclick="toggleRaporOdevFiltre('TAMAMLANDI')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:#00661d;">Tamamlanan</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#00661d;">${odevTamamlananSayi}</div>
+        </div>
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-80 transition-opacity" style="background:#fce8e8;" onclick="toggleRaporOdevFiltre('YAPILMADI')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:#ba1a1a;">Yapılmadı</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#ba1a1a;">${odevYapilmadiSayi}</div>
+        </div>
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-80 transition-opacity" style="background:#fff3e0;" onclick="toggleRaporOdevFiltre('EKSİK')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:#805600;">Eksik</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#805600;">${odevEksikSayi}</div>
+        </div>
+      </div>
+      <div id="rapor-odev-filtre" style="display:none;margin-top:14px;"></div>
+    </div>
+  </div>
+
   ${denemeler.length ? `
   <!-- Denemeler -->
   <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mt-5">
@@ -2546,7 +2582,8 @@ async function loadRapor() {
   // Rapor verisini global'e yaz (acKonuGrafigi için)
   window._raporData = {
     ogrenciId, konuOdevler, uyariSonuclari,
-    uyarilar: mevcutUyarilar, _chart: null, _activeKonu: null
+    uyarilar: mevcutUyarilar, _chart: null, _activeKonu: null,
+    tumOdevler, _rol: state.rol
   };
 
   // DB uyarı upsert (sadece öğretmen)
@@ -2586,6 +2623,97 @@ async function loadRapor() {
       window._raporData.uyarilar = guncel || [];
     }
   }
+}
+
+// ── RAPOR ÖDEV ANALİZİ ────────────────────────────────────────
+function toggleRaporOdevFiltre(durum) {
+  const el = document.getElementById('rapor-odev-filtre');
+  if (!el) return;
+  const isOpen = el.dataset.durum === durum && el.style.display !== 'none';
+  if (isOpen) { el.style.display = 'none'; el.dataset.durum = ''; return; }
+  el.dataset.durum = durum;
+  el.style.display = '';
+
+  const rData = window._raporData;
+  if (!rData) return;
+  const liste = (rData.tumOdevler || []).filter(o => o.durum === durum);
+  window._raporOdevFiltreListesi = liste;
+  const isOgretmen = rData._rol === 'ogretmen';
+
+  const durumBadge = d => {
+    const map = {
+      TAMAMLANDI: ['#e8f5e9','#00661d'],
+      YAPILMADI:  ['#fce8e8','#ba1a1a'],
+      EKSİK:      ['#fff3e0','#805600'],
+    };
+    const [bg, col] = map[d] || ['#f0f0f0','#555'];
+    return `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:${bg};color:${col};">${d}</span>`;
+  };
+
+  if (!liste.length) {
+    el.innerHTML = `<div class="text-sm text-outline text-center py-6 bg-surface-container/40 rounded-2xl">${durum} ödev yok</div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="overflow-x-auto rounded-2xl border border-outline-variant/20">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="bg-surface-container text-xs font-bold text-outline uppercase tracking-wider border-b border-outline-variant/20">
+            <th class="px-3 py-2.5 text-left">Gün</th>
+            <th class="px-3 py-2.5 text-left">Kaynak</th>
+            <th class="px-3 py-2.5 text-left">Konu</th>
+            <th class="px-3 py-2.5 text-left">Durum</th>
+            ${isOgretmen ? '<th class="px-3 py-2.5"></th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${liste.map((o, i) => {
+            const bg = i%2===1 ? 'style="background:rgba(0,0,0,.02)"' : '';
+            const dybHtml = o.durum === 'TAMAMLANDI' && (o.dogru != null || o.yanlis != null || o.bos != null)
+              ? `<div class="flex gap-3 mt-1 text-xs font-semibold flex-wrap">
+                  ${o.dogru  != null ? `<span style="color:#00661d">D: ${o.dogru}</span>`  : ''}
+                  ${o.yanlis != null ? `<span style="color:#ba1a1a">Y: ${o.yanlis}</span>` : ''}
+                  ${o.bos    != null ? `<span style="color:#888">B: ${o.bos}</span>`       : ''}
+                  ${o.toplam != null ? `<span class="text-outline">Top: ${o.toplam}</span>` : ''}
+                </div>` : '';
+            const tekrarTd = isOgretmen
+              ? `<td class="px-3 py-2"><button onclick="raporTekrarVerByIdx(${i})"
+                  class="text-xs font-bold px-2.5 py-1 rounded-full bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors whitespace-nowrap">
+                  ↺ Tekrar Ver</button></td>` : '';
+            return `<tr class="border-b border-outline-variant/10 last:border-0" ${bg}>
+              <td class="px-3 py-2.5 text-xs font-medium text-on-surface">${o.gun||'—'}</td>
+              <td class="px-3 py-2.5 text-xs text-on-surface">${o.kaynak||'—'}</td>
+              <td class="px-3 py-2.5 text-xs text-on-surface">
+                <div>${(o.konu||'—').split(' — ')[0]}</div>${dybHtml}
+              </td>
+              <td class="px-3 py-2.5">${durumBadge(o.durum)}</td>
+              ${tekrarTd}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function raporTekrarVerByIdx(i) {
+  const o = window._raporOdevFiltreListesi?.[i];
+  if (!o) return;
+  raporTekrarVer(window._raporData.ogrenciId, o.kaynak||'', o.konu||'', o.kazanim||'');
+}
+
+async function raporTekrarVer(ogrenciId, kaynak, konu, kazanim) {
+  goPage('odev');
+  const sel = document.getElementById('odev-ogrenci');
+  sel.value = ogrenciId;
+  await odevOgrenciSecildi();
+  const fKaynak = document.getElementById('f-kaynak');
+  const fKonu   = document.getElementById('f-konu');
+  if (fKaynak && kaynak) fKaynak.value = kaynak;
+  if (fKonu && konu) { fKonu.value = konu; formKonuSecildi(); }
+  const fKazanim = document.getElementById('f-kazanim');
+  if (fKazanim && kazanim) fKazanim.value = kazanim;
+  showToast('📋 Ödev formu hazırlandı — gün seçin ve tabloya ekleyin');
 }
 
 // ── KONU ZAMAN SERİSİ YARDIMCI FONKSİYONLAR ──────────────────

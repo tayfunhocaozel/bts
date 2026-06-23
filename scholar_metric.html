@@ -574,9 +574,19 @@ tailwind.config = {
           <div><label class="lbl">Okul</label><input type="text" id="yeni-okul" placeholder="Okul adı" class="field"/></div>
           <div><label class="lbl">Okul No</label><input type="number" id="yeni-okulno" placeholder="145" class="field"/></div>
         </div>
-        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div><label class="lbl">Veli Adı</label><input type="text" id="yeni-veli" placeholder="Ahmet Yılmaz" class="field"/></div>
-          <div><label class="lbl">Veli Telefonu</label><input type="number" id="yeni-tel" placeholder="5051234567" class="field"/></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <label class="lbl" style="margin:0;">Veliler *</label>
+            <button type="button" onclick="veliSatirEkle('yeni-veli-container')" style="font-size:12px;font-weight:700;color:var(--primary);background:none;border:none;cursor:pointer;padding:0;">+ Veli Ekle</button>
+          </div>
+          <div id="yeni-veli-container">
+            <div class="veli-satir" style="display:grid;grid-template-columns:100px 1fr 1fr 32px;gap:6px;align-items:end;margin-bottom:4px;">
+              <div><label class="lbl">Yakınlık</label><select class="field veli-yakinlik"><option>Anne</option><option>Baba</option><option>Vasi</option><option>Diğer</option></select></div>
+              <div><label class="lbl">Veli Adı</label><input type="text" class="field veli-adi" placeholder="Ahmet Yılmaz"/></div>
+              <div><label class="lbl">Telefon</label><input type="text" inputmode="numeric" class="field veli-tel" placeholder="05XXXXXXXXX"/></div>
+              <div style="display:flex;align-items:flex-end;"><button type="button" onclick="veliSatirSil(this)" style="width:32px;height:34px;border-radius:8px;background:#ffdad6;color:#ba1a1a;border:none;cursor:pointer;font-size:13px;line-height:1;">✕</button></div>
+            </div>
+          </div>
         </div>
         <button onclick="ogrenciEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
           <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
@@ -1023,13 +1033,16 @@ async function doLogin() {
 
     } else {
       const tel = document.getElementById('veli-tel').value.trim();
-      const { data: tumVeli, error: veliErr } = await sb.from('ogrenciler').select('ogrenci_id, veli_telefon, ad_soyad');
+      const { data: veliKayit, error: veliErr } = await sb.from('veliler')
+        .select('*, ogrenciler(*)')
+        .eq('telefon', tel)
+        .limit(1);
       if (veliErr) { showError('Bağlantı hatası: ' + veliErr.message); return; }
-      const veliOgr = (tumVeli||[]).find(o => String(o.veli_telefon||'').trim() === tel);
-      if (!veliOgr) { showError(`Bulunamadı (${(tumVeli||[]).length} kayıt içinde arandı)`); return; }
-      const { data: veliFullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', veliOgr.ogrenci_id).limit(1);
+      if (!veliKayit || !veliKayit.length) { showError('Bu telefon numarasıyla kayıtlı veli bulunamadı'); return; }
+      const ogr = veliKayit[0].ogrenciler;
+      if (!ogr) { showError('Öğrenci kaydı bulunamadı'); return; }
       state.rol = 'veli';
-      state.user = { ...((veliFullData||[])[0] || veliOgr), rol: 'veli' };
+      state.user = { ...ogr, rol: 'veli' };
     }
 
     initApp();
@@ -1956,21 +1969,25 @@ function goRaporFor(id) {
   loadRapor();
 }
 
-function ogrenciDuzenle(id) {
+async function ogrenciDuzenle(id) {
   const o = state.ogrenciler.find(x => x.ogrenci_id === id);
   if (!o) return;
   const m = document.getElementById('ogr-duzenle-modal');
   m.dataset.ogrenciId = id;
-  m.querySelector('#od-ad').value     = o.ad_soyad    || '';
-  m.querySelector('#od-sinif').value  = o.sinif        || '';
-  m.querySelector('#od-sube').value   = o.sube         || '';
-  m.querySelector('#od-okul').value   = o.okul         || '';
+  m.querySelector('#od-ad').value     = o.ad_soyad || '';
+  m.querySelector('#od-sinif').value  = o.sinif    || '';
+  m.querySelector('#od-sube').value   = o.sube     || '';
+  m.querySelector('#od-okul').value   = o.okul     || '';
   m.querySelector('#od-tc').value     = o.tc_no    || '';
-  m.querySelector('#od-okulno').value = o.okul_no      || '';
-  m.querySelector('#od-veli').value   = o.veli_ad_soyad     || '';
-  m.querySelector('#od-tel').value    = o.veli_telefon|| '';
+  m.querySelector('#od-okulno').value = o.okul_no  || '';
   m.classList.remove('hidden');
   m.querySelector('#od-ad').focus();
+  const container = document.getElementById('od-veli-container');
+  container.innerHTML = '<div style="font-size:12px;color:#888;padding:4px 0;">Yükleniyor...</div>';
+  const { data: mevVeliler } = await sb.from('veliler').select('*').eq('ogrenci_id', id);
+  container.innerHTML = (mevVeliler && mevVeliler.length)
+    ? mevVeliler.map(v => veliSatirHTML(v.yakinlik||'Diğer', v.veli_adi, v.telefon)).join('')
+    : veliSatirHTML('Anne', o.veli_ad_soyad||'', o.veli_telefon||'');
 }
 
 async function ogrenciDuzenleKaydet() {
@@ -1978,21 +1995,25 @@ async function ogrenciDuzenleKaydet() {
   const id = m.dataset.ogrenciId;
   const ad = m.querySelector('#od-ad').value.trim();
   if (!ad) { showToast('⚠️ Ad Soyad zorunlu'); return; }
+  const yeniVeliler = getVeliFormData('od-veli-container');
+  if (!yeniVeliler.length) { showToast('⚠️ En az 1 veli zorunlu'); return; }
   const payload = {
-    ad_soyad:      ad,
-    sinif:         m.querySelector('#od-sinif').value,
-    sube:          m.querySelector('#od-sube').value.trim(),
-    okul:          m.querySelector('#od-okul').value.trim(),
-    tc_no:     m.querySelector('#od-tc').value.trim(),
-    okul_no:       m.querySelector('#od-okulno').value.trim(),
-    veli_ad_soyad:      m.querySelector('#od-veli').value.trim(),
-    veli_telefon: m.querySelector('#od-tel').value.trim(),
+    ad_soyad: ad,
+    sinif:    m.querySelector('#od-sinif').value,
+    sube:     m.querySelector('#od-sube').value.trim(),
+    okul:     m.querySelector('#od-okul').value.trim(),
+    tc_no:    m.querySelector('#od-tc').value.trim(),
+    okul_no:  m.querySelector('#od-okulno').value.trim(),
   };
   m.classList.add('hidden');
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').update(payload).eq('ogrenci_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
-  showToast('✅ Bilgiler güncellendi');
+  await sb.from('veliler').delete().eq('ogrenci_id', id);
+  const { error: vErr } = await sb.from('veliler').insert(
+    yeniVeliler.map(v => ({ ogrenci_id: id, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
+  );
+  if (vErr) { showToast('⚠️ Veli kaydedilemedi: ' + vErr.message); } else { showToast('✅ Bilgiler güncellendi'); }
   const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
@@ -2020,18 +2041,48 @@ async function ogrenciSil() {
   renderOgrenciler();
 }
 
+function veliSatirHTML(yakinlik, adi, tel) {
+  const opts = ['Anne','Baba','Vasi','Diğer'].map(o =>
+    `<option${o===yakinlik?' selected':''}>${o}</option>`).join('');
+  return `<div class="veli-satir" style="display:grid;grid-template-columns:100px 1fr 1fr 32px;gap:6px;align-items:end;margin-bottom:4px;">
+    <div><label class="lbl">Yakınlık</label><select class="field veli-yakinlik" style="font-size:13px;">${opts}</select></div>
+    <div><label class="lbl">Veli Adı</label><input type="text" class="field veli-adi" placeholder="Ahmet Yılmaz" value="${(adi||'').replace(/"/g,'&quot;')}" style="font-size:13px;"></div>
+    <div><label class="lbl">Telefon</label><input type="text" inputmode="numeric" class="field veli-tel" placeholder="05XXXXXXXXX" value="${(tel||'').replace(/"/g,'&quot;')}" style="font-size:13px;"></div>
+    <div style="display:flex;align-items:flex-end;"><button type="button" onclick="veliSatirSil(this)" style="width:32px;height:34px;border-radius:8px;background:#ffdad6;color:#ba1a1a;border:none;cursor:pointer;font-size:13px;line-height:1;">✕</button></div>
+  </div>`;
+}
+function veliSatirEkle(containerId) {
+  const c = document.getElementById(containerId);
+  if (c.querySelectorAll('.veli-satir').length >= 3) { showToast('⚠️ En fazla 3 veli eklenebilir'); return; }
+  c.insertAdjacentHTML('beforeend', veliSatirHTML('Anne', '', ''));
+}
+function veliSatirSil(btn) {
+  const c = btn.closest('[id$="-veli-container"]');
+  if (c.querySelectorAll('.veli-satir').length <= 1) { showToast('⚠️ En az 1 veli zorunlu'); return; }
+  btn.closest('.veli-satir').remove();
+}
+function getVeliFormData(containerId) {
+  return Array.from(document.getElementById(containerId).querySelectorAll('.veli-satir'))
+    .map(row => ({
+      yakinlik: row.querySelector('.veli-yakinlik').value,
+      veli_adi: row.querySelector('.veli-adi').value.trim(),
+      telefon:  row.querySelector('.veli-tel').value.trim()
+    }))
+    .filter(v => v.veli_adi && v.telefon);
+}
+
 async function ogrenciEkle() {
   const ad = document.getElementById('yeni-ad').value.trim();
   const tc = document.getElementById('yeni-tc').value.trim();
   if (!ad) { showToast('⚠️ Ad Soyad zorunlu'); return; }
   if (!tc) { showToast('⚠️ TC kimlik zorunlu'); return; }
+  const veliler = getVeliFormData('yeni-veli-container');
+  if (!veliler.length) { showToast('⚠️ En az 1 veli eklenmeli'); return; }
 
-  const sinif = document.getElementById('yeni-sinif').value;
-  const sube  = document.getElementById('yeni-sube').value.trim();
-  const okul  = document.getElementById('yeni-okul').value.trim();
+  const sinif  = document.getElementById('yeni-sinif').value;
+  const sube   = document.getElementById('yeni-sube').value.trim();
+  const okul   = document.getElementById('yeni-okul').value.trim();
   const okulno = document.getElementById('yeni-okulno').value;
-  const veli  = document.getElementById('yeni-veli').value.trim();
-  const tel   = document.getElementById('yeni-tel').value.trim();
 
   const lastId = state.ogrenciler.length + 1001;
   const newId  = 'OGR-' + lastId;
@@ -2039,16 +2090,20 @@ async function ogrenciEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').insert({
     ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
-    tc_no: tc, okul_no: okulno, veli_ad_soyad: veli, veli_telefon: tel, kayit_durumu: 'AKTİF'
+    tc_no: tc, okul_no: okulno, kayit_durumu: 'AKTİF'
   });
   if (error) { showToast('❌ ' + error.message); return; }
-  showToast('✅ Öğrenci eklendi!');
-  // Listeyi güncelle
+  const { error: vErr } = await sb.from('veliler').insert(
+    veliler.map(v => ({ ogrenci_id: newId, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
+  );
+  if (vErr) { showToast('⚠️ Öğrenci eklendi ancak veli kaydedilemedi: ' + vErr.message); }
+  else { showToast('✅ Öğrenci eklendi!'); }
   const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
-  ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno','yeni-veli','yeni-tel'].forEach(id => document.getElementById(id).value = '');
+  ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('yeni-veli-container').innerHTML = veliSatirHTML('Anne', '', '');
 }
 
 // ── KAYNAKLAR ─────────────────────────────────────────────────
@@ -4515,7 +4570,7 @@ function showToast(msg) {
 
 <!-- Öğrenci Düzenle Modal -->
 <div id="ogr-duzenle-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-  <div class="bg-surface rounded-2xl shadow-xl p-6 w-96 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+  <div class="bg-surface rounded-2xl shadow-xl p-6 w-full max-w-lg flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
     <div class="font-headline font-bold text-lg text-on-surface">✏️ Öğrenci Düzenle</div>
     <div class="flex flex-col gap-3">
       <div class="flex flex-col gap-1">
@@ -4549,12 +4604,11 @@ function showToast(msg) {
         </div>
       </div>
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veli Adı</label>
-        <input id="od-veli" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
-      </div>
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veli Telefonu</label>
-        <input id="od-tel" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veliler</label>
+          <button type="button" onclick="veliSatirEkle('od-veli-container')" class="text-xs font-bold text-primary hover:underline">+ Veli Ekle</button>
+        </div>
+        <div id="od-veli-container" style="min-height:40px;"></div>
       </div>
     </div>
     <div class="flex gap-2 justify-between mt-1">

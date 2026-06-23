@@ -2384,7 +2384,7 @@ async function loadRapor() {
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
     sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam').eq('ogrenci_id', ogrenciId),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
-    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
@@ -2718,11 +2718,12 @@ async function loadRapor() {
 
   // Print görünümünü render et
   renderRaporPrintHTML({
-    ogr, dersOturumSayisi, dersSatir,
+    ogr, dersOturumSayisi, dersSatir, derslerRaw: dersler,
     tumOdevler, tamamlananOdevler, denemeler,
     konuMap, allKonular,
     topDogru, topYanlis, topBos, topToplam, genelPct,
-    odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi
+    odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi,
+    uyarilar: mevcutUyarilar
   });
 
   // Rapor verisini global'e yaz (acKonuGrafigi için)
@@ -2771,225 +2772,223 @@ async function loadRapor() {
   }
 }
 
-// ── RAPOR PRINT VIEW ─────────────────────────────────────────
-function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi }) {
+// ── RAPOR PRINT VIEW (V2) ─────────────────────────────────────
+function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi, uyarilar }) {
   const el = document.getElementById('rapor-print-view');
   if (!el) return;
 
-  const raporTarihi = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
-  const initials = (ogr?.ad_soyad || '?').split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+  const raporTarihi = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const raporAyYil  = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+  const initials    = (ogr?.ad_soyad || '?').split(' ').map(w => w[0]||'').join('').toUpperCase().slice(0, 2);
 
-  const konuBasarilar = allKonular
-    .filter(k => konuMap[k] && konuMap[k].toplam > 0)
-    .map(k => ({ konu: k, pct: Math.round(konuMap[k].dogru / konuMap[k].toplam * 100) }))
-    .sort((a, b) => b.pct - a.pct);
+  const allUyarilar    = uyarilar || [];
+  const uyarilarAcik   = allUyarilar.filter(u => u.durum === 'acik' || u.durum === 'kronik_tekrar');
+  const uyarilarNot    = allUyarilar.filter(u => u.ogretmen_notu && u.ogretmen_notu.trim());
+  const kronikler      = uyarilarAcik.filter(u => u.uyari_tipi === 'kronik' || u.uyari_tipi === 'kronik_tekrar');
+  const dususler       = uyarilarAcik.filter(u => u.uyari_tipi === 'dusus');
+  const dalgalanmalar  = uyarilarAcik.filter(u => u.uyari_tipi === 'dalgalanma');
 
-  function calcTrend() {
-    if (denemeler.length < 4) return 'stabil';
-    const r = denemeler.slice(0, 3).map(d => parseFloat(d.basari_yuzdesi) || 0);
-    const p = denemeler.slice(3, 6).map(d => parseFloat(d.basari_yuzdesi) || 0);
-    const rA = r.reduce((a, b) => a + b, 0) / r.length;
-    const pA = p.reduce((a, b) => a + b, 0) / p.length;
-    return rA - pA >= 5 ? 'yukselis' : pA - rA >= 5 ? 'dusus' : 'stabil';
+  function rozetHtml(tip) {
+    if (!tip || tip === 'basarili') return `<span style="background:#EAF3DE;color:#3B6D11;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Başarılı / İstikrarlı</span>`;
+    if (tip === 'kronik' || tip === 'kronik_tekrar') return `<span style="background:#FCEBEB;color:#A32D2D;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Kronik Riskli Konu</span>`;
+    if (tip === 'dusus') return `<span style="background:#FAEEDA;color:#854F0B;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Düşüşteki Konu</span>`;
+    if (tip === 'dalgalanma') return `<span style="background:#fff8e6;color:#854F0B;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Dalgalanma Gösteren</span>`;
+    return `<span style="background:#EAF3DE;color:#3B6D11;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Başarılı / İstikrarlı</span>`;
   }
-  const trend = calcTrend();
-  const enIyi   = konuBasarilar[0];
-  const enDusuk = [...konuBasarilar].reverse()[0];
-  let sistemMetin = '';
-  if (enIyi)   sistemMetin += `${enIyi.konu} konusunda güçlü bir performans sergileniyor (%${enIyi.pct}). `;
-  if (enDusuk && enDusuk.pct < 60) sistemMetin += `${enDusuk.konu} konusuna odaklanılması önerilir. `;
-  if (trend === 'yukselis') sistemMetin += 'Deneme performansı son dönemde yükseliş eğiliminde — bu güzel gidiş!';
-  else if (trend === 'dusus') sistemMetin += 'Deneme performansında düşüş gözlemleniyor, ek çalışma planlanmalı.';
-  else sistemMetin += 'Deneme performansı istikrarlı seyrediyor.';
-  if (!sistemMetin.trim()) sistemMetin = 'Henüz yeterli veri bulunmamaktadır.';
 
-  const son6 = dersSatir.slice(0, 6);
+  function secBas(txt) {
+    return `<div style="font-size:7.5pt;font-weight:800;color:#005d8d;text-transform:uppercase;letter-spacing:0.07em;border-left:3px solid #005d8d;padding-left:7px;margin-bottom:8px;">${txt}</div>`;
+  }
 
-  const secBas = (txt) =>
-    `<div style="font-size:8pt;font-weight:800;color:#005d8d;text-transform:uppercase;letter-spacing:0.08em;border-left:3px solid #005d8d;padding-left:7px;margin-bottom:8px;">${txt}</div>`;
+  const konuSatirlari = allKonular.filter(k => konuMap[k] && konuMap[k].toplam > 0).map(konu => {
+    const r    = konuMap[konu];
+    const dPct = Math.round(r.dogru  / r.toplam * 100);
+    const yPct = Math.round(r.yanlis / r.toplam * 100);
+    const bPct = Math.max(0, 100 - dPct - yPct);
+    const uyari = uyarilarAcik.find(u => u.konu === konu);
+    return { konu, r, dPct, yPct, bPct, uyariTip: uyari?.uyari_tipi || null };
+  });
+
+  const sorunAlanlari = (derslerRaw || [])
+    .filter(d => d.ders_gorusu && d.ders_gorusu.trim())
+    .slice(0, 5);
 
   el.innerHTML = `
-    <!-- HEADER -->
-    <div style="background:#005d8d;color:white;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0;">
-      <div style="display:flex;align-items:center;gap:11px;">
-        <img src="public/adaptix_renk_logo.png" alt="AdaptiX" style="height:36px;width:auto;flex-shrink:0;object-fit:contain;">
-        <div>
-          <div style="font-size:14px;font-weight:800;letter-spacing:-0.3px;font-family:Manrope,sans-serif;">AdaptiX BTS</div>
-          <div style="font-size:9px;opacity:0.75;">Bireysel Takip Sistemi</div>
-        </div>
+    <!-- BÖL 1: HEADER -->
+    <div style="background:#005d8d;color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="public/adaptix_renk_logo.png" alt="AdaptiX" style="height:32px;width:auto;object-fit:contain;flex-shrink:0;">
+        <span style="font-size:11.5pt;font-weight:800;font-family:Manrope,sans-serif;letter-spacing:0.02em;">ADAPTİX BTS | AKADEMİK PERFORMANS RAPORU</span>
       </div>
-      <div style="text-align:right;">
-        <div style="font-size:11px;font-weight:700;opacity:0.9;font-family:Manrope,sans-serif;">Performans Raporu</div>
-        <div style="font-size:9px;opacity:0.65;margin-top:2px;">${raporTarihi}</div>
-      </div>
+      <div style="font-size:9pt;opacity:0.85;white-space:nowrap;">${raporTarihi}</div>
     </div>
 
-    <!-- ÖĞRENCİ BANDI -->
-    <div style="background:#e8f4fb;border-bottom:0.5px solid #b5d4f4;padding:11px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;">
+    <!-- BÖL 2: ÖĞRENCİ BANDI -->
+    <div style="background:#e8f4fb;border-bottom:0.5px solid #b5d4f4;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;">
       <div style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;">
-        <div style="width:40px;height:40px;background:#005d8d;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <span style="font-size:14px;font-weight:800;color:white;font-family:Manrope,sans-serif;">${initials}</span>
+        <div style="width:44px;height:44px;background:#005d8d;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:15px;font-weight:800;color:white;font-family:Manrope,sans-serif;">${initials}</span>
         </div>
         <div>
-          <div style="font-size:13px;font-weight:800;color:#141d22;font-family:Manrope,sans-serif;">${ogr?.ad_soyad || '—'}</div>
-          <div style="font-size:9pt;color:#185fa5;margin-top:1px;">${[ogr?.sinif, ogr?.sube, ogr?.okul].filter(Boolean).join(' · ') || '—'}</div>
+          <div style="font-size:13pt;font-weight:800;color:#141d22;font-family:Manrope,sans-serif;">${ogr?.ad_soyad||'—'}</div>
+          <div style="font-size:9pt;color:#185fa5;margin-top:2px;">${[ogr?.sinif,ogr?.sube,ogr?.okul].filter(Boolean).join(' · ')||'—'}</div>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
-        ${[{ label:'Ders', val:dersOturumSayisi }, { label:'Ödev', val:tumOdevler.length }, { label:'Deneme', val:denemeler.length }].map(m =>
-          `<div style="background:white;border-radius:7px;padding:7px 13px;text-align:center;border:0.5px solid #b5d4f4;">
-            <div style="font-size:15px;font-weight:800;color:#005d8d;font-family:Manrope,sans-serif;">${m.val}</div>
-            <div style="font-size:8pt;color:#5a7fa8;margin-top:1px;">${m.label}</div>
+        ${[{label:'Toplam Ders',val:dersOturumSayisi},{label:'Toplam Ödev',val:tumOdevler.length},{label:'Deneme Sayısı',val:denemeler.length}].map(m=>
+          `<div style="background:white;border-radius:7px;padding:7px 13px;text-align:center;border:0.5px solid #b5d4f4;min-width:64px;">
+            <div style="font-size:16pt;font-weight:800;color:#005d8d;font-family:Manrope,sans-serif;">${m.val}</div>
+            <div style="font-size:7.5pt;color:#5a7fa8;margin-top:1px;">${m.label}</div>
           </div>`).join('')}
       </div>
     </div>
 
-    <!-- ÖDEV İSTATİSTİKLERİ -->
-    <div style="padding:13px 22px 8px;">
-      ${secBas('Ödev İstatistikleri')}
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;">
-        ${[
-          { label:'Toplam Ödev',  val:tumOdevler.length,    bg:'#f5faff', col:'#141d22' },
-          { label:'Tamamlanan',   val:odevTamamlananSayi,   bg:'#f0f9f4', col:'#00661d' },
-          { label:'Eksik',        val:odevEksikSayi,        bg:'#fff8f0', col:'#805600' },
-          { label:'Yapılmadı',    val:odevYapilmadiSayi,    bg:'#fff0f0', col:'#ba1a1a' }
-        ].map(k =>
-          `<div style="background:${k.bg};border-radius:7px;padding:9px 13px;border:0.5px solid ${k.col}25;">
-            <div style="font-size:17px;font-weight:800;color:${k.col};font-family:Manrope,sans-serif;">${k.val}</div>
-            <div style="font-size:8pt;color:${k.col};opacity:0.8;margin-top:2px;">${k.label}</div>
-          </div>`).join('')}
-      </div>
-    </div>
+    <!-- BÖL 3: KONU ANALİZİ | KRİTİK UYARILAR + AKSİYON -->
+    <div style="padding:12px 20px 8px;display:grid;grid-template-columns:55% 43%;gap:2%;">
 
-    <!-- KONU ANALİZİ + BAŞARI GRAFİKLERİ -->
-    <div style="padding:8px 22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div>
-        ${secBas('Konu Analizi')}
-        <table style="border-collapse:collapse;width:100%;font-size:8pt;font-family:Inter,sans-serif;">
-          <thead>
-            <tr style="background:#005d8d;color:white;">
-              <th style="padding:5px 8px;text-align:left;font-weight:700;">Konu</th>
-              <th style="padding:5px 5px;text-align:center;width:28px;">D</th>
-              <th style="padding:5px 5px;text-align:center;width:28px;">Y</th>
-              <th style="padding:5px 5px;text-align:center;width:28px;">B</th>
-              <th style="padding:5px 5px;text-align:center;width:38px;">Net</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${allKonular.map((konu, i) => {
-              const r = konuMap[konu];
-              const net = r && r.toplam > 0 ? (r.dogru - r.yanlis / 3).toFixed(1) : '—';
-              return `<tr style="border-bottom:0.5px solid #e8f4fb;${i%2===1?'background:#f9fbfd;':''}">
-                <td style="padding:4px 8px;color:#141d22;">${konu}</td>
-                <td style="padding:4px 5px;text-align:center;font-weight:700;color:#00661d;">${r?r.dogru:'—'}</td>
-                <td style="padding:4px 5px;text-align:center;font-weight:700;color:#ba1a1a;">${r?r.yanlis:'—'}</td>
-                <td style="padding:4px 5px;text-align:center;color:#888;">${r?r.bos:'—'}</td>
-                <td style="padding:4px 5px;text-align:center;font-weight:700;color:#141d22;">${net}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="background:#f5faff;border-top:1.5px solid #b5d4f4;">
-              <td style="padding:5px 8px;font-weight:800;color:#141d22;">Genel Toplam</td>
-              <td style="padding:5px 5px;text-align:center;font-weight:800;color:#00661d;">${topDogru}</td>
-              <td style="padding:5px 5px;text-align:center;font-weight:800;color:#ba1a1a;">${topYanlis}</td>
-              <td style="padding:5px 5px;text-align:center;color:#888;">${topBos}</td>
-              <td style="padding:5px 5px;text-align:center;font-weight:800;color:#141d22;">${topToplam>0?(topDogru-topYanlis/3).toFixed(1):'—'}</td>
-            </tr>
-          </tfoot>
-        </table>
+        ${secBas('Konu Bazlı Analiz & Durum Rozetleri')}
+        ${konuSatirlari.length === 0
+          ? `<div style="font-size:9pt;color:#888;font-style:italic;padding:8px 0;">Henüz tamamlanan ödev verisi yok.</div>`
+          : konuSatirlari.map(({konu, r, dPct, yPct, bPct, uyariTip}) => `
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+              <span style="font-size:8pt;color:#141d22;font-weight:600;width:90px;min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${konu}">${konu}</span>
+              <div style="flex:1;height:11px;border-radius:3px;overflow:hidden;display:flex;min-width:60px;">
+                <div style="width:${dPct}%;background:#00661d;height:100%;"></div>
+                <div style="width:${yPct}%;background:#ba1a1a;height:100%;"></div>
+                <div style="width:${bPct}%;background:#b5d4f4;height:100%;"></div>
+              </div>
+              <span style="font-size:7pt;color:#555;white-space:nowrap;width:56px;text-align:right;flex-shrink:0;">D:${dPct}% Y:${yPct}%</span>
+              ${rozetHtml(uyariTip)}
+            </div>`).join('')}
+        <div style="display:flex;gap:12px;margin-top:8px;font-size:7.5pt;color:#555;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#00661d;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Doğru</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#ba1a1a;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Yanlış</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#b5d4f4;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Boş</span>
+        </div>
       </div>
-      <div>
-        ${secBas('Konu Başarı Analizi')}
-        ${konuBasarilar.length === 0
-          ? '<div style="font-size:9pt;color:#888;text-align:center;padding:20px 0;">Henüz veri yok</div>'
-          : konuBasarilar.map(({ konu, pct }) => {
-              const col = pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
-              return `<div style="margin-bottom:7px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-                  <span style="font-size:8pt;color:#141d22;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;">${konu}</span>
-                  <span style="font-size:8pt;font-weight:700;color:${col};">%${pct}</span>
-                </div>
-                <div style="background:#e8f4fb;height:10px;border-radius:4px;overflow:hidden;">
-                  <div style="height:100%;width:${pct}%;background:${col};border-radius:4px;"></div>
-                </div>
-              </div>`;
-            }).join('')}
-      </div>
-    </div>
 
-    <!-- DENEME SONUÇLARI -->
-    ${denemeler.length ? `
-    <div style="padding:8px 22px;">
-      ${secBas('Deneme Sonuçları')}
-      <table style="border-collapse:collapse;width:100%;font-size:8pt;font-family:Inter,sans-serif;">
-        <thead>
-          <tr style="background:#005d8d;color:white;">
-            <th style="padding:5px 8px;text-align:left;font-weight:700;">Deneme Adı</th>
-            <th style="padding:5px 8px;text-align:left;font-weight:700;width:65px;">Tarih</th>
-            <th style="padding:5px 5px;text-align:center;font-weight:700;width:26px;">D</th>
-            <th style="padding:5px 5px;text-align:center;font-weight:700;width:26px;">Y</th>
-            <th style="padding:5px 5px;text-align:center;font-weight:700;width:26px;">B</th>
-            <th style="padding:5px 5px;text-align:center;font-weight:700;width:36px;">Net</th>
-            <th style="padding:5px 8px;text-align:center;font-weight:700;width:55px;">Başarı</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${denemeler.map((r, i) => {
-            const pct = parseFloat(r.basari_yuzdesi)||0;
-            const badgeBg  = pct>=80?'#EAF3DE':pct>=60?'#FAEEDA':'#FCEBEB';
-            const badgeCol = pct>=80?'#3B6D11':pct>=60?'#854F0B':'#A32D2D';
-            const tarih = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR') : '—';
-            const net = (parseFloat(r.dogru||0) - parseFloat(r.yanlis||0)/3).toFixed(1);
-            return `<tr style="border-bottom:0.5px solid #e8f4fb;${i%2===1?'background:#f9fbfd;':''}">
-              <td style="padding:4px 8px;font-weight:600;color:#141d22;">${r.deneme_adi||'—'}</td>
-              <td style="padding:4px 8px;color:#707881;">${tarih}</td>
-              <td style="padding:4px 5px;text-align:center;font-weight:700;color:#00661d;">${r.dogru}</td>
-              <td style="padding:4px 5px;text-align:center;font-weight:700;color:#ba1a1a;">${r.yanlis}</td>
-              <td style="padding:4px 5px;text-align:center;color:#888;">${r.bos}</td>
-              <td style="padding:4px 5px;text-align:center;font-weight:700;color:#141d22;">${net}</td>
-              <td style="padding:4px 8px;text-align:center;">
-                <span style="background:${badgeBg};color:${badgeCol};font-size:7.5pt;font-weight:700;padding:2px 7px;border-radius:10px;">%${pct.toFixed(1)}</span>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>` : ''}
-
-    <!-- DERS AKIŞI + SİSTEM DEĞERLENDİRMESİ -->
-    <div style="padding:8px 22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-      <div>
-        ${secBas('Son İşlenen Konular')}
-        ${son6.length === 0
-          ? '<div style="font-size:9pt;color:#888;text-align:center;padding:16px 0;">Henüz ders kaydı yok</div>'
-          : son6.map(d => {
-              const tarihStr = d.tarih ? new Date(d.tarih).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
-              const td = d.tamamlamaDurumu;
-              const rozet = td==='kismi'
-                ? `<span style="background:#fff8f0;color:#805600;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;">Kısmi</span>`
-                : td==='baslandi'
-                ? `<span style="background:#f0f0f0;color:#555;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;">Başlandı</span>`
-                : '';
-              return `<div style="background:#f5faff;border-radius:6px;padding:5px 8px;margin-bottom:5px;">
-                <span style="font-size:8pt;font-weight:700;color:#005d8d;">${tarihStr}</span>
-                <span style="font-size:8pt;font-weight:600;color:#141d22;margin-left:6px;">${d.konu||'—'}</span>${rozet}
-                ${d.kazanimlar&&d.kazanimlar.length?`<div style="font-size:7pt;color:#185fa5;margin-top:1px;">${d.kazanimlar.join(' · ')}</div>`:''}
-              </div>`;
-            }).join('')}
-      </div>
-      <div>
-        ${secBas('Sistem Değerlendirmesi')}
-        <div style="background:#f0f9f4;border:0.5px solid #9FE1CB;border-radius:8px;padding:12px 14px;">
-          <p style="font-size:9pt;color:#1d3a2a;line-height:1.65;margin:0;font-family:Inter,sans-serif;">${sistemMetin}</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="border:0.5px solid #dce7f0;border-radius:7px;padding:10px 12px;">
+          ${secBas('Kritik Uyarılar & Düşüş Eğilimi')}
+          ${kronikler.length===0 && dususler.length===0 && dalgalanmalar.length===0
+            ? `<div style="background:#f0f9f4;border:0.5px solid #9FE1CB;border-radius:6px;padding:7px 10px;font-size:8pt;color:#1d3a2a;">Tüm konularda performans istikrarlı seyrediyor.</div>`
+            : [
+                kronikler.length ? `<div style="background:#FCEBEB;border-radius:5px;padding:6px 10px;margin-bottom:5px;"><div style="font-size:7.5pt;font-weight:800;color:#A32D2D;">🔴 Kronik Riskler</div><div style="font-size:7.5pt;color:#A32D2D;margin-top:2px;">${kronikler.map(u=>u.konu).join(', ')}</div></div>` : '',
+                dususler.length ? `<div style="background:#FAEEDA;border-radius:5px;padding:6px 10px;margin-bottom:5px;"><div style="font-size:7.5pt;font-weight:800;color:#854F0B;">⚠️ Düşüştekiler</div><div style="font-size:7.5pt;color:#854F0B;margin-top:2px;">${dususler.map(u=>u.konu).join(', ')}</div></div>` : '',
+                dalgalanmalar.length ? `<div style="background:#fff8e6;border-radius:5px;padding:6px 10px;"><div style="font-size:7.5pt;font-weight:800;color:#854F0B;">🟡 Dalgalanmalar</div><div style="font-size:7.5pt;color:#854F0B;margin-top:2px;">${dalgalanmalar.map(u=>u.konu).join(', ')}</div></div>` : ''
+              ].filter(Boolean).join('')}
+        </div>
+        <div style="border:0.5px solid #dce7f0;border-radius:7px;padding:10px 12px;flex:1;">
+          ${secBas('Akademik Aksiyon Planı & Öğretmen Notları')}
+          ${uyarilarNot.length === 0
+            ? `<div style="font-size:8pt;color:#888;font-style:italic;">Bu dönem için aksiyon notu bulunmamaktadır.</div>`
+            : uyarilarNot.map(u => {
+                const tarihStr = u.aksiyon_tarihi ? new Date(u.aksiyon_tarihi).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'}) : '';
+                return `<div style="font-size:8pt;color:#1d2a36;margin-bottom:5px;line-height:1.5;">
+                  <span style="font-weight:700;color:#005d8d;">${u.konu}:</span> ${u.ogretmen_notu}${tarihStr?` <span style="color:#888;">(${tarihStr})</span>`:''}
+                </div>`;
+              }).join('')}
         </div>
       </div>
     </div>
 
-    <!-- FOOTER -->
-    <div style="background:#f5faff;border-top:0.5px solid #b5d4f4;padding:9px 22px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;border-radius:0 0 8px 8px;">
+    <!-- BÖL 4: ÖDEV İSTATİSTİKLERİ | SORUN ALANLARI -->
+    <div style="padding:8px 20px;display:grid;grid-template-columns:55% 43%;gap:2%;">
+
+      <div>
+        ${secBas('Ödev ve Katılım İstatistikleri')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          ${[
+            {label:'Toplam Ödev',  val:tumOdevler.length,   bg:'#005d8d'},
+            {label:'Tamamlanan',   val:odevTamamlananSayi,  bg:'#00661d'},
+            {label:'Yapılmayan',   val:odevYapilmadiSayi,   bg:'#ba1a1a'},
+            {label:'Eksik',        val:odevEksikSayi,       bg:'#805600'}
+          ].map(k=>`
+            <div style="background:${k.bg};border-radius:7px;padding:9px 13px;">
+              <div style="font-size:18pt;font-weight:800;color:white;font-family:Manrope,sans-serif;">${k.val}</div>
+              <div style="font-size:8pt;color:rgba(255,255,255,0.85);margin-top:2px;">${k.label}</div>
+            </div>`).join('')}
+        </div>
+        ${topToplam > 0 ? `
+        <div style="background:#f5faff;border-radius:6px;padding:7px 12px;font-size:8pt;color:#141d22;border:0.5px solid #b5d4f4;">
+          <span style="font-weight:700;">Tamamlanan Ödev Net/Soru:</span>
+          D: <b style="color:#00661d;">${topDogru}</b> &nbsp;
+          Y: <b style="color:#ba1a1a;">${topYanlis}</b> &nbsp;
+          B: <b style="color:#888;">${topBos}</b> &nbsp;
+          Top: <b>${topToplam}</b>
+        </div>` : ''}
+      </div>
+
+      <div>
+        ${secBas('Sorun Alanları & Gelecek Planlaması')}
+        ${sorunAlanlari.length === 0
+          ? `<div style="font-size:8pt;color:#888;font-style:italic;margin-bottom:8px;">Kayıtlı sorun alanı bulunmamaktadır.</div>`
+          : `<ul style="margin:0 0 8px 0;padding:0;list-style:none;">
+              ${sorunAlanlari.map(d => {
+                const uyariEslesen = uyarilarAcik.find(u => u.konu && d.islenen_konu && d.islenen_konu.toLowerCase().includes(u.konu.toLowerCase()));
+                const oneri = uyariEslesen?.uyari_tipi === 'kronik' || uyariEslesen?.uyari_tipi === 'kronik_tekrar'
+                  ? 'tekrar seansı planlanması önerilmektedir.'
+                  : uyariEslesen?.uyari_tipi === 'dusus'
+                  ? 'ek çalışma materyali temin edilmesi önerilmektedir.'
+                  : 'takip edilmesi önerilmektedir.';
+                return `<li style="font-size:8pt;color:#1d2a36;margin-bottom:5px;line-height:1.5;">• ${d.ders_gorusu}; <span style="color:#555;font-style:italic;">${oneri}</span></li>`;
+              }).join('')}
+            </ul>`}
+        ${uyarilarAcik.length > 0 ? `
+          <div style="font-size:7.5pt;font-weight:700;color:#141d22;margin-bottom:4px;">Planlanan Odak Alanları:</div>
+          <ul style="margin:0;padding:0;list-style:none;">
+            ${uyarilarAcik.slice(0,4).map(u=>{
+              const aciklama = u.uyari_tipi==='kronik'||u.uyari_tipi==='kronik_tekrar'?'yoğun tekrar':u.uyari_tipi==='dusus'?'destekleyici çalışma':'dengeleme';
+              return `<li style="font-size:7.5pt;color:#1d2a36;margin-bottom:3px;">• <b>${u.konu}:</b> ${aciklama} odak çalışması planlanmaktadır.</li>`;
+            }).join('')}
+          </ul>` : ''}
+      </div>
+    </div>
+
+    <!-- BÖL 5: DENEME SONUÇLARI -->
+    <div style="padding:8px 20px;">
+      ${secBas('Deneme Sonuçları')}
+      ${denemeler.length === 0
+        ? `<div style="font-size:9pt;color:#888;font-style:italic;">Henüz deneme kaydı bulunmamaktadır.</div>`
+        : `<table style="border-collapse:collapse;width:100%;font-size:8pt;font-family:Inter,sans-serif;">
+            <thead>
+              <tr style="background:#005d8d;color:white;">
+                <th style="padding:5px 8px;text-align:left;font-weight:700;">Deneme Adı</th>
+                <th style="padding:5px 8px;text-align:left;font-weight:700;width:60px;">Tarih</th>
+                <th style="padding:5px 5px;text-align:center;width:26px;">D</th>
+                <th style="padding:5px 5px;text-align:center;width:26px;">Y</th>
+                <th style="padding:5px 5px;text-align:center;width:26px;">B</th>
+                <th style="padding:5px 5px;text-align:center;width:38px;">Net</th>
+                <th style="padding:5px 8px;text-align:center;width:56px;">Başarı</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${denemeler.map((r,i)=>{
+                const pct = parseFloat(r.basari_yuzdesi)||0;
+                const net = (parseFloat(r.dogru||0)-parseFloat(r.yanlis||0)/3).toFixed(1);
+                const tarih = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}) : '—';
+                const bbg = pct>=80?'#EAF3DE':pct>=60?'#FAEEDA':'#FCEBEB';
+                const bcl = pct>=80?'#3B6D11':pct>=60?'#854F0B':'#A32D2D';
+                return `<tr style="border-bottom:0.5px solid #e8f4fb;${i%2===1?'background:#f9fbfd;':''}">
+                  <td style="padding:4px 8px;font-weight:600;color:#141d22;">${r.deneme_adi||'—'}</td>
+                  <td style="padding:4px 8px;color:#707881;">${tarih}</td>
+                  <td style="padding:4px 5px;text-align:center;font-weight:700;color:#00661d;">${r.dogru}</td>
+                  <td style="padding:4px 5px;text-align:center;font-weight:700;color:#ba1a1a;">${r.yanlis}</td>
+                  <td style="padding:4px 5px;text-align:center;color:#888;">${r.bos}</td>
+                  <td style="padding:4px 5px;text-align:center;font-weight:700;color:#141d22;">${net}</td>
+                  <td style="padding:4px 8px;text-align:center;"><span style="background:${bbg};color:${bcl};font-size:7.5pt;font-weight:700;padding:2px 7px;border-radius:10px;">%${pct.toFixed(1)}</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>`}
+    </div>
+
+    <!-- BÖL 6: FOOTER -->
+    <div style="background:#f5faff;border-top:0.5px solid #b5d4f4;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
       <span style="font-size:8.5pt;color:#185fa5;font-family:Inter,sans-serif;">AdaptiX BTS · Tayfun Hoca · Dijital Eğitim Çözümleri</span>
-      <span style="font-size:8.5pt;color:#aaa;">${raporTarihi}</span>
+      <span style="font-size:8.5pt;color:#888;">1 / 1</span>
+      <span style="font-size:8.5pt;color:#aaa;">${raporAyYil}</span>
     </div>
   `;
 }

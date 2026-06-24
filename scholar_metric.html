@@ -985,19 +985,6 @@ tailwind.config = {
         <button onclick="adaTemizle()" class="btn btn-ghost" style="padding:8px 12px;font-size:13px;flex-shrink:0;" title="Sohbeti temizle">
           <span class="material-symbols-outlined" style="font-size:17px;">refresh</span>
         </button>
-        <button onclick="adaApiKeyPanel()" id="ada-key-btn" class="btn btn-ghost" style="padding:8px 12px;font-size:13px;flex-shrink:0;" title="API Anahtarı">
-          <span class="material-symbols-outlined" style="font-size:17px;">key</span>
-        </button>
-      </div>
-      <!-- API Key Paneli (gizli) -->
-      <div id="ada-key-panel" style="display:none;background:#fef9ec;border:1px solid #f3d88a;border-radius:12px;padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
-        <div style="font-size:13px;font-weight:600;color:#7a4f00;margin-bottom:8px;">Anthropic API Anahtarı</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input type="password" id="ada-key-input" class="field" placeholder="sk-ant-api03-..." style="flex:1;font-size:13px;font-family:monospace;">
-          <button onclick="adaApiKeySave()" class="btn btn-primary" style="padding:8px 14px;font-size:13px;">Kaydet</button>
-          <button onclick="adaApiKeySil()" class="btn btn-ghost" style="padding:8px 14px;font-size:13px;color:#ba1a1a;">Sil</button>
-        </div>
-        <div style="font-size:11.5px;color:#7a4f00;margin-top:6px;opacity:.8;">Anahtar yalnızca bu tarayıcıda localStorage'da saklanır. Güvenli cihaz.</div>
       </div>
       <!-- Mesaj Alanı -->
       <div id="ada-mesajlar" style="flex:1;overflow-y:auto;padding:4px 0 12px;display:flex;flex-direction:column;gap:10px;">
@@ -4847,20 +4834,25 @@ const ADA_TOOLS = [
 let adaConv = {};     // { ogrenci_id_or_genel: [{role, content}] }
 let adaLoading = false;
 
-function adaSayfaAcildi() {
+async function adaSayfaAcildi() {
   const selId = document.getElementById('ada-ogrenci')?.value || '';
   adaRenderMesajlar(selId);
-  // Key butonu: varsa yeşil, yoksa sarı uyarı
-  const btn = document.getElementById('ada-key-btn');
-  if (btn) {
-    const hasKey = !!localStorage.getItem('adaptix_anthropic_key');
-    btn.style.color = hasKey ? '#00661d' : '#805600';
-    btn.title = hasKey ? 'API Anahtarı ayarlı' : 'API Anahtarı girilmedi — buraya tıklayın';
+  // Önce localStorage yedeğini kontrol et (hızlı başlangıç)
+  if (!window._adaApiKey) {
+    window._adaApiKey = localStorage.getItem('adaptix_ada_key') || null;
   }
-  // Key yoksa panel otomatik aç
-  if (!localStorage.getItem('adaptix_anthropic_key')) {
-    const panel = document.getElementById('ada-key-panel');
-    if (panel) panel.style.display = 'block';
+  // Supabase'den taze key çek
+  try {
+    const { data } = await sb.from('kullanicilar')
+      .select('deger')
+      .eq('rol', 'api_key')
+      .single();
+    window._adaApiKey = data?.deger || null;
+    if (window._adaApiKey) {
+      localStorage.setItem('adaptix_ada_key', window._adaApiKey);
+    }
+  } catch(e) {
+    // Supabase erişim hatası — yedek key varsa kullan, yoksa null kalır
   }
 }
 
@@ -5081,12 +5073,9 @@ async function adaToolLoop(conv, response, selId) {
 }
 
 async function adaAPICall(conv, selId) {
-  const apiKey = localStorage.getItem('adaptix_anthropic_key');
+  const apiKey = window._adaApiKey;
   if (!apiKey) {
-    // Panel açık değilse aç ve kullanıcıyı bilgilendir
-    const panel = document.getElementById('ada-key-panel');
-    if (panel) panel.style.display = 'block';
-    throw new Error('Anthropic API anahtarı girilmedi. Lütfen 🔑 butonundan ekleyin.');
+    throw new Error('Ada şu an kullanılamıyor. Lütfen sistem yöneticisiyle iletişime geçin.');
   }
 
   const apiMessages = conv
@@ -5120,38 +5109,6 @@ async function adaAPICall(conv, selId) {
   return data;
 }
 
-function adaApiKeyPanel() {
-  const panel = document.getElementById('ada-key-panel');
-  if (!panel) return;
-  const isOpen = panel.style.display !== 'none';
-  panel.style.display = isOpen ? 'none' : 'block';
-  if (!isOpen) {
-    const key = localStorage.getItem('adaptix_anthropic_key') || '';
-    const inp = document.getElementById('ada-key-input');
-    if (inp) inp.value = key ? '••••••••' + key.slice(-6) : '';
-  }
-}
-
-function adaApiKeySave() {
-  const inp = document.getElementById('ada-key-input');
-  const val = inp?.value.trim();
-  if (!val || val.startsWith('•')) { showToast('Geçerli bir anahtar girin'); return; }
-  if (!val.startsWith('sk-ant-')) { showToast('Anahtar sk-ant- ile başlamalı'); return; }
-  localStorage.setItem('adaptix_anthropic_key', val);
-  document.getElementById('ada-key-panel').style.display = 'none';
-  const btn = document.getElementById('ada-key-btn');
-  if (btn) btn.style.color = '#00661d';
-  showToast('✅ API anahtarı kaydedildi');
-}
-
-function adaApiKeySil() {
-  localStorage.removeItem('adaptix_anthropic_key');
-  const inp = document.getElementById('ada-key-input');
-  if (inp) inp.value = '';
-  const btn = document.getElementById('ada-key-btn');
-  if (btn) btn.style.color = '';
-  showToast('API anahtarı silindi');
-}
 
 async function adaExecuteTool(toolName, input) {
   switch(toolName) {

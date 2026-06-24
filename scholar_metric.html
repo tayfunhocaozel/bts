@@ -2441,7 +2441,7 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
-    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam').eq('ogrenci_id', ogrenciId),
+    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
@@ -2677,15 +2677,11 @@ async function loadRapor() {
       <span class="ml-auto text-xs text-outline">${tumOdevler.length} ödev</span>
     </div>
     <div class="p-4">
-      ${odevBekleyenSayi > 0 ? `
-      <div class="rounded-2xl p-4 cursor-pointer hover:opacity-90 transition-opacity mb-3 flex items-center justify-between" style="background:#005d8d;" onclick="toggleRaporOdevFiltre('BEKLİYOR')">
-        <div>
-          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:rgba(255,255,255,.8);">BEKLİYOR</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-90 transition-opacity" style="background:#005d8d;" onclick="toggleRaporOdevFiltre('BEKLİYOR')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:rgba(255,255,255,.8);">Bekleyen</div>
           <div class="font-headline text-2xl font-extrabold" style="color:#fff;">${odevBekleyenSayi}</div>
         </div>
-        <span style="color:rgba(255,255,255,.6);font-size:18px;">▾</span>
-      </div>` : ''}
-      <div class="grid grid-cols-2 gap-3">
         <div class="rounded-2xl p-4 bg-surface-container">
           <div class="text-xs font-semibold text-outline uppercase tracking-wide mb-1">Toplam</div>
           <div class="font-headline text-2xl font-extrabold text-on-surface">${tumOdevler.length}</div>

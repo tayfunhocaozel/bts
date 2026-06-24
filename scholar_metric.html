@@ -1659,7 +1659,7 @@ function renderTaslakTablo() {
       <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-primary flex-shrink-0 mt-0.5">${t.gun}</span>
       <div class="flex-1 min-w-0">
         <div class="text-sm font-semibold text-on-surface">${t.konu}${t.kazanim?' — '+t.kazanim:''}</div>
-        <div class="text-xs text-outline mt-0.5">📚 ${t.kaynak}${t.odev_detay?' &nbsp;•&nbsp; 📄 '+t.odev_detay:''}</div>
+        <div class="text-xs text-outline mt-0.5">📚 ${t.kaynak}${t.odev_detay && t.odev_detay.trim() ? ' &nbsp;•&nbsp; 📄 '+t.odev_detay.trim() : ''}</div>
       </div>
       <button onclick="taslakSil(${t._id})" class="text-error hover:bg-error-container/30 w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 text-lg font-bold">×</button>
     </div>`).join('');
@@ -1731,7 +1731,7 @@ async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
                   <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
                   <div class="text-xs text-outline mt-0.5">
                     📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}
-                    ${o.odev_detay?'&nbsp;•&nbsp; 📄 '+o.odev_detay:''}
+                    ${o.odev_detay && o.odev_detay.trim() ? '&nbsp;•&nbsp; 📄 '+o.odev_detay.trim() : ''}
                     &nbsp;•&nbsp; <span class="opacity-60">${o.verilis_tarihi||''}</span>
                   </div>
                 </div>
@@ -2531,6 +2531,7 @@ async function loadRapor() {
   const odevTamamlananSayi = tamamlananOdevler.length;
   const odevYapilmadiSayi  = tumOdevler.filter(o => o.durum === 'YAPILMADI').length;
   const odevEksikSayi      = tumOdevler.filter(o => o.durum === 'EKSİK').length;
+  const odevBekleyenSayi   = tumOdevler.filter(o => o.durum === 'BEKLİYOR').length;
 
   el.innerHTML = `
   <!-- Başlık -->
@@ -2676,6 +2677,14 @@ async function loadRapor() {
       <span class="ml-auto text-xs text-outline">${tumOdevler.length} ödev</span>
     </div>
     <div class="p-4">
+      ${odevBekleyenSayi > 0 ? `
+      <div class="rounded-2xl p-4 cursor-pointer hover:opacity-90 transition-opacity mb-3 flex items-center justify-between" style="background:#005d8d;" onclick="toggleRaporOdevFiltre('BEKLİYOR')">
+        <div>
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:rgba(255,255,255,.8);">BEKLİYOR</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#fff;">${odevBekleyenSayi}</div>
+        </div>
+        <span style="color:rgba(255,255,255,.6);font-size:18px;">▾</span>
+      </div>` : ''}
       <div class="grid grid-cols-2 gap-3">
         <div class="rounded-2xl p-4 bg-surface-container">
           <div class="text-xs font-semibold text-outline uppercase tracking-wide mb-1">Toplam</div>
@@ -3072,6 +3081,7 @@ function toggleRaporOdevFiltre(durum) {
       TAMAMLANDI: ['#e8f5e9','#00661d'],
       YAPILMADI:  ['#fce8e8','#ba1a1a'],
       EKSİK:      ['#fff3e0','#805600'],
+      BEKLİYOR:   ['#e8f4fb','#005d8d'],
     };
     const [bg, col] = map[d] || ['#f0f0f0','#555'];
     return `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:${bg};color:${col};">${d}</span>`;
@@ -3110,7 +3120,10 @@ function toggleRaporOdevFiltre(durum) {
                   ↺ Tekrar Ver</button></td>` : '';
             return `<tr class="border-b border-outline-variant/10 last:border-0" ${bg}>
               <td class="px-3 py-2.5 text-xs font-medium text-on-surface">${o.gun||'—'}</td>
-              <td class="px-3 py-2.5 text-xs text-on-surface">${o.kaynak||'—'}</td>
+              <td class="px-3 py-2.5 text-xs text-on-surface">
+                <div>${o.kaynak||'—'}</div>
+                ${o.odev_detay && o.odev_detay.trim() ? `<div class="mt-0.5" style="color:var(--outline);opacity:.7;font-size:10px;">${o.odev_detay.trim()}</div>` : ''}
+              </td>
               <td class="px-3 py-2.5 text-xs text-on-surface">
                 <div>${(o.konu||'—').split(' — ')[0]}</div>${dybHtml}
               </td>

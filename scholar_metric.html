@@ -233,6 +233,20 @@ tailwind.config = {
     #rapor-content .h-2\.5 { height: 5px !important; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   }
+  /* ── ADA CHATBOX ── */
+  #page-ada.active { display: flex !important; }
+  .ada-mesaj { max-width:82%; padding:11px 14px; border-radius:16px; font-size:14px; line-height:1.55; word-break:break-word; }
+  .ada-mesaj.ada { background:#e8f4fb; color:#0d2c3d; border-bottom-left-radius:4px; }
+  .ada-mesaj.ogretmen { background:#005d8d; color:#fff; border-bottom-right-radius:4px; margin-left:auto; }
+  .ada-mesaj.sistem { background:#f0f0f0; color:#555; font-size:12px; text-align:center; max-width:100%; border-radius:8px; padding:7px 12px; }
+  .ada-mesaj p { margin:0 0 6px; } .ada-mesaj p:last-child { margin:0; }
+  .ada-mesaj ul { margin:4px 0 4px 16px; padding:0; } .ada-mesaj li { margin:2px 0; }
+  .ada-yazıyor { display:flex;align-items:center;gap:5px;padding:10px 14px; }
+  .ada-yazıyor span { width:7px;height:7px;border-radius:50%;background:#005d8d;display:inline-block;animation:adaDot 1.2s infinite; }
+  .ada-yazıyor span:nth-child(2){animation-delay:.2s} .ada-yazıyor span:nth-child(3){animation-delay:.4s}
+  @keyframes adaDot { 0%,60%,100%{opacity:.2;transform:scale(.9)} 30%{opacity:1;transform:scale(1.1)} }
+  #ada-mesajlar::-webkit-scrollbar { width: 4px; }
+  #ada-mesajlar::-webkit-scrollbar-thumb { background: #cce5ff; border-radius: 4px; }
 </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen">
@@ -954,6 +968,43 @@ tailwind.config = {
       <div id="veli-tab-basari" class="hidden"></div>
     </div>
 
+    <!-- ── ADA AI KOÇU -->
+    <div id="page-ada" class="page" style="display:flex;flex-direction:column;height:calc(100vh - 130px);">
+      <!-- Ada Header -->
+      <div class="card-2xl" style="padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#005d8d,#013149);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span class="material-symbols-outlined" style="color:#fff;font-size:26px;font-variation-settings:'FILL' 1;">smart_toy</span>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">Ada</div>
+          <div style="font-size:12px;color:var(--ink-soft);">Yapay Zeka Destekli Öğrenci Koçu</div>
+        </div>
+        <select id="ada-ogrenci" class="field" onchange="adaOgrenciSecildi()" style="max-width:190px;font-size:13px;flex-shrink:0;">
+          <option value="">— Öğrenci seçin —</option>
+        </select>
+        <button onclick="adaTemizle()" class="btn btn-ghost" style="padding:8px 12px;font-size:13px;flex-shrink:0;">
+          <span class="material-symbols-outlined" style="font-size:17px;">refresh</span>
+        </button>
+      </div>
+      <!-- Mesaj Alanı -->
+      <div id="ada-mesajlar" style="flex:1;overflow-y:auto;padding:4px 0 12px;display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;padding:32px 20px;">
+          <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#005d8d,#013149);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+            <span class="material-symbols-outlined" style="color:#fff;font-size:36px;font-variation-settings:'FILL' 1;">smart_toy</span>
+          </div>
+          <div style="font-family:Manrope;font-weight:800;font-size:18px;color:var(--ink);margin-bottom:6px;">Merhaba, ben Ada!</div>
+          <div style="font-size:13.5px;color:var(--ink-soft);max-width:360px;margin:0 auto;line-height:1.6;">Öğrencileriniz hakkında sorularınızı yanıtlıyor, ders hazırlığınıza yardım ediyorum. Başlamak için bir öğrenci seçin veya doğrudan sorunuzu yazın.</div>
+        </div>
+      </div>
+      <!-- Input Alanı -->
+      <div style="flex-shrink:0;padding-top:10px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:flex-end;">
+        <textarea id="ada-input" rows="2" class="field" placeholder="Mesajınızı yazın… (Shift+Enter: yeni satır)" style="flex:1;resize:none;font-size:14px;padding:10px 14px;line-height:1.5;" onkeydown="adaKeyDown(event)"></textarea>
+        <button id="ada-gonder-btn" onclick="adaGonder()" class="btn btn-primary" style="padding:10px 16px;flex-shrink:0;align-self:flex-end;">
+          <span class="material-symbols-outlined" style="font-size:20px;">send</span>
+        </button>
+      </div>
+    </div>
+
     </main>
   </div><!-- /sağ taraf -->
 
@@ -1122,6 +1173,7 @@ function buildNav() {
     { id: 'denemeler',    icon: 'quiz',           label: 'Denemeler' },
     { id: 'ders-programi', icon: 'calendar_month', label: 'Ders Programı' },
     { id: 'rapor',        icon: 'analytics',      label: 'Rapor' },
+    { id: 'ada',          icon: 'smart_toy',      label: 'Ada' },
   ] : state.rol === 'ogrenci' ? [
     { id: 'ogrenci-panel', icon: 'dashboard', label: 'Panel' },
   ] : [
@@ -1153,6 +1205,7 @@ const PAGE_TITLES = {
   'denemeler':    ['Denemeler',     'TYT/LGS deneme sonuçları'],
   'ders-programi':['Ders Programı', 'Haftalık ders takvimi'],
   'rapor':        ['Rapor',         'Öğrenci performans raporu'],
+  'ada':          ['Ada',           'Yapay zeka destekli öğrenci koçu'],
   'ogrenci-panel':['Öğrenci Paneli','Ödevler, dersler ve başarı'],
   'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
 };
@@ -1165,6 +1218,7 @@ function goPage(id) {
   if (page) page.classList.add('active');
   if (id === 'ders-programi') loadHaftalikProgram();
   if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = new Date().toISOString().split('T')[0]; }
+  if (id === 'ada') adaSayfaAcildi();
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
   const hdrSub   = document.getElementById('hdr-sub');
@@ -1197,7 +1251,7 @@ function fillSelects() {
   const ogrOpts = '<option value="">— Öğrenci seçin —</option>' +
     state.ogrenciler.map(o => { const s = (o.sinif||'').trim(); return `<option value="${o.ogrenci_id}" data-sinif="${s}">${o.ad_soyad} (${s})</option>`; }).join('');
 
-  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci','program-ogrenci','deneme-ogrenci'].forEach(id => {
+  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci','program-ogrenci','deneme-ogrenci','ada-ogrenci'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = ogrOpts;
   });
@@ -4602,6 +4656,554 @@ function renderHaftalikGrid(pazartesi) {
 function programKartaTikla(ogrenciId) {
   goPage('ogrenciler');
   setTimeout(() => ogrenciDuzenle(ogrenciId), 150);
+}
+
+// ── ADA AI KOÇU ───────────────────────────────────────────────
+
+const ADA_SYSTEM_PROMPT = `Sen AdaptiX BTS'in yapay zeka destekli öğrenci koçusun. Adın "Ada".
+
+Görevin: Tayfun Hoca'nın öğrencilerini daha iyi tanımasına, derse hazırlanmasına
+ve doğru pedagojik kararlar almasına yardımcı olmak.
+
+---
+
+## KİMLİĞİN
+
+- Türkiye'deki ortaokul matematik eğitimi konusunda uzman bir öğrenci koçusun.
+- Tayfun Hoca ile çalışıyorsun — kararları her zaman ona ait, sen aksiyon önerirsin.
+- Emin olmadığın bir konuda "bilmiyorum" veya "bu konuda verim yetersiz" diyebilirsin.
+- Asla tahmin yürüterek yanlış bilgi verme. Öğrenci verisi için her zaman
+  veritabanını sorgula, hafızana güvenme.
+
+---
+
+## BİLGİ TABANIN
+
+### Türkiye Eğitim Sistemi
+- MEB ortaokul matematik müfredatı: 5, 6, 7 ve 8. sınıf konu sıralaması ve yıllık planlar
+- Her sınıf düzeyindeki temel kazanımlar ve önkoşul ilişkileri
+- LGS formatı: 20 Matematik sorusu, puan hesaplama (ham puan → standart puan), sayısal puan türü
+- Geçmiş LGS sınavları (2018–2025) matematik soru dağılımı ve konu ağırlıkları
+
+### MEB 2024 Müfredat — Sınıf Bazlı Konu Yapısı
+
+5. SINIF: Geometrik Şekiller (38s) → Sayılar/Nicelikler-1 (28s) → Geometrik Nicelikler (20s) → Sayılar/Nicelikler-2 (33s) → İstatistik (24s) → Cebirsel Düşünme (20s) → Olasılık (9s)
+Konular: Doğal sayılar, Kesirler, Açı ölçme, Çokgenler, Dikdörtgen alan/çevre, İşlem önceliği, Örüntüler, Sütun grafiği
+
+6. SINIF: Sayılar-1 (15s) → İstatistik (24s) → Sayılar-2 (38s) → Olasılık (9s) → Geometri (20s) → Cebir (33s) → Geometrik Nicelikler (33s)
+Konular: OBEB-OKEK, Asal sayılar, Kesirlerle işlemler, Yüzde, Cebirsel ifadeler, Alan-çevre birimleri, Geometrik cisimler, Ortalama-Ortanca-Tepe değer
+
+7. SINIF: Sayılar-1 (35s) → Geometrik Nicelikler-1 (19s) → İstatistik (24s) → Dönüşüm (8s) → Geometri (6s) → Sayılar-2 (15s) → Olasılık (9s) → Cebir (38s) → Geometrik Nicelikler-2 (18s)
+Konular: Rasyonel sayılar, Oran-orantı, Üçgenler (kenarortay/açıortay), Yansıma, Denklem-eşitsizlikler, Teorik olasılık, Yayılım ölçüleri
+
+8. SINIF (LGS YILI): Sayılar (38s) → Geometrik Şekiller (39s) → Olasılık (9s) → Cebir (42s) → Geometrik Nicelikler (15s) → İstatistik (20s) → Dönüşüm (9s)
+Konular: Kareköklü-Üslü ifadeler, Çarpanlara ayırma, Pisagor, Üçgen eşitsizliği, Doğrusal fonksiyonlar, Geometrik cisimler hacim-yüzey
+
+### Kritik Önkoşul Zinciri
+5.sınıf Doğal Sayılar → 6.sınıf Çarpanlar/Kesirler → 7.sınıf Rasyonel Sayılar → 8.sınıf Kareköklü/Üslü İfadeler (LGS'de 5-6 soru!)
+5.sınıf Cebirsel Düşünme → 6.sınıf Cebirsel İfadeler → 7.sınıf Denklemler → 8.sınıf Doğrusal Fonksiyonlar (LGS'de 3 soru)
+
+### LGS Konu Ağırlıkları (2018-2025 ortalaması)
+Kareköklü İfadeler: 2-5 soru (EN İSTİKRARLI) | Üslü İfadeler: 2-4 | Doğrusal Denklemler: 2-4 | Cebirsel İfadeler: 2-4
+Bu 4 konu birlikte ~9-12 soru (~%50). Geometri: 4-8 soru arası değişken.
+
+### Yaygın Öğrenme Güçlükleri
+- Denklem kurma: sözel → sembol geçiş zorluğu
+- Kesir işlemleri: payda eşitleme kavram hatası
+- Üslü ifadeler: negatif üs ve sıfır üs karışıklığı
+- Geometri görselleştirme: 3D → 2D güçlüğü
+- Çarpanlara ayırma: ortak çarpan gözden kaçırma
+
+### Özel Ders Pedagojisi
+- Hata analizi: yanlış cevabın arkasındaki kavram hatasını bul
+- Scaffolding: biraz üstünde soru ver, çok üstünde değil
+- Immediate feedback: ödev sonuçlarını hızlı değerlendir
+
+---
+
+## DAVRANIŞ KURALLARI
+
+1. Her öğrenci sorusunda önce tool ile veritabanından güncel veriyi çek, sonra yorum yap.
+2. Aksiyon önerirken: "Önerim: [aksiyon]. Nedeni: [veri/gerekçe]. Karar senin."
+3. Emin olmadığında: "Bu konuda yeterli verim yok, Tayfun Hoca'nın değerlendirmesine bırakıyorum."
+4. Öğrenci hakkında konuşurken yapıcı ve çözüm odaklı ol.
+5. Cevaplar kısa ve aksiyonable olsun. Madde madde, net.
+6. Türkçe konuş. Eğitim jargonunu kullan ama anlaşılır tut.
+
+---
+
+## ÖRNEK KONUŞMALAR
+
+Öğretmen: "Ahmet'e 15'te ders var, ne bilmem lazım?"
+Ada: [get_ders_oncesi_brifing çağırır, sonra özetler]
+→ Son ders, bekleyen ödevler, konu uyarıları, son deneme performansını özetler, 3 madde önerir.
+
+Öğretmen: "Ahmet'in annesine mesaj yazar mısın?"
+Ada: Taslak mesaj yazar, düzenlemek ister misin diye sorar.
+
+Öğretmen: "7. sınıf rasyonel sayılarda önkoşullar neler?"
+Ada: [get_mufredat_detay çağırır] 6. sınıf kesir işlemleri, OBEB-OKEK, yüzde konularını özetler.`;
+
+const ADA_TOOLS = [
+  {
+    name: 'get_ogrenci_ozet',
+    description: 'Bir öğrencinin genel özet bilgilerini getirir. Ad, sınıf, okul, toplam ders/ödev/deneme sayıları.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_adi: { type: 'string', description: 'Öğrencinin adı veya adının bir kısmı' }
+      },
+      required: ['ogrenci_adi']
+    }
+  },
+  {
+    name: 'get_son_dersler',
+    description: 'Öğrencinin son N dersini getirir. Tarih, konu, kazanım, tamamlama durumu ve sorun alanı dahil.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' },
+        limit: { type: 'number', description: 'Kaç ders getirilsin, varsayılan 5' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_odev_analizi',
+    description: 'Öğrencinin ödev performansını konu bazında analiz eder. Tamamlama oranı, D/Y/B ortalamaları, yapılmayan ödevler.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' },
+        son_kac_gun: { type: 'number', description: 'Son kaç günün ödevi, varsayılan tümü' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_deneme_trendi',
+    description: 'Öğrencinin deneme sınavı sonuçlarını ve net trendini getirir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_konu_uyarilari',
+    description: 'Öğrencinin aktif konu uyarılarını getirir. Kronik, düşüş, dalgalanma tipleri dahil.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_ders_oncesi_brifing',
+    description: 'Derse girmeden önce öğrenci hakkında tam veri paketini tek sorguda getirir. Son dersler + ödev analizi + deneme trendi + uyarılar paralel çekilir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_mufredat_detay',
+    description: 'MEB 2024 müfredatından belirli bir sınıf ve tema için konu içeriği ve önkoşul ilişkilerini getirir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sinif: { type: 'number', description: 'Sınıf düzeyi: 5, 6, 7 veya 8' },
+        tema: { type: 'string', description: 'Tema adı veya kodu. Örn: Sayılar, Geometri, Cebir, Rasyonel Sayılar' }
+      },
+      required: ['sinif']
+    }
+  }
+];
+
+// Ada conversation state (oturum bazlı, öğrenci başına)
+let adaConv = {};     // { ogrenci_id_or_genel: [{role, content}] }
+let adaLoading = false;
+
+function adaSayfaAcildi() {
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  adaRenderMesajlar(selId);
+}
+
+function adaOgrenciSecildi() {
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  adaRenderMesajlar(selId);
+}
+
+function adaTemizle() {
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  const key = 'ada_' + (selId || 'genel');
+  adaConv[key] = [];
+  try { localStorage.removeItem('adaptix_' + key); } catch(e){}
+  adaRenderMesajlar(selId);
+  showToast('Sohbet temizlendi');
+}
+
+function adaGetConv(selId) {
+  const key = 'ada_' + (selId || 'genel');
+  if (!adaConv[key]) {
+    try {
+      const saved = localStorage.getItem('adaptix_' + key);
+      adaConv[key] = saved ? JSON.parse(saved) : [];
+    } catch(e) { adaConv[key] = []; }
+  }
+  return adaConv[key];
+}
+
+function adaSaveConv(selId) {
+  const key = 'ada_' + (selId || 'genel');
+  try { localStorage.setItem('adaptix_' + key, JSON.stringify(adaConv[key] || [])); } catch(e){}
+}
+
+function adaRenderMesajlar(selId) {
+  const el = document.getElementById('ada-mesajlar');
+  if (!el) return;
+  const conv = adaGetConv(selId);
+  if (!conv.length) {
+    // Öğrenci seçildiyse karşılama mesajına öğrenci adı ekle
+    const ogrAdi = selId ? (state.ogrenciler.find(o => o.ogrenci_id === selId)?.ad_soyad || '') : '';
+    el.innerHTML = `<div style="text-align:center;padding:32px 20px;">
+      <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#005d8d,#013149);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <span class="material-symbols-outlined" style="color:#fff;font-size:36px;font-variation-settings:'FILL' 1;">smart_toy</span>
+      </div>
+      <div style="font-family:Manrope;font-weight:800;font-size:18px;color:var(--ink);margin-bottom:6px;">Merhaba, ben Ada!</div>
+      <div style="font-size:13.5px;color:var(--ink-soft);max-width:360px;margin:0 auto;line-height:1.6;">
+        ${ogrAdi ? `<strong>${ogrAdi}</strong> seçildi. Hakkında soru sorabilirsiniz.` : 'Öğrencileriniz hakkında sorularınızı yanıtlıyor, ders hazırlığınıza yardım ediyorum. Başlamak için bir öğrenci seçin veya doğrudan sorunuzu yazın.'}
+      </div>
+      ${ogrAdi ? `<button onclick="adaHizliSor('ders_oncesi')" class="btn btn-soft" style="margin-top:16px;font-size:13px;padding:8px 16px;">⚡ Ders öncesi brifing hazırla</button>` : ''}
+    </div>`;
+    return;
+  }
+  el.innerHTML = conv.map(msg => adaMesajHTML(msg)).join('');
+  setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+}
+
+function adaMesajHTML(msg) {
+  if (msg.role === 'system_info') {
+    return `<div style="display:flex;justify-content:center;"><div class="ada-mesaj sistem">${msg.content}</div></div>`;
+  }
+  if (msg.role === 'user') {
+    const text = msg._d ||
+      (typeof msg.content === 'string' ? msg.content
+      : Array.isArray(msg.content) ? msg.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : '');
+    if (!text) return '';
+    return `<div style="display:flex;justify-content:flex-end;"><div class="ada-mesaj ogretmen">${escHtml(text)}</div></div>`;
+  }
+  if (msg.role === 'assistant') {
+    const textParts = Array.isArray(msg.content)
+      ? msg.content.filter(c => c.type === 'text').map(c => c.text)
+      : (typeof msg.content === 'string' ? [msg.content] : []);
+    const text = textParts.join('\n').trim();
+    if (!text) return '';
+    return `<div style="display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#005d8d;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
+        <span class="material-symbols-outlined" style="color:#fff;font-size:16px;font-variation-settings:'FILL' 1;">smart_toy</span>
+      </div>
+      <div class="ada-mesaj ada">${adaFormatText(text)}</div>
+    </div>`;
+  }
+  return '';
+}
+
+function adaFormatText(text) {
+  const esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^[-•*] (.+)$/gm,'<div style="padding-left:14px;margin:2px 0;">• $1</div>')
+    .replace(/\n\n+/g,'<br><br>')
+    .replace(/\n/g,'<br>');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function adaYaziyorGoster() {
+  const el = document.getElementById('ada-mesajlar');
+  if (!el) return;
+  const div = document.createElement('div');
+  div.id = 'ada-typing';
+  div.style.cssText = 'display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;';
+  div.innerHTML = `<div style="width:28px;height:28px;border-radius:8px;background:#005d8d;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
+    <span class="material-symbols-outlined" style="color:#fff;font-size:16px;font-variation-settings:'FILL' 1;">smart_toy</span>
+  </div>
+  <div class="ada-mesaj ada ada-yazıyor" style="padding:10px 14px;">
+    <span></span><span></span><span></span>
+  </div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function adaYaziyorGizle() {
+  document.getElementById('ada-typing')?.remove();
+}
+
+function adaKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); adaGonder(); }
+}
+
+function adaHizliSor(tip) {
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  const ogrAdi = selId ? (state.ogrenciler.find(o => o.ogrenci_id === selId)?.ad_soyad || '') : '';
+  if (!ogrAdi) return;
+  const mesajlar = {
+    ders_oncesi: `${ogrAdi} için ders öncesi brifing hazırla.`
+  };
+  const input = document.getElementById('ada-input');
+  if (input) input.value = mesajlar[tip] || '';
+  adaGonder();
+}
+
+async function adaGonder() {
+  if (adaLoading) return;
+  const input = document.getElementById('ada-input');
+  const btn   = document.getElementById('ada-gonder-btn');
+  const text  = input?.value.trim();
+  if (!text) return;
+
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  const conv  = adaGetConv(selId);
+
+  // Öğrenci context'ini sistem mesajına ekle
+  let contextNote = '';
+  if (selId) {
+    const ogr = state.ogrenciler.find(o => o.ogrenci_id === selId);
+    if (ogr) contextNote = `\n\n[Aktif öğrenci: ${ogr.ad_soyad}, Sınıf: ${ogr.sinif || '—'}, ID: ${ogr.ogrenci_id}]`;
+  }
+
+  conv.push({ role: 'user', content: text + contextNote, _d: text });
+  input.value = '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;"></span>'; }
+  adaLoading = true;
+
+  adaRenderMesajlar(selId);
+  adaYaziyorGoster();
+
+  try {
+    const yanit = await adaAPICall(conv, selId);
+    adaYaziyorGizle();
+
+    if (yanit.stop_reason === 'tool_use') {
+      await adaToolLoop(conv, yanit, selId);
+    } else {
+      const text = yanit.content?.find(c => c.type === 'text')?.text || 'Yanıt alınamadı.';
+      conv.push({ role: 'assistant', content: yanit.content });
+      adaSaveConv(selId);
+      adaRenderMesajlar(selId);
+    }
+  } catch(err) {
+    adaYaziyorGizle();
+    conv.push({ role: 'system_info', content: '⚠️ ' + (err.message || 'Bağlantı hatası oluştu.') });
+    adaRenderMesajlar(selId);
+  } finally {
+    adaLoading = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">send</span>'; }
+    const msgEl = document.getElementById('ada-mesajlar');
+    if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
+  }
+}
+
+async function adaToolLoop(conv, response, selId) {
+  let current = response;
+  let iterations = 0;
+  const MAX_ITER = 6;
+
+  while (current.stop_reason === 'tool_use' && iterations < MAX_ITER) {
+    iterations++;
+    // Asistan mesajını conv'a ekle (tool_use blokları dahil)
+    conv.push({ role: 'assistant', content: current.content });
+
+    // Tool çağrılarını topla ve paralel çalıştır
+    const toolBlocks = current.content.filter(c => c.type === 'tool_use');
+    const toolResults = await Promise.all(toolBlocks.map(async tb => {
+      let result;
+      try {
+        result = await adaExecuteTool(tb.name, tb.input);
+      } catch(e) {
+        result = { error: 'Veri çekilemedi: ' + e.message };
+      }
+      return {
+        type: 'tool_result',
+        tool_use_id: tb.id,
+        content: JSON.stringify(result)
+      };
+    }));
+
+    conv.push({ role: 'user', content: toolResults });
+    adaYaziyorGoster();
+    current = await adaAPICall(conv, selId);
+    adaYaziyorGizle();
+  }
+
+  // Final cevap
+  conv.push({ role: 'assistant', content: current.content });
+  adaSaveConv(selId);
+  adaRenderMesajlar(selId);
+}
+
+async function adaAPICall(conv, selId) {
+  // conv'daki system_info ve _d display field'larını temizle
+  const apiMessages = conv
+    .filter(m => m.role !== 'system_info')
+    .map(({ _d, ...m }) => m);
+
+  const body = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1500,
+    system: ADA_SYSTEM_PROMPT,
+    tools: ADA_TOOLS,
+    messages: apiMessages
+  };
+
+  const { data, error } = await sb.functions.invoke('ada-chat', { body });
+
+  if (error) throw new Error('Edge Function hatası: ' + (error.message || JSON.stringify(error)));
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+async function adaExecuteTool(toolName, input) {
+  switch(toolName) {
+    case 'get_ogrenci_ozet': {
+      const { data } = await sb.from('ogrenciler')
+        .select('ogrenci_id, ad_soyad, sinif, okul, kayit_durumu')
+        .ilike('ad_soyad', `%${input.ogrenci_adi}%`)
+        .eq('kayit_durumu', 'AKTİF');
+      if (!data?.length) return { bulunamadi: true, aranan: input.ogrenci_adi };
+      const ogr = data[0];
+      const [dRes, oRes, deRes] = await Promise.all([
+        sb.from('dersler').select('ders_id', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
+        sb.from('odevler').select('odev_id', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
+        sb.from('denemeler').select('deneme_id', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id)
+      ]);
+      return { ...ogr, toplam_ders: dRes.count||0, toplam_odev: oRes.count||0, toplam_deneme: deRes.count||0 };
+    }
+    case 'get_son_dersler': {
+      const { data } = await sb.from('dersler')
+        .select('tarih, islened_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
+        .eq('ogrenci_id', input.ogrenci_id)
+        .order('tarih', { ascending: false })
+        .limit(input.limit || 5);
+      return data || [];
+    }
+    case 'get_odev_analizi': {
+      let query = sb.from('odevler')
+        .select('gun, kaynak, konu, durum, dogru, yanlis, bos, toplam, verilis_tarihi')
+        .eq('ogrenci_id', input.ogrenci_id)
+        .order('created_at', { ascending: false });
+      if (input.son_kac_gun) {
+        const sinir = new Date();
+        sinir.setDate(sinir.getDate() - input.son_kac_gun);
+        query = query.gte('created_at', sinir.toISOString());
+      }
+      const { data } = await query;
+      if (!data?.length) return { odev_yok: true };
+      const toplam = data.length;
+      const tamamlanan = data.filter(o => o.durum === 'TAMAMLANDI').length;
+      const yapilmadi = data.filter(o => o.durum === 'YAPILMADI').length;
+      const eksik = data.filter(o => o.durum === 'EKSİK').length;
+      const bekleyen = data.filter(o => o.durum === 'BEKLİYOR').length;
+      const konuMap = {};
+      data.filter(o => o.konu).forEach(o => {
+        if (!konuMap[o.konu]) konuMap[o.konu] = { toplam:0, dogru:0, yanlis:0, bos:0, yapilan:0 };
+        konuMap[o.konu].toplam++;
+        if (o.durum === 'TAMAMLANDI') {
+          konuMap[o.konu].yapilan++;
+          konuMap[o.konu].dogru  += o.dogru  || 0;
+          konuMap[o.konu].yanlis += o.yanlis || 0;
+          konuMap[o.konu].bos    += o.bos    || 0;
+        }
+      });
+      return { toplam, tamamlanan, yapilmadi, eksik, bekleyen, konu_analizi: konuMap };
+    }
+    case 'get_deneme_trendi': {
+      const { data } = await sb.from('denemeler')
+        .select('tarih, deneme_adi, dogru, yanlis, bos, net, basari_yuzdesi, toplam_soru')
+        .eq('ogrenci_id', input.ogrenci_id)
+        .order('tarih', { ascending: true });
+      if (!data?.length) return { deneme_yok: true };
+      const netler = data.map(d => d.net || 0);
+      const son = netler[netler.length-1];
+      const onceki = netler.length > 1 ? netler[netler.length-2] : null;
+      return { denemeler: data, son_net: son, trend: onceki !== null ? (son - onceki).toFixed(1) : null };
+    }
+    case 'get_konu_uyarilari': {
+      const { data } = await sb.from('konu_uyarilari')
+        .select('konu, uyari_tipi, uyari_tarihi, tetikleyen_deger, ogretmen_notu, durum')
+        .eq('ogrenci_id', input.ogrenci_id)
+        .in('durum', ['acik','kronik_tekrar'])
+        .order('uyari_tarihi', { ascending: false });
+      return data || [];
+    }
+    case 'get_ders_oncesi_brifing': {
+      const [dersRes, odevRes, denemeRes, uyariRes] = await Promise.all([
+        sb.from('dersler').select('tarih,islened_konu,tamamlama_durumu,ders_gorusu').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
+        sb.from('odevler').select('konu,durum,dogru,yanlis,toplam,verilis_tarihi').eq('ogrenci_id', input.ogrenci_id).order('created_at',{ascending:false}).limit(10),
+        sb.from('denemeler').select('tarih,deneme_adi,net,basari_yuzdesi').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
+        sb.from('konu_uyarilari').select('konu,uyari_tipi,durum').eq('ogrenci_id', input.ogrenci_id).in('durum',['acik','kronik_tekrar'])
+      ]);
+      return {
+        son_dersler:   dersRes.data  || [],
+        son_odevler:   odevRes.data  || [],
+        son_denemeler: denemeRes.data|| [],
+        uyarilar:      uyariRes.data || []
+      };
+    }
+    case 'get_mufredat_detay': {
+      const mufredat = {
+        5: {
+          'sayılar': '5.Sınıf Sayılar: Doğal sayılar ve işlemler, Çok basamaklı sayılar, Kesirler ve farklı gösterimler. Önkoşul: İlkokul 4.sınıf doğal sayı işlemleri.',
+          'geometri': '5.Sınıf Geometri: Temel geometrik çizimler, Açı ölçme, Çokgenler, Çember, Üçgen inşaları. Dikdörtgenin çevre ve alanı.',
+          'cebir': '5.Sınıf Cebir: İşlem önceliği, Sayı ve şekil örüntüleri, Algoritma yorumlama.',
+          'istatistik': '5.Sınıf İstatistik: Kategorik veri, Sıklık tablosu, Sütun grafiği. Öznel olasılık.',
+          'default': '5.Sınıf Temaları: Geometrik Şekiller(21%), Sayılar(34%), Geometrik Nicelikler(11%), İstatistik(13%), Cebir(11%), Olasılık(5%).'
+        },
+        6: {
+          'sayılar': '6.Sınıf Sayılar: Doğal sayıların çarpanları-katları, Asal sayılar, OBEB-OKEK, Kesirlerle işlemler, Ondalık gösterim, Yüzde. Önkoşul: 5.sınıf kesir ve doğal sayı anlayışı.',
+          'geometri': '6.Sınıf Geometri: İki paralel doğru ve kesen, Açı türleri. Uzunluk-alan birimleri, Geometrik cisimler görünümleri.',
+          'cebir': '6.Sınıf Cebir: Cebirsel ifadeler, Sayı örüntüleri. Önkoşul: 5.sınıf işlem önceliği ve örüntü kavramı.',
+          'istatistik': '6.Sınıf İstatistik: Kategorik ve kesikli veri, Kök-yaprak gösterimi, Aritmetik ortalama, Ortanca, Tepe değer. Deneysel olasılık.',
+          'default': '6.Sınıf Temaları: Sayılar(29%), Geometri+Nicelikler(29%), Cebir(18%), İstatistik(14%), Olasılık(5%).'
+        },
+        7: {
+          'sayılar': '7.Sınıf Sayılar: Rasyonel sayılar ve işlemler (tam, kesirli, ondalık formlar), Oran ve orantı (doğru-ters). Önkoşul: 6.sınıf kesir işlemleri KRİTİK — burada boşluk varsa 7.sınıf bloke olur.',
+          'geometri': '7.Sınıf Geometri: Cisimlerin görünümleri, Eşkenar dörtgen ve yamuk, Üçgenlerde kenarortay/açıortay/yükseklik. Yansıma dönüşümü.',
+          'cebir': '7.Sınıf Cebir: Cebirsel ifadelerle işlemler, Denklem ve eşitsizlikler, İspat yapma. Önkoşul: 6.sınıf cebirsel ifade kavramı.',
+          'istatistik': '7.Sınıf İstatistik: Sürekli veri, Çizgi grafiği, Yayılım ölçüleri (medyan, çeyrek açıklık). Teorik olasılık.',
+          'default': '7.Sınıf Temaları: Sayılar(27%), Cebir(21%), Geometrik Nicelikler(21%), İstatistik(13%), Olasılık(5%), Dönüşüm(5%).'
+        },
+        8: {
+          'sayılar': '8.Sınıf Sayılar (LGS KRİTİK): Gerçek sayılar, Kareköklü ifadeler (LGS\'de 2-5 soru), Üslü ifadeler (2-4 soru), Çarpanlara ayırma. Önkoşul: 7.sınıf rasyonel sayılar.',
+          'geometri': '8.Sınıf Geometri: Üçgende açı-kenar ilişkisi, Pisagor bağıntısı (LGS\'de 2-3 soru), Üçgen eşitsizliği. Dik prizmalar, silindir, koni hacim-yüzey.',
+          'cebir': '8.Sınıf Cebir (LGS KRİTİK): Doğrusal fonksiyonlar (3 soru), Doğrusal denklemler (2-4 soru), Eşitsizlikler (1-2 soru). Önkoşul: 7.sınıf denklem ve cebirsel ifadeler.',
+          'istatistik': '8.Sınıf İstatistik: Tüm veri türleri (kategorik, kesikli, sürekli). Olasılık: Öznel-deneysel-teorik ilişkisi.',
+          'default': '8.Sınıf (LGS Yılı) Temaları: Cebir(23%), Geometrik Şekiller(22%), Sayılar(21%), İstatistik(11%), Geometrik Nicelikler(8%), Olasılık+Dönüşüm(10%). LGS toplamı: 20 soru.'
+        }
+      };
+      const sinifData = mufredat[input.sinif];
+      if (!sinifData) return { hata: 'Desteklenen sınıflar: 5, 6, 7, 8' };
+      if (!input.tema) return { icerik: sinifData.default };
+      const temaKey = input.tema.toLowerCase()
+        .replace(/sayılar|nicelikler|rasyonel|kesir|doğal/,'sayılar')
+        .replace(/geometr|pisagor|üçgen|dönüşüm|cisim/,'geometri')
+        .replace(/cebir|denklem|fonksiyon|cebirsel|eşitsizlik/,'cebir')
+        .replace(/istatistik|olasılık|veri|grafik/,'istatistik');
+      return { icerik: sinifData[temaKey] || sinifData.default };
+    }
+    default:
+      return { hata: 'Bilinmeyen tool: ' + toolName };
+  }
 }
 
 // ── UTILS ─────────────────────────────────────────────────────

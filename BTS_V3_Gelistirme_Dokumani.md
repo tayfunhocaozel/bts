@@ -1,17 +1,17 @@
 # AdaptiX BTS V3 — Geliştirme Dokümanı
 
 **Hazırlanma Tarihi:** 13 Haziran 2026  
-**Son Güncelleme:** 23 Haziran 2026  
+**Son Güncelleme:** 24 Haziran 2026  
 **Sürüm:** BTS V2 → V3  
 **Geliştirici:** Tayfun Hoca + Claude (Sonnet 4.6)  
 **İlgili Dosyalar:** `scholar_metric.html`, `www/index.html`  
-**GitHub Commit:** `7ac8de7` (son)
+**GitHub Commit:** `c24140a` (son)
 
 ---
 
 ## Özet
 
-Bu sürümde yedi büyük özellik eklendi:
+Bu sürümde on büyük özellik / geliştirme eklendi:
 
 1. **Ders Programı Modülü** — Haftalık seans grid görünümü
 2. **Ders Kaydet İyileştirmeleri** — Kazanım bazlı tamamlama durumu + alan yeniden isimlendirme
@@ -20,6 +20,9 @@ Bu sürümde yedi büyük özellik eklendi:
 5. **Hızlı Navigasyon** — Dashboard kartı ve öğrenci listesinden doğrudan sayfa yönlendirme
 6. **Rapor Ödev Analizi** — Rapor sayfasında ödev istatistik kartları ve filtrelenmiş liste
 7. **Bekleyen Ödev Yönetim Modali** — Dashboard'dan tüm bekleyen ödevleri tek ekranda işleme
+8. **Çok Veli Desteği** — Öğrenci başına birden fazla veli kaydı, ayrı `veliler` tablosu
+9. **Öğrenci Ödev Sekmesi İyileştirmeleri** — Detay alanı, 7 gün filtresi, YAPILMADI/EKSİK bölümü, Bekleyen toggle kart
+10. **Rapor Ödev Bölümü İyileştirmeleri** — BEKLİYOR kart, grid yeniden düzenleme, `odev_detay` sorgu fix
 
 ---
 
@@ -374,17 +377,156 @@ Kaydet toast'ı yüzde doğru oranını gösterir (`%73 doğru`). Tüm satırlar
 
 ---
 
-## 8. Teknik Notlar
+## 8. Çok Veli Desteği
+
+### 8.1 Genel
+
+Bir öğrenciye birden fazla veli (anne, baba, vasi, diğer) eklenebilmesi için ayrı `veliler` tablosu oluşturuldu. `ogrenciler` tablosundaki eski `veli_ad_soyad` ve `veli_telefon` sütunları silinmedi — geçiş dönemi için fallback olarak korunmaktadır.
+
+### 8.2 Veritabanı Değişikliği
+
+```sql
+CREATE TABLE veliler (
+  veli_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ogrenci_id TEXT NOT NULL REFERENCES ogrenciler(ogrenci_id) ON DELETE CASCADE,
+  veli_adi   TEXT NOT NULL,
+  telefon    TEXT NOT NULL,
+  yakinlik   TEXT  -- 'Anne', 'Baba', 'Vasi', 'Diğer'
+);
+
+-- Mevcut velileri taşı
+INSERT INTO veliler (ogrenci_id, veli_adi, telefon, yakinlik)
+SELECT ogrenci_id, veli_ad_soyad, veli_telefon, 'Anne/Baba'
+FROM ogrenciler
+WHERE veli_telefon IS NOT NULL AND veli_telefon != '';
+```
+
+`ON DELETE CASCADE` sayesinde öğrenci silindiğinde veliler otomatik silinir.
+
+### 8.3 UI — Dinamik Veli Satırları
+
+**Yeni Öğrenci Formu** ve **Düzenle Modali** içinde sabit veli alanları kaldırılarak dinamik satır sistemi eklendi:
+
+- Başlangıçta 1 satır: `[Yakınlık dropdown] [Veli Adı] [Telefon] [✕ Sil]`
+- **+ Veli Ekle** butonu ile yeni satır eklenir (maksimum 3)
+- En az 1 geçerli veli zorunlu; kaydet öncesi validasyon yapılır
+- Düzenleme modalinde veliler `veliler` tablosundan async yüklenir; kayıt yoksa eski sütunlardan fallback
+
+### 8.4 Veli Girişi Değişikliği
+
+```javascript
+// Eski — ogrenciler.veli_telefon taraması
+const { data: tumVeli } = await sb.from('ogrenciler').select('ogrenci_id, veli_telefon, ad_soyad');
+const veliOgr = tumVeli.find(o => o.veli_telefon === tel);
+
+// Yeni — veliler tablosu JOIN
+const { data: veliKayit } = await sb.from('veliler')
+  .select('*, ogrenciler(*)')
+  .eq('telefon', tel)
+  .limit(1);
+const ogr = veliKayit[0].ogrenciler;
+```
+
+Aynı telefon birden fazla öğrenciye atanmışsa (örn. iki kardeşin velisi) ilk eşleşen öğrencinin paneli açılır.
+
+### 8.5 Kayıt Akışı
+
+| İşlem | Öğrenci | Veliler |
+|---|---|---|
+| Yeni kayıt | `ogrenciler` INSERT | `veliler` INSERT (liste) |
+| Düzenleme | `ogrenciler` UPDATE | `veliler` DELETE + INSERT |
+| Silme | `ogrenciler` DELETE | CASCADE ile otomatik |
+
+### 8.6 Yeni Fonksiyonlar
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `veliSatirHTML(yakinlik, adi, tel)` | Tek veli satırı HTML'i döner (seçili yakınlık ile) |
+| `veliSatirEkle(containerId)` | Container'a yeni satır ekler (max 3 kontrolü) |
+| `veliSatirSil(btn)` | Tıklanan satırı kaldırır (min 1 kontrolü) |
+| `getVeliFormData(containerId)` | Container'dan veli verilerini dizi olarak okur (boş filtrelenir) |
+
+---
+
+## 9. Öğrenci Ödev Sekmesi İyileştirmeleri
+
+### 9.1 Değişiklikler
+
+| # | Değişiklik | Detay |
+|---|---|---|
+| 1 | **Detay alanı** | Bekleyen, tamamlanan ve yapılmayan bölümlerinde kaynak adının altında `odev_detay` ayrı satırda gösterilir (null/boş kontrolü ile) |
+| 2 | **7 gün filtresi** | `TAMAMLANDI` ödevler son 7 güne filtrelendi; tarih için `verilis_tarihi \|\| created_at` kullanılır |
+| 3 | **YAPILMADI/EKSİK bölümü** | Yeni `ogr-yapilmayan-bolum` div'i eklendi; bu statüdeki ödevler herhangi bir tarih filtresi uygulanmadan listelenir; her satırda **↺ Tekrar Ver** butonu |
+| 4 | **Bekleyen toggle kart** | `ogr-stat-bekleyen` stat kartı primary (#005d8d) renge getirildi, tıklanınca `bekleyen-toggle-liste` div'i açılır/kapanır; liste basit (konu + gün + kaynak + detay), D/Y/B form yok |
+
+### 9.2 Tekrar Ver (Öğrenci)
+
+`ogrTekrarVer(odevId)` fonksiyonu: YAPILMADI/EKSİK ödev için `durum = 'BEKLİYOR'`, D/Y/B alanları `null` olarak güncellenir → panel yenilenir.
+
+### 9.3 Yeni Fonksiyonlar
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `toggleBekleyenListe()` | `bekleyen-toggle-liste` div'ini toggle eder |
+| `ogrTekrarVer(odevId)` | Ödev statüsünü BEKLİYOR'a sıfırlar, paneli yeniler |
+
+---
+
+## 10. Rapor Ödev Bölümü İyileştirmeleri
+
+### 10.1 BEKLİYOR Kart Eklendi
+
+`odevBekleyenSayi` değişkeni hesaplanarak istatistik grid'ine eklendi.
+
+**Yeni kart sırası (2 sütun grid):**
+```
+[ Bekleyen  #005d8d ]  [ Toplam          ]
+[ Tamamlanan        ]  [ Yapılmadı       ]
+[ Eksik             ]
+```
+
+BEKLİYOR karta tıklayınca `toggleRaporOdevFiltre('BEKLİYOR')` çalışır. `durumBadge` map'e `BEKLİYOR: ['#e8f4fb','#005d8d']` eklendi.
+
+### 10.2 `odev_detay` Sorgu Fix
+
+`loadRapor()` içindeki `odevler` explicit SELECT listesinden `odev_detay` sütunu eksikti — rapor toggle tablosunda detay her zaman `undefined` geliyordu. Sütun listeye eklendi:
+
+```javascript
+// Düzeltilmiş sorgu
+sb.from('odevler').select(
+  'odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay'
+)
+```
+
+### 10.3 Toggle Tablo Kaynak Hücresi
+
+`toggleRaporOdevFiltre` tablosunun Kaynak sütununda detay alanı `trim()` kontrolüyle eklendi:
+
+```javascript
+${o.odev_detay && o.odev_detay.trim()
+  ? `<div style="font-size:10px;opacity:.7;">${o.odev_detay.trim()}</div>`
+  : ''}
+```
+
+### 10.4 Detay Trim Fix (Genel)
+
+Taslak listesi ve bekleyen ödev listesindeki detay kontrolü truthy → `trim() !== ''` kontrolüne güncellendi (whitespace-only string'lerde boş bullet görünümü giderildi).
+
+---
+
+## 11. Teknik Notlar
 
 - Chart.js 4.4.4 CDN üzerinden mevcut — yeni import gerekmedi
 - `_renderSimpleKonuChart` öğrenci (`pfx='sl'`) ve veli (`pfx='vl'`) için `id` çakışmasını önler
 - `store._pfx` alanı `toggleSimpleLine` fonksiyonunun doğru store'u bulmasını sağlar
-- Ders oturumu silinirken `tarih + islenen_konu` grup anahtarı kullanılır — aynı gün aynı konuya iki farklı oturum desteklenmez
+- Ders oturumu silinirken `tarih + islened_konu` grup anahtarı kullanılır — aynı gün aynı konuya iki farklı oturum desteklenmez
 - `loadRapor()` içinde `odevler` sorgusuna `ORDER BY` eklenmemeli: `verilis_tarihi` null olan eski kayıtlar Supabase hatasına yol açar, `data: null` döner ve tüm rapor boşalır
+- `veliler` tablosu için `ogrenciler(*)` JOIN sorgusu Supabase foreign key ilişkisine dayanır; tablo oluşturulmadan önce uygulama hata verir
+- `odev_detay` rapor sorgusuna explicit olarak dahil edilmeli — `select('*')` yerine sütun listesi kullanılırken eksik kalırsa toggle tabloda her zaman `undefined` gelir
 
 ---
 
-## 9. Commit Geçmişi (Bu Sürüm)
+## 12. Commit Geçmişi (Bu Sürüm)
 
 | Hash | Açıklama |
 |---|---|
@@ -398,6 +540,12 @@ Kaydet toast'ı yüzde doğru oranını gösterir (`%73 doğru`). Tüm satırlar
 | `e52faa8` | Dashboard: Bekleyen Ödev kartına modal eklendi |
 | `1b738fd` | Fix: loadRapor odevler sorgusunda tarih → verilis_tarihi |
 | `7ac8de7` | Fix: loadRapor odevler sorgusundan ORDER BY kaldırıldı |
+| `21c0aeb` | Fix: Giriş sol panel — slogan düzeltmesi |
+| `d1bfeec` | Fix: Giriş sol panel — renk logosu dekoratif daire içine taşındı |
+| `1da4aeb` | Feat: Çok veli desteği — veliler tablosu ve dinamik satır UI |
+| `37b51ad` | Feat: Öğrenci ödev sekmesi — 4 iyileştirme |
+| `8500918` | Fix: Rapor ödev — BEKLİYOR kart + detay trim kontrolü |
+| `c24140a` | Fix: Rapor ödev grid yeniden düzenlendi + odev_detay sorgu hatası |
 
 ---
 

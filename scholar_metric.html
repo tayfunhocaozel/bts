@@ -5160,15 +5160,15 @@ async function adaExecuteTool(toolName, input) {
       if (!data?.length) return { bulunamadi: true, aranan: input.ogrenci_adi };
       const ogr = data[0];
       const [dRes, oRes, deRes] = await Promise.all([
-        sb.from('dersler').select('ders_id', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
-        sb.from('odevler').select('odev_id', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
+        sb.from('dersler').select('*', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
+        sb.from('odevler').select('*', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
         sb.from('denemeler').select('deneme_id', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id)
       ]);
       return { ...ogr, toplam_ders: dRes.count||0, toplam_odev: oRes.count||0, toplam_deneme: deRes.count||0 };
     }
     case 'get_son_dersler': {
       const { data } = await sb.from('dersler')
-        .select('tarih, islened_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
+        .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
         .eq('ogrenci_id', input.ogrenci_id)
         .order('tarih', { ascending: false })
         .limit(input.limit || 5);
@@ -5177,12 +5177,11 @@ async function adaExecuteTool(toolName, input) {
     case 'get_odev_analizi': {
       let query = sb.from('odevler')
         .select('gun, kaynak, konu, durum, dogru, yanlis, bos, toplam, verilis_tarihi')
-        .eq('ogrenci_id', input.ogrenci_id)
-        .order('created_at', { ascending: false });
+        .eq('ogrenci_id', input.ogrenci_id);
       if (input.son_kac_gun) {
         const sinir = new Date();
         sinir.setDate(sinir.getDate() - input.son_kac_gun);
-        query = query.gte('created_at', sinir.toISOString());
+        query = query.gte('verilis_tarihi', sinir.toISOString().split('T')[0]);
       }
       const { data } = await query;
       if (!data?.length) return { odev_yok: true };
@@ -5225,8 +5224,8 @@ async function adaExecuteTool(toolName, input) {
     }
     case 'get_ders_oncesi_brifing': {
       const [dersRes, odevRes, denemeRes, uyariRes] = await Promise.all([
-        sb.from('dersler').select('tarih,islened_konu,tamamlama_durumu,ders_gorusu').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
-        sb.from('odevler').select('konu,durum,dogru,yanlis,toplam,verilis_tarihi').eq('ogrenci_id', input.ogrenci_id).order('created_at',{ascending:false}).limit(10),
+        sb.from('dersler').select('tarih,islenen_konu,tamamlama_durumu,ders_gorusu').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
+        sb.from('odevler').select('konu,durum,dogru,yanlis,toplam,verilis_tarihi').eq('ogrenci_id', input.ogrenci_id).limit(20),
         sb.from('denemeler').select('tarih,deneme_adi,net,basari_yuzdesi').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
         sb.from('konu_uyarilari').select('konu,uyari_tipi,durum').eq('ogrenci_id', input.ogrenci_id).in('durum',['acik','kronik_tekrar'])
       ]);

@@ -972,8 +972,8 @@ tailwind.config = {
     <div id="page-ada" class="page" style="display:flex;flex-direction:column;height:calc(100vh - 130px);">
       <!-- Ada Header -->
       <div class="card-2xl" style="padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
-        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#005d8d,#013149);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <span class="material-symbols-outlined" style="color:#fff;font-size:26px;font-variation-settings:'FILL' 1;">smart_toy</span>
+        <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <img src="public/ai_simge.png" style="width:38px;height:38px;object-fit:contain;background:transparent;">
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">Ada</div>
@@ -1002,8 +1002,8 @@ tailwind.config = {
       <!-- Mesaj Alanı -->
       <div id="ada-mesajlar" style="flex:1;overflow-y:auto;padding:4px 0 12px;display:flex;flex-direction:column;gap:10px;">
         <div style="text-align:center;padding:32px 20px;">
-          <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#005d8d,#013149);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-            <span class="material-symbols-outlined" style="color:#fff;font-size:36px;font-variation-settings:'FILL' 1;">smart_toy</span>
+          <div style="width:88px;height:88px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+            <img src="public/ai_simge.png" style="width:80px;height:80px;object-fit:contain;background:transparent;">
           </div>
           <div style="font-family:Manrope;font-weight:800;font-size:18px;color:var(--ink);margin-bottom:6px;">Merhaba, ben Ada!</div>
           <div style="font-size:13.5px;color:var(--ink-soft);max-width:360px;margin:0 auto;line-height:1.6;">Öğrencileriniz hakkında sorularınızı yanıtlıyor, ders hazırlığınıza yardım ediyorum. Başlamak için bir öğrenci seçin veya doğrudan sorunuzu yazın.</div>
@@ -1203,7 +1203,10 @@ function buildNav() {
     const sEl = document.createElement('button');
     sEl.className = 'nav-item';
     sEl.dataset.page = p.id;
-    sEl.innerHTML = `<span class="material-symbols-outlined">${p.icon}</span>${p.label}`;
+    const iconHtml = p.id === 'ada'
+      ? `<img src="public/ai_simge.png" style="width:22px;height:22px;object-fit:contain;background:transparent;flex-shrink:0;">`
+      : `<span class="material-symbols-outlined">${p.icon}</span>`;
+    sEl.innerHTML = `${iconHtml}${p.label}`;
     sEl.onclick = () => goPage(p.id);
     sidebarNav.appendChild(sEl);
   });
@@ -4899,8 +4902,8 @@ function adaRenderMesajlar(selId) {
     // Öğrenci seçildiyse karşılama mesajına öğrenci adı ekle
     const ogrAdi = selId ? (state.ogrenciler.find(o => o.ogrenci_id === selId)?.ad_soyad || '') : '';
     el.innerHTML = `<div style="text-align:center;padding:32px 20px;">
-      <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#005d8d,#013149);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-        <span class="material-symbols-outlined" style="color:#fff;font-size:36px;font-variation-settings:'FILL' 1;">smart_toy</span>
+      <div style="width:88px;height:88px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <img src="public/ai_simge.png" style="width:80px;height:80px;object-fit:contain;background:transparent;">
       </div>
       <div style="font-family:Manrope;font-weight:800;font-size:18px;color:var(--ink);margin-bottom:6px;">Merhaba, ben Ada!</div>
       <div style="font-size:13.5px;color:var(--ink-soft);max-width:360px;margin:0 auto;line-height:1.6;">
@@ -4932,8 +4935,8 @@ function adaMesajHTML(msg) {
     const text = textParts.join('\n').trim();
     if (!text) return '';
     return `<div style="display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;">
-      <div style="width:28px;height:28px;border-radius:8px;background:#005d8d;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
-        <span class="material-symbols-outlined" style="color:#fff;font-size:16px;font-variation-settings:'FILL' 1;">smart_toy</span>
+      <div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
+        <img src="public/ai_simge.png" style="width:28px;height:28px;object-fit:contain;background:transparent;">
       </div>
       <div class="ada-mesaj ada">${adaFormatText(text)}</div>
     </div>`;
@@ -4960,8 +4963,8 @@ function adaYaziyorGoster() {
   const div = document.createElement('div');
   div.id = 'ada-typing';
   div.style.cssText = 'display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;';
-  div.innerHTML = `<div style="width:28px;height:28px;border-radius:8px;background:#005d8d;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
-    <span class="material-symbols-outlined" style="color:#fff;font-size:16px;font-variation-settings:'FILL' 1;">smart_toy</span>
+  div.innerHTML = `<div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
+    <img src="public/ai_simge.png" style="width:28px;height:28px;object-fit:contain;background:transparent;">
   </div>
   <div class="ada-mesaj ada ada-yazıyor" style="padding:10px 14px;">
     <span></span><span></span><span></span>

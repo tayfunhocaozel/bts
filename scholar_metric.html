@@ -1043,7 +1043,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── STATE ─────────────────────────────────────────────────────
 let state = {
-  rol: null, user: null,
+  rol: null, user: null, ogretmen_id: null,
   ogrenciler: [], kazanimlar: [], kaynaklar: [],
   _dersKazanimlar: [],
   _dersGecmisGruplar: [],
@@ -1088,10 +1088,15 @@ async function doLogin() {
       const sifre = document.getElementById('ogr-sifre').value;
       const hash = await hashSifre(sifre);
       const { data: kullanici, error: kulErr } = await sb.from('kullanicilar')
-        .select('id').eq('rol', 'ogretmen').eq('sifre_hash', hash).limit(1);
+        .select('id, rol').eq('sifre_hash', hash).limit(1);
       if (kulErr || !kullanici || kullanici.length === 0) { showError('Şifre hatalı'); return; }
+      // Şimdilik tek öğretmen — .single() yeterli. Çok öğretmende kullanicilar.ogretmen_id ile eşlenir.
+      const { data: ogretmen } = await sb.from('ogretmenler').select('*').eq('durum', 'aktif').single();
       state.rol = 'ogretmen';
-      state.user = { ad: 'Tayfun Hoca', rol: 'ogretmen' };
+      state.ogretmen_id = ogretmen?.ogretmen_id || '';
+      state.user = { ad: ogretmen?.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
+      localStorage.setItem('adaptix_ogretmen_id', state.ogretmen_id);
+      localStorage.setItem('adaptix_ogretmen_adi', ogretmen?.ad_soyad || '');
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
@@ -1135,7 +1140,7 @@ async function initApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'flex';
 
-  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
+  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user, ogretmen_id: state.ogretmen_id }));
 
   buildNav();
   updateUserInfo();
@@ -1155,7 +1160,7 @@ async function initApp() {
 }
 
 function updateUserInfo() {
-  const ad = state.rol === 'ogretmen' ? 'Tayfun Hoca' :
+  const ad = state.rol === 'ogretmen' ? (state.user.ad || 'Öğretmen') :
              state.rol === 'ogrenci'  ? (state.user.ad_soyad || state.user.ogrenci_id) :
              (state.user.ad_soyad || '') + ' — Veli';
   const sinif = state.user.sinif || '';
@@ -1262,7 +1267,7 @@ function goPage(id) {
 // ── MASTER DATA ───────────────────────────────────────────────
 async function loadMasterData() {
   const [o, k, ky] = await Promise.all([
-    sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').order('ad_soyad'),
+    sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad'),
     sb.from('kazanimlar').select('*').order('sinif').order('konu'),
     sb.from('kaynaklar').select('*').order('kaynak_adi'),
   ]);
@@ -1285,7 +1290,7 @@ function fillSelects() {
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function loadDashboard() {
-  document.getElementById('dash-welcome').textContent = 'Tayfun Hoca';
+  document.getElementById('dash-welcome').textContent = state.user.ad || 'Öğretmen';
   document.getElementById('stat-ogrenci').textContent = state.ogrenciler.length;
 
   // Sınıf dağılımı
@@ -1301,13 +1306,14 @@ async function loadDashboard() {
     </div>`).join('');
 
   // Ödevler
-  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','BEKLİYOR');
+  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','BEKLİYOR').eq('ogretmen_id', state.ogretmen_id);
   const bekleyen = odevler || [];
   document.getElementById('stat-bekleyen').textContent = bekleyen.length;
 
   // Bu ay ders
   const buAy = new Date();
   const { data: dersler } = await sb.from('dersler').select('kayit_id, tarih')
+    .eq('ogretmen_id', state.ogretmen_id)
     .gte('tarih', `${buAy.getFullYear()}-${String(buAy.getMonth()+1).padStart(2,'0')}-01`);
   const benzersiz = new Set((dersler||[]).map(d => d.kayit_id)).size;
   document.getElementById('stat-ders').textContent = benzersiz || (dersler||[]).length;
@@ -1470,7 +1476,7 @@ async function dersSave() {
 
   const tarih = edit ? edit.tarih : (document.getElementById('ders-tarih').value || new Date().toISOString().split('T')[0]);
   const rows = secili.map(s => ({
-    ogrenci_id: ogrenciId, tarih,
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih,
     islenen_konu: konu, kazanim_kodu: s.kod,
     tamamlama_durumu: s.td,
     ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma
@@ -1503,7 +1509,7 @@ async function loadDersGecmisi() {
 
   const { data } = await sb.from('dersler')
     .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
-    .eq('ogrenci_id', ogrenciId)
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
     .order('tarih', { ascending: false })
     .limit(60);
 
@@ -1577,7 +1583,7 @@ async function dersDuzenleAc(idx) {
   const ogrenciId = document.getElementById('ders-ogrenci').value;
   const { data: rows } = await sb.from('dersler')
     .select('kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
-    .eq('ogrenci_id', ogrenciId).eq('tarih', g.tarih).eq('islenen_konu', g.konu);
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).eq('tarih', g.tarih).eq('islenen_konu', g.konu);
 
   if (!rows || !rows.length) return;
 
@@ -1625,7 +1631,7 @@ async function odevOgrenciSecildi() {
 
   const [kazRes, kayRes] = await Promise.all([
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(sinif||'').replace(/[^0-9]/g,'')}%`).order('konu'),
-    sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId)
+    sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
   ]);
 
   state._odevKazanimlar = kazRes.data || [];
@@ -1751,7 +1757,7 @@ async function odevSave() {
   showToast('Kaydediliyor...');
   const tarih = new Date().toISOString().split('T')[0];
   const rows = state._odevTaslaklari.map(t => ({
-    ogrenci_id: ogrenciId,
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
     verilis_tarihi: tarih,
     gun: t.gun,
     kaynak: t.kaynak,
@@ -1774,7 +1780,7 @@ async function odevSave() {
 // ── ÖDEV GİR: bekleyen ödevleri göster ───────────────────────
 async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
   const { data } = await sb.from('odevler').select('*')
-    .eq('ogrenci_id', ogrenciId)
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
     .in('durum', ['BEKLİYOR','EKSİK','YAPILMADI'])
     .order('verilis_tarihi', { ascending: false })
     .limit(20);
@@ -1860,7 +1866,7 @@ async function acBekleyenModal() {
   liste.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
   const { data } = await sb.from('odevler')
-    .select('*').eq('durum', 'BEKLİYOR')
+    .select('*').eq('durum', 'BEKLİYOR').eq('ogretmen_id', state.ogretmen_id)
     .order('verilis_tarihi', { ascending: true });
 
   const odevler = data || [];
@@ -2094,7 +2100,7 @@ async function ogrenciDuzenleKaydet() {
     yeniVeliler.map(v => ({ ogrenci_id: id, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
   );
   if (vErr) { showToast('⚠️ Veli kaydedilemedi: ' + vErr.message); } else { showToast('✅ Bilgiler güncellendi'); }
-  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
@@ -2115,7 +2121,7 @@ async function ogrenciSil() {
   const { error } = await sb.from('ogrenciler').delete().eq('ogrenci_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('🗑️ Öğrenci silindi');
-  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
@@ -2170,7 +2176,7 @@ async function ogrenciEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').insert({
     ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
-    tc_no: tc, okul_no: okulno, kayit_durumu: 'AKTİF'
+    tc_no: tc, okul_no: okulno, kayit_durumu: 'AKTİF', ogretmen_id: state.ogretmen_id
   });
   if (error) { showToast('❌ ' + error.message); return; }
   const { error: vErr } = await sb.from('veliler').insert(
@@ -2178,7 +2184,7 @@ async function ogrenciEkle() {
   );
   if (vErr) { showToast('⚠️ Öğrenci eklendi ancak veli kaydedilemedi: ' + vErr.message); }
   else { showToast('✅ Öğrenci eklendi!'); }
-  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
@@ -2247,7 +2253,7 @@ async function ataOgrenciSecildi() {
   if (!ogrenciId) { document.getElementById('ogrenci-kaynak-listesi').innerHTML = ''; return; }
 
   // ogrn_kaynak: kayit_id, ogrenci_id, kaynak_adi, konu_sayisi, islenen_konu, ilerleme_yuzdesi
-  const { data } = await sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId);
+  const { data } = await sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id);
   const kaynaklar = data || [];
   const el = document.getElementById('ogrenci-kaynak-listesi');
 
@@ -2286,12 +2292,12 @@ async function kaynakAta() {
 
   showToast('Atanıyor...');
   // kaynakId burada kaynak_adi değeri taşıyor (select value="kaynak_adi")
-  const { error } = await sb.from('ogrn_kaynak').insert({ 
-    ogrenci_id: ogrenciId, 
-    kaynak_adi: kaynakId, 
+  const { error } = await sb.from('ogrn_kaynak').insert({
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
+    kaynak_adi: kaynakId,
     konu_sayisi: 12,
-    islenen_konu: 0, 
-    ilerleme_yuzdesi: 0 
+    islenen_konu: 0,
+    ilerleme_yuzdesi: 0
   });
   if (error) { showToast('❌ ' + (error.code === '23505' ? 'Bu kaynak zaten atanmış' : error.message)); return; }
   showToast('✅ Kaynak atandı!');
@@ -2414,7 +2420,7 @@ async function denemeEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('denemeler').insert({
     deneme_id: crypto.randomUUID(),
-    ogrenci_id: ogrenciId, tarih, deneme_adi: adi,
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih, deneme_adi: adi,
     dogru: d, yanlis: y, bos: b, toplam_soru: top,
     net, basari_yuzdesi: pct
   });
@@ -2433,7 +2439,7 @@ async function loadDenemeler() {
   el.innerHTML = '<div class="flex justify-center py-8"><div class="spinner"></div></div>';
 
   const { data, error } = await sb.from('denemeler').select('*')
-    .eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false });
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).order('tarih', { ascending: false });
 
   if (error) { el.innerHTML = `<div class="text-sm text-error text-center py-4">${error.message}</div>`; return; }
   const liste = data || [];
@@ -2575,7 +2581,7 @@ async function loadRapor() {
   let mevcutUyarilar = [];
   if (state.rol === 'ogretmen') {
     const { data: uyD } = await sb.from('konu_uyarilari')
-      .select('*').eq('ogrenci_id', ogrenciId)
+      .select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
       .order('uyari_tarihi', { ascending: false });
     mevcutUyarilar = uyD || [];
   }
@@ -2892,7 +2898,7 @@ async function loadRapor() {
         if (!acik) {
           const yeniDurum = aksiyonlu ? 'kronik_tekrar' : 'acik';
           yeniUyarilar.push({
-            uyari_id: crypto.randomUUID(), ogrenci_id: ogrenciId,
+            uyari_id: crypto.randomUUID(), ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
             konu, uyari_tipi: analiz.tip,
             uyari_tarihi: new Date().toISOString().split('T')[0],
             tetikleyen_deger: analiz.deger, durum: yeniDurum
@@ -2908,7 +2914,7 @@ async function loadRapor() {
 
     if (yeniUyarilar.length || cozulenIds.length) {
       const { data: guncel } = await sb.from('konu_uyarilari')
-        .select('*').eq('ogrenci_id', ogrenciId).order('uyari_tarihi', { ascending: false });
+        .select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).order('uyari_tarihi', { ascending: false });
       window._raporData.uyarilar = guncel || [];
     }
   }
@@ -4423,7 +4429,7 @@ async function loadDersProgrami() {
   if (!ogrenciId) { bolum.classList.add('hidden'); return; }
 
   const { data } = await sb.from('ders_programi')
-    .select('*').eq('ogrenci_id', ogrenciId)
+    .select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
     .order('gun');
 
   const programlar = data || [];
@@ -4474,7 +4480,7 @@ function programTipSec(tip) {
 
 // ── ÇAKIŞMA KONTROLÜ ──────────────────────────────────────────
 async function checkCakisma(gun, baslangic, bitis, tip, tarih, excludeId = null) {
-  const { data } = await sb.from('ders_programi').select('*').eq('gun', gun);
+  const { data } = await sb.from('ders_programi').select('*').eq('gun', gun).eq('ogretmen_id', state.ogretmen_id);
   const toMin = t => { const [h, m] = t.substring(0,5).split(':').map(Number); return h*60+m; };
   const yB = toMin(baslangic), yE = toMin(bitis);
 
@@ -4525,7 +4531,7 @@ async function programEkle() {
   }
 
   showToast('Kaydediliyor...');
-  const kayit = { ogrenci_id: ogrenciId, gun, baslangic, bitis, tip: _programTip };
+  const kayit = { ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, gun, baslangic, bitis, tip: _programTip };
   if (_programTip === 'ek') kayit.tarih = tarih;
 
   const { error } = await sb.from('ders_programi').insert(kayit);
@@ -4552,7 +4558,7 @@ async function loadHaftalikProgram() {
   if (!el) return;
   el.innerHTML = '<div class="flex justify-center py-16"><div class="spinner"></div></div>';
 
-  const { data } = await sb.from('ders_programi').select('*');
+  const { data } = await sb.from('ders_programi').select('*').eq('ogretmen_id', state.ogretmen_id);
 
   const bugun = new Date();
   const haftaGunu = bugun.getDay();
@@ -4705,7 +4711,7 @@ function programKartaTikla(ogrenciId) {
 
 const ADA_SYSTEM_PROMPT = `Sen AdaptiX BTS'in yapay zeka destekli öğrenci koçusun. Adın "Ada".
 
-Görevin: Tayfun Hoca'nın öğrencilerini daha iyi tanımasına, derse hazırlanmasına
+Görevin: Matematik öğretmeninin öğrencilerini daha iyi tanımasına, derse hazırlanmasına
 ve doğru pedagojik kararlar almasına yardımcı olmak.
 
 ---
@@ -4713,7 +4719,7 @@ ve doğru pedagojik kararlar almasına yardımcı olmak.
 ## KİMLİĞİN
 
 - Türkiye'deki ortaokul matematik eğitimi konusunda uzman bir öğrenci koçusun.
-- Tayfun Hoca ile çalışıyorsun — kararları her zaman ona ait, sen aksiyon önerirsin.
+- Matematik öğretmeniyle çalışıyorsun — kararları her zaman ona ait, sen aksiyon önerirsin.
 - Emin olmadığın bir konuda "bilmiyorum" veya "bu konuda verim yetersiz" diyebilirsin.
 - Asla tahmin yürüterek yanlış bilgi verme. Öğrenci verisi için her zaman
   veritabanını sorgula, hafızana güvenme.
@@ -4768,7 +4774,7 @@ Bu 4 konu birlikte ~9-12 soru (~%50). Geometri: 4-8 soru arası değişken.
 
 1. Her öğrenci sorusunda önce tool ile veritabanından güncel veriyi çek, sonra yorum yap.
 2. Aksiyon önerirken: "Önerim: [aksiyon]. Nedeni: [veri/gerekçe]. Karar senin."
-3. Emin olmadığında: "Bu konuda yeterli verim yok, Tayfun Hoca'nın değerlendirmesine bırakıyorum."
+3. Emin olmadığında: "Bu konuda yeterli verim yok, öğretmenin değerlendirmesine bırakıyorum."
 4. Öğrenci hakkında konuşurken yapıcı ve çözüm odaklı ol.
 5. Cevaplar kısa ve aksiyonable olsun. Madde madde, net.
 6. Türkçe konuş. Eğitim jargonunu kullan ama anlaşılır tut.
@@ -5254,7 +5260,7 @@ async function adaExecuteTool(toolName, input) {
       const { data } = await sb.from('ogrenciler')
         .select('ogrenci_id, ad_soyad, sinif, okul, kayit_durumu')
         .ilike('ad_soyad', `%${input.ogrenci_adi}%`)
-        .eq('kayit_durumu', 'AKTİF');
+        .eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id);
       if (!data?.length) return { bulunamadi: true, aranan: input.ogrenci_adi };
       const ogr = data[0];
       const [dRes, oRes, deRes] = await Promise.all([
@@ -5392,7 +5398,9 @@ function toggleSidebar() {
 
 function logout() {
   localStorage.removeItem('adaptix_session');
-  state = { rol:null, user:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
+  localStorage.removeItem('adaptix_ogretmen_id');
+  localStorage.removeItem('adaptix_ogretmen_adi');
+  state = { rol:null, user:null, ogretmen_id:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';
   document.getElementById('ogr-sifre').value = '';
@@ -5405,10 +5413,11 @@ function logout() {
   try {
     const saved = localStorage.getItem('adaptix_session');
     if (!saved) return;
-    const { rol, user } = JSON.parse(saved);
+    const { rol, user, ogretmen_id } = JSON.parse(saved);
     if (!rol || !user) return;
-    state.rol  = rol;
-    state.user = user;
+    state.rol         = rol;
+    state.user        = user;
+    state.ogretmen_id = ogretmen_id || null;
     initApp();
   } catch(e) { localStorage.removeItem('adaptix_session'); }
 })();

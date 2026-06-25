@@ -876,11 +876,21 @@ tailwind.config = {
       <!-- Hedefim -->
       <div class="card-2xl" style="padding:18px 22px;margin-bottom:16px;">
         <p style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">Hedefim</p>
-        <textarea id="ogr-hedef-input" rows="2" placeholder="Hedefini buraya yaz... (Örn: LGS'de matematik bölümünü tam yapacağım!)" class="field" style="resize:vertical;"></textarea>
-        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-          <button onclick="hedefKaydet()" class="btn btn-orange">
-            <span class="material-symbols-outlined" style="font-size:17px;">save</span> Kaydet
-          </button>
+        <div id="hedef-edit-mode">
+          <textarea id="ogr-hedef-input" rows="2" placeholder="Hedefini buraya yaz... (Örn: LGS'de matematik bölümünü tam yapacağım!)" class="field" style="resize:vertical;transition:opacity .2s;"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button onclick="hedefKaydet()" class="btn btn-orange">
+              <span class="material-symbols-outlined" style="font-size:17px;">save</span> Kaydet
+            </button>
+          </div>
+        </div>
+        <div id="hedef-view-mode" style="display:none;transition:opacity .2s;">
+          <p id="ogr-hedef-label" style="margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--ink);"></p>
+          <div style="display:flex;justify-content:flex-end;">
+            <button onclick="hedefDuzenle()" class="btn" style="background:transparent;color:#f57c00;border:1.5px solid #f57c00;">
+              <span class="material-symbols-outlined" style="font-size:17px;">edit</span> Düzenle
+            </button>
+          </div>
         </div>
       </div>
 
@@ -979,7 +989,7 @@ tailwind.config = {
     </div>
 
     <!-- ── ADA AI KOÇU -->
-    <div id="page-ada" class="page" style="display:flex;flex-direction:column;height:calc(100vh - 130px);">
+    <div id="page-ada" class="page" style="flex-direction:column;height:calc(100vh - 130px);">
       <!-- Ada Header -->
       <div class="card-2xl" style="padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
         <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1223,6 +1233,7 @@ const PAGE_TITLES = {
   'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
 };
 function goPage(id) {
+  if (id === 'ada' && state.rol !== 'ogretmen') return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === id);
@@ -3557,8 +3568,15 @@ function lgsGeriSayim() {
 
 // ── HEDEF ─────────────────────────────────────────────────────
 function hedefYukle() {
-  const el = document.getElementById('ogr-hedef-input');
-  if (el) el.value = state.user.hedef || '';
+  const hedef = state.user.hedef || '';
+  if (hedef) {
+    document.getElementById('ogr-hedef-label').textContent = hedef;
+    document.getElementById('hedef-edit-mode').style.display = 'none';
+    document.getElementById('hedef-view-mode').style.display = '';
+  } else {
+    document.getElementById('hedef-edit-mode').style.display = '';
+    document.getElementById('hedef-view-mode').style.display = 'none';
+  }
 }
 
 async function hedefKaydet() {
@@ -3570,6 +3588,18 @@ async function hedefKaydet() {
   state.user.hedef = hedef;
   localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
   showToast('🎯 Hedef kaydedildi!');
+  if (hedef) {
+    document.getElementById('ogr-hedef-label').textContent = hedef;
+    document.getElementById('hedef-edit-mode').style.display = 'none';
+    document.getElementById('hedef-view-mode').style.display = '';
+  }
+}
+
+function hedefDuzenle() {
+  document.getElementById('ogr-hedef-input').value = state.user.hedef || '';
+  document.getElementById('hedef-view-mode').style.display = 'none';
+  document.getElementById('hedef-edit-mode').style.display = '';
+  document.getElementById('ogr-hedef-input').focus();
 }
 
 // ── ÖĞRENCİ PANELİ ───────────────────────────────────────────
@@ -4872,28 +4902,42 @@ function adaOgrenciSecildi() {
 }
 
 function adaTemizle() {
+  if (state.rol !== 'ogretmen') return;
   const selId = document.getElementById('ada-ogrenci')?.value || '';
   const key = 'ada_' + (selId || 'genel');
   adaConv[key] = [];
-  try { localStorage.removeItem('adaptix_' + key); } catch(e){}
+  try { localStorage.removeItem('adaptix_ada_ogretmen_' + (selId || 'genel')); } catch(e){}
   adaRenderMesajlar(selId);
   showToast('Sohbet temizlendi');
 }
 
 function adaGetConv(selId) {
+  if (state.rol !== 'ogretmen') return [];
   const key = 'ada_' + (selId || 'genel');
   if (!adaConv[key]) {
     try {
-      const saved = localStorage.getItem('adaptix_' + key);
-      adaConv[key] = saved ? JSON.parse(saved) : [];
+      const newStorageKey = 'adaptix_ada_ogretmen_' + (selId || 'genel');
+      const saved = localStorage.getItem(newStorageKey);
+      if (saved) {
+        adaConv[key] = JSON.parse(saved);
+      } else {
+        // Eski key'den göç: adaptix_ada_* → adaptix_ada_ogretmen_*
+        const oldSaved = localStorage.getItem('adaptix_' + key);
+        adaConv[key] = oldSaved ? JSON.parse(oldSaved) : [];
+        if (adaConv[key].length > 0) {
+          localStorage.setItem(newStorageKey, JSON.stringify(adaConv[key]));
+          try { localStorage.removeItem('adaptix_' + key); } catch(e) {}
+        }
+      }
     } catch(e) { adaConv[key] = []; }
   }
   return adaConv[key];
 }
 
 function adaSaveConv(selId) {
+  if (state.rol !== 'ogretmen') return;
   const key = 'ada_' + (selId || 'genel');
-  try { localStorage.setItem('adaptix_' + key, JSON.stringify(adaConv[key] || [])); } catch(e){}
+  try { localStorage.setItem('adaptix_ada_ogretmen_' + (selId || 'genel'), JSON.stringify(adaConv[key] || [])); } catch(e){}
 }
 
 function adaRenderMesajlar(selId) {

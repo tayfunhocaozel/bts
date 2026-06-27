@@ -1,17 +1,17 @@
 # AdaptiX BTS V3 — Geliştirme Dokümanı
 
 **Hazırlanma Tarihi:** 13 Haziran 2026  
-**Son Güncelleme:** 24 Haziran 2026  
+**Son Güncelleme:** 27 Haziran 2026  
 **Sürüm:** BTS V2 → V3  
 **Geliştirici:** Tayfun Hoca + Claude (Sonnet 4.6)  
 **İlgili Dosyalar:** `scholar_metric.html`, `www/index.html`  
-**GitHub Commit:** `c24140a` (son)
+**GitHub Commit:** bkz. Bölüm 14
 
 ---
 
 ## Özet
 
-Bu sürümde on büyük özellik / geliştirme eklendi:
+Bu sürümde on üç büyük özellik / geliştirme eklendi:
 
 1. **Ders Programı Modülü** — Haftalık seans grid görünümü
 2. **Ders Kaydet İyileştirmeleri** — Kazanım bazlı tamamlama durumu + alan yeniden isimlendirme
@@ -23,6 +23,9 @@ Bu sürümde on büyük özellik / geliştirme eklendi:
 8. **Çok Veli Desteği** — Öğrenci başına birden fazla veli kaydı, ayrı `veliler` tablosu
 9. **Öğrenci Ödev Sekmesi İyileştirmeleri** — Detay alanı, 7 gün filtresi, YAPILMADI/EKSİK bölümü, Bekleyen toggle kart
 10. **Rapor Ödev Bölümü İyileştirmeleri** — BEKLİYOR kart, grid yeniden düzenleme, `odev_detay` sorgu fix
+11. **Öğrenci Paneli Hedef Toggle** — Kaydet sonrası label görünümü, Düzenle ile geri dönüş
+12. **Ada Bileşeni Düzeltmeleri** — Rol koruması, `#page-ada` görünürlük fix, localStorage key ayrımı
+13. **Ödev Sekmeleri ve Düzenleme** — Öğrenci + öğretmen panelinde Bekleyenler/Tamamlananlar/Tümü sekmeleri; tamamlanan ödevlerde inline Düzenle formu
 
 ---
 
@@ -514,7 +517,200 @@ Taslak listesi ve bekleyen ödev listesindeki detay kontrolü truthy → `trim()
 
 ---
 
-## 11. Teknik Notlar
+## 11. Öğrenci Paneli Hedef Toggle
+
+### 11.1 Genel
+
+Öğrenci panelindeki "Hedefim" kartı daha önce her zaman textarea + Kaydet butonu gösteriyordu. Yeni davranış: hedef kaydedilince textarea yerine düz metin label gösterilir, Düzenle butonu ile geri dönülür.
+
+### 11.2 HTML Yapısı
+
+Tek `<textarea>` yerine iki `<div>` bloğu:
+
+| Div | Görünürlük | İçerik |
+|---|---|---|
+| `#hedef-edit-mode` | Hedef boşsa veya düzenleme modunda | `<textarea>` + Kaydet butonu |
+| `#hedef-view-mode` | Hedef kaydedilince | `<p id="ogr-hedef-label">` + Düzenle butonu |
+
+Her iki bloka `transition: opacity .2s` eklendi.
+
+### 11.3 Davranış Akışı
+
+```
+[Boş hedef] → edit-mode görünür
+    ↓ Kaydet
+[Hedef dolu] → view-mode görünür, label metni güncellenir
+    ↓ Düzenle
+[edit-mode] → textarea içinde mevcut metin, otomatik focus
+```
+
+### 11.4 Değiştirilen / Eklenen Fonksiyonlar
+
+| Fonksiyon | Değişiklik |
+|---|---|
+| `hedefYukle()` | Hedef varsa view-mode, yoksa edit-mode gösterir |
+| `hedefKaydet()` | Kayıt başarılıysa ve hedef doluysa view-mode'a geçer |
+| `hedefDuzenle()` | **Yeni.** textarea'ya mevcut metni yükler, edit-mode'a geçer, focus verir |
+
+### 11.5 localStorage Key
+
+Değiştirilmedi. `state.user.hedef` Supabase `ogrenciler` tablosuna yazılır, oturum `adaptix_session` key'inde tutulur.
+
+---
+
+## 12. Ada Bileşeni Düzeltmeleri
+
+### 12.1 `#page-ada` Görünürlük Fix
+
+`#page-ada` div'inin inline `style` attribute'unda `display:flex;` bulunuyordu. Bu, `.page { display: none; }` CSS kuralını ezerek Ada'nın tüm sayfalarda render edilmesine neden oluyordu.
+
+**Düzeltme:** Inline `display:flex;` kaldırıldı. Görünürlük tamamen CSS ile yönetiliyor:
+
+```css
+.page          { display: none; }          /* default gizli */
+.page.active   { display: block; }         /* aktif sayfa */
+#page-ada.active { display: flex !important; } /* Ada: flex layout */
+```
+
+### 12.2 Rol Koruması — `goPage()`
+
+`goPage()` fonksiyonunun başına guard eklendi:
+
+```javascript
+function goPage(id) {
+  if (id === 'ada' && state.rol !== 'ogretmen') return;
+  // ...
+}
+```
+
+`buildNav()` zaten Ada'yı yalnızca `ogretmen` pages dizisine ekliyordu; bu guard programatik erişimi de engeller.
+
+### 12.3 localStorage Key Ayrımı
+
+Ada konuşma geçmişi için localStorage key'i role göre ayrıldı:
+
+| Rol | Eski Key | Yeni Key |
+|---|---|---|
+| `ogretmen` | `adaptix_ada_genel` / `adaptix_ada_<id>` | `adaptix_ada_ogretmen_genel` / `adaptix_ada_ogretmen_<id>` |
+| `ogrenci` / `veli` | (erişim yoktu) | (erişim yok — guard ile engellendi) |
+
+**Migration:** `adaGetConv()` ilk çalışmada eski key varsa ve yeni key yoksa veriyi otomatik taşır, eski key'i siler. Mevcut öğretmen sohbet geçmişi korunur.
+
+### 12.4 Değiştirilen Fonksiyonlar
+
+| Fonksiyon | Değişiklik |
+|---|---|
+| `adaGetConv(selId)` | `state.rol !== 'ogretmen'` ise `[]` döner; yeni key okur; eski key'den migration |
+| `adaSaveConv(selId)` | `state.rol !== 'ogretmen'` ise no-op; yeni key'e yazar |
+| `adaTemizle()` | `state.rol !== 'ogretmen'` ise no-op; yeni key'i siler |
+
+---
+
+## 13. Ödev Sekmeleri ve Düzenleme
+
+### 13.1 Sorun
+
+Öğrenci panelindeki Ödevler sekmesi yalnızca `durum = 'BEKLİYOR'` ödevleri gösteriyordu. Öğrenci bir ödevi tamamladığında ödev liste dışına çıkıyor, artık düzenlenemiyordu. Öğretmen Ödev Gir sayfasında da tamamlanan ödevler görünmüyordu.
+
+### 13.2 Öğrenci Paneli — Ödevler Sekmesi
+
+**HTML Değişikliği:**
+
+İstatistik kartlarının altına üç alt sekme eklendi. Eski tek-bölüm yapısı (`ogr-bekleyen-bolum`, `ogr-yapilmayan-bolum`, `ogr-tamamlanan-bolum`) şu yapıya dönüştürüldü:
+
+```html
+<div class="tabbar">
+  <button onclick="ogrOdevSubTab('bekleyen')"   id="ogr-sub-tab-bekleyen"   class="tab active">⏳ Bekleyenler</button>
+  <button onclick="ogrOdevSubTab('tamamlanan')" id="ogr-sub-tab-tamamlanan" class="tab">✅ Tamamlananlar</button>
+  <button onclick="ogrOdevSubTab('tumsi')"      id="ogr-sub-tab-tumsi"      class="tab">📋 Tümü</button>
+</div>
+<div id="ogr-sub-bekleyen">   <div id="ogr-bekleyen-bolum"></div>   </div>
+<div id="ogr-sub-tamamlanan" class="hidden"> <div id="ogr-tamamlanan-bolum"></div> </div>
+<div id="ogr-sub-tumsi"      class="hidden"> <div id="ogr-tumsi-bolum"></div>      </div>
+```
+
+`ogr-yapilmayan-bolum` kaldırıldı — EKSİK/YAPILMADI ödevler artık Tamamlananlar sekmesinde gösterilir.
+
+**Sekme İçerikleri:**
+
+| Sekme | Filtre | Özellik |
+|---|---|---|
+| Bekleyenler | `durum = 'BEKLİYOR'` | Mevcut D/Y/B giriş formu korunur |
+| Tamamlananlar | `TAMAMLANDI \| EKSİK \| YAPILMADI` | Her kartta ✏️ Düzenle butonu |
+| Tümü | Tüm ödevler | Salt okunur kompakt liste |
+
+**`loadOgrenciPanel()` Değişiklikleri:**
+
+- Tüm ödevler tek sorguda çekilir (durum filtresi yok), `verilis_tarihi DESC` sıralı
+- `bekleyen` = BEKLİYOR, `tamamlananlar` = diğer üçü, stat sayıları buna göre güncellenir
+- Tamamlananlar kartında durum, renk ve D/Y/B bilgisi inline gösterilir
+- 7 günlük tarih filtresi kaldırıldı — tüm tamamlananlar listelenir
+
+**Tamamlananlar Düzenle Formu:**
+
+Her ödev kartında **✏️ Düzenle** butonuna tıklayınca inline açılan form:
+
+```
+[ Durum dropdown: TAMAMLANDI / EKSİK / YAPILMADI ]
+[ D | Y | B | Toplam ]  ← yalnızca TAMAMLANDI seçiliyken görünür
+[ İptal ]  [ Kaydet ]
+```
+
+`Kaydet` → `sb.from('odevler').update(...)` `.eq('odev_id', odevId).eq('ogrenci_id', state.user.ogrenci_id)` ile güncellenir, liste yenilenir.
+
+### 13.3 Öğretmen Paneli — Ödev Gir Sayfası
+
+**`loadBekleyenOdevlerForOgrenci()` Değişikliği:**
+
+Eski: Yalnızca `['BEKLİYOR','EKSİK','YAPILMADI']` durumlarını çekiyordu, limit 20.  
+Yeni: Filtre ve limit kaldırıldı — tüm ödevler çekilir.
+
+İki ayrı bölüm olarak render edilir:
+
+| Bölüm | Filtre | Eylemler |
+|---|---|---|
+| ⏳ Bekleyenler | `durum = 'BEKLİYOR'` | Yapıldı / Eksik / Yapılmadı / Sonuç Gir (mevcut butonlar) |
+| ✅ Tamamlananlar | `TAMAMLANDI \| EKSİK \| YAPILMADI` | ✏️ Düzenle (inline form) |
+
+Öğrenciye hiç ödev atanmamışsa "Bu öğrenciye henüz ödev atanmamış" mesajı gösterilir.
+
+### 13.4 Renk Sistemi
+
+| Durum | Arka Plan | Metin |
+|---|---|---|
+| BEKLİYOR | `#e8f4fb` | `#005d8d` |
+| TAMAMLANDI ≥%80 | `rgba(0,130,40,0.12)` | `#00661d` |
+| TAMAMLANDI %60–79 | `rgba(254,178,35,0.2)` | `#805600` |
+| TAMAMLANDI <%60 / EKSİK / YAPILMADI | `rgba(186,26,26,0.1)` | `#ba1a1a` |
+
+### 13.5 Yeni Fonksiyonlar
+
+**Öğrenci Paneli:**
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `ogrOdevSubTab(tab)` | Alt sekmeyi değiştirir; container ve buton class'larını toggle eder |
+| `ogrOdevDuzenleToggle(odevId)` | `ogr-duzenle-form-<id>` div'ini açar/kapar |
+| `ogrOdevDurumInputToggle(odevId)` | Durum dropdown değişince D/Y/B alanlarını göster/gizle |
+| `ogrOdevDuzenleKaydet(odevId)` | UPDATE + `ogrenci_id` koruması + panel yenile |
+
+**Öğretmen Paneli:**
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `ogretmenOdevDuzenleToggle(odevId)` | `ogr-ogr-form-<id>` div'ini açar/kapar |
+| `ogretmenOdevDurumInputToggle(odevId)` | Durum dropdown değişince D/Y/B alanlarını göster/gizle |
+| `ogretmenOdevDuzenleKaydet(odevId)` | UPDATE sadece `odev_id` ile + `loadBekleyenOdevlerForOgrenci` yenile |
+
+### 13.6 Teknik Notlar
+
+- `ogr-yapilmayan-bolum` div'i ve `ogrTekrarVer()` çağrısı kaldırılmadı — `ogrTekrarVer()` hâlâ çalışabilir (manuel çağrı veya gelecek kullanım için); sadece otomatik render artık yoktur
+- Öğrenci Düzenle formu `ogrenci_id` ile kısıtlanır → başka öğrencinin ödevi güncellenemez
+- Öğretmen Düzenle formu yalnızca `odev_id` ile günceller — `ogretmen_id` filtresi `loadBekleyenOdevlerForOgrenci` sorgusunda zaten uygulanmış
+
+---
+
+## 14. Teknik Notlar
 
 - Chart.js 4.4.4 CDN üzerinden mevcut — yeni import gerekmedi
 - `_renderSimpleKonuChart` öğrenci (`pfx='sl'`) ve veli (`pfx='vl'`) için `id` çakışmasını önler
@@ -526,7 +722,7 @@ Taslak listesi ve bekleyen ödev listesindeki detay kontrolü truthy → `trim()
 
 ---
 
-## 12. Commit Geçmişi (Bu Sürüm)
+## 15. Commit Geçmişi (Bu Sürüm)
 
 | Hash | Açıklama |
 |---|---|
@@ -546,6 +742,8 @@ Taslak listesi ve bekleyen ödev listesindeki detay kontrolü truthy → `trim()
 | `37b51ad` | Feat: Öğrenci ödev sekmesi — 4 iyileştirme |
 | `8500918` | Fix: Rapor ödev — BEKLİYOR kart + detay trim kontrolü |
 | `c24140a` | Fix: Rapor ödev grid yeniden düzenlendi + odev_detay sorgu hatası |
+| `a6b039c` | Fix: Ada rol kontrolü, görünürlük fix, localStorage key ayrımı; hedef toggle |
+| *(sonraki)* | Feat: Ödev sekmeleri (Bekleyenler/Tamamlananlar/Tümü) + inline Düzenle formu |
 
 ---
 

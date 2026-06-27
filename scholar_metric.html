@@ -919,9 +919,21 @@ tailwind.config = {
           </div>
         </div>
         <div id="bekleyen-toggle-liste" class="hidden" style="margin-bottom:16px;"></div>
-        <div id="ogr-bekleyen-bolum"></div>
-        <div id="ogr-yapilmayan-bolum"></div>
-        <div id="ogr-tamamlanan-bolum"></div>
+        <!-- Ödev Alt Sekmeleri -->
+        <div class="tabbar" style="margin-bottom:16px;">
+          <button onclick="ogrOdevSubTab('bekleyen')" id="ogr-sub-tab-bekleyen" class="tab active">⏳ Bekleyenler</button>
+          <button onclick="ogrOdevSubTab('tamamlanan')" id="ogr-sub-tab-tamamlanan" class="tab">✅ Tamamlananlar</button>
+          <button onclick="ogrOdevSubTab('tumsi')" id="ogr-sub-tab-tumsi" class="tab">📋 Tümü</button>
+        </div>
+        <div id="ogr-sub-bekleyen">
+          <div id="ogr-bekleyen-bolum"></div>
+        </div>
+        <div id="ogr-sub-tamamlanan" class="hidden">
+          <div id="ogr-tamamlanan-bolum"></div>
+        </div>
+        <div id="ogr-sub-tumsi" class="hidden">
+          <div id="ogr-tumsi-bolum"></div>
+        </div>
       </div>
 
       <div id="ogr-tab-denemeler" class="hidden">
@@ -1777,72 +1789,142 @@ async function odevSave() {
   loadBekleyenOdevlerForOgrenci(ogrenciId);
 }
 
-// ── ÖDEV GİR: bekleyen ödevleri göster ───────────────────────
+// ── ÖDEV GİR: bekleyen + tamamlanan ödevleri göster ─────────
 async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
   const { data } = await sb.from('odevler').select('*')
     .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
-    .in('durum', ['BEKLİYOR','EKSİK','YAPILMADI'])
-    .order('verilis_tarihi', { ascending: false })
-    .limit(20);
+    .order('verilis_tarihi', { ascending: false });
 
-  const odevler = data || [];
+  const tumOdevler  = data || [];
+  const bekleyenler = tumOdevler.filter(o => o.durum === 'BEKLİYOR');
+  const tamamlananlar = tumOdevler.filter(o => ['TAMAMLANDI','EKSİK','YAPILMADI'].includes(o.durum));
   const bekEl = document.getElementById('bekleyen-odev-listesi-wrapper');
 
-  if (!odevler.length) {
+  if (!tumOdevler.length) {
     bekEl.innerHTML = `
       <div class="bg-surface-container-lowest rounded-xl p-5 text-center shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
         <div class="text-3xl mb-2">🎉</div>
-        <div class="text-sm font-semibold text-tertiary">Bekleyen ödev yok</div>
+        <div class="text-sm font-semibold text-tertiary">Bu öğrenciye henüz ödev atanmamış</div>
       </div>`;
     return;
   }
 
-  bekEl.innerHTML = `
-    <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+  const durumBadgeStyle = d => d==='BEKLİYOR'?'background:#e8f4fb;color:#005d8d;'
+    : d==='TAMAMLANDI'?'background:rgba(0,130,40,0.12);color:#00661d;'
+    : d==='EKSİK'?'background:rgba(254,178,35,0.2);color:#805600;'
+    : 'background:rgba(186,26,26,0.1);color:#ba1a1a;';
+
+  const bekleyenHTML = bekleyenler.length ? `
+    <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="font-headline font-bold text-base text-on-surface">⏳ Bekleyen Ödevler</h2>
-        <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">${odevler.length}</span>
+        <h2 class="font-headline font-bold text-base text-on-surface">⏳ Bekleyenler</h2>
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background:#e8f4fb;color:#005d8d;">${bekleyenler.length}</span>
       </div>
       <div class="divide-y divide-outline-variant/20">
-        ${odevler.map(o => {
-          const durumClr = o.durum==='BEKLİYOR'?'bg-secondary-container/40 text-on-secondary-container':
-                          o.durum==='EKSİK'?'bg-error-container/40 text-error':
-                          'bg-surface-container-highest text-outline';
+        ${bekleyenler.map(o => `
+          <div class="py-3">
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-xs text-outline mt-0.5">
+                  📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}
+                  ${o.odev_detay && o.odev_detay.trim() ? '&nbsp;•&nbsp; 📄 '+o.odev_detay.trim() : ''}
+                  &nbsp;•&nbsp; <span class="opacity-60">${o.verilis_tarihi||''}</span>
+                </div>
+              </div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style="${durumBadgeStyle(o.durum)}">${o.durum}</span>
+            </div>
+            <div class="flex gap-1.5 flex-wrap">
+              <button onclick="durumDegistir('${o.odev_id}','TAMAMLANDI')"
+                class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-tertiary-container/20 text-tertiary hover:bg-tertiary hover:text-on-primary transition-colors">
+                ✅ Yapıldı
+              </button>
+              <button onclick="durumDegistir('${o.odev_id}','EKSİK')"
+                class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-error-container/20 text-error hover:bg-error hover:text-on-primary transition-colors">
+                ⚠️ Eksik
+              </button>
+              <button onclick="durumDegistir('${o.odev_id}','YAPILMADI')"
+                class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">
+                ❌ Yapılmadı
+              </button>
+              <button onclick="odevSonucGir('${o.odev_id}')"
+                class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors">
+                📝 Sonuç Gir
+              </button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : `
+    <div class="bg-surface-container-lowest rounded-xl p-5 text-center shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
+      <div class="text-3xl mb-2">🎉</div>
+      <div class="text-sm font-semibold text-tertiary">Bekleyen ödev yok</div>
+    </div>`;
+
+  const tamamlananHTML = tamamlananlar.length ? `
+    <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-headline font-bold text-base text-on-surface">✅ Tamamlananlar</h2>
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">${tamamlananlar.length}</span>
+      </div>
+      <div class="divide-y divide-outline-variant/20">
+        ${tamamlananlar.map(o => {
+          const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0, top=Number(o.toplam)||(d+y+b);
           return `
-            <div class="py-3">
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
-                  <div class="text-xs text-outline mt-0.5">
-                    📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}
-                    ${o.odev_detay && o.odev_detay.trim() ? '&nbsp;•&nbsp; 📄 '+o.odev_detay.trim() : ''}
-                    &nbsp;•&nbsp; <span class="opacity-60">${o.verilis_tarihi||''}</span>
+          <div class="py-3">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
+                ${o.durum==='TAMAMLANDI'&&top>0?`<div class="text-xs mt-0.5 text-outline">✅${d} ❌${y} ⬜${b}/${top}</div>`:''}
+              </div>
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style="${durumBadgeStyle(o.durum)}">${o.durum}</span>
+            </div>
+            <button onclick="ogretmenOdevDuzenleToggle('${o.odev_id}')"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg"
+              style="background:#e8f4fb;color:#005d8d;border:1px solid #b5d4f4;">✏️ Düzenle</button>
+            <div id="ogr-ogr-form-${o.odev_id}" class="hidden mt-3 bg-surface-container rounded-xl p-4">
+              <div class="mb-3">
+                <div class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Durum</div>
+                <select class="ogr-form-durum w-full rounded-lg px-3 py-2 text-sm bg-surface border border-outline-variant focus:outline-none"
+                  onchange="ogretmenOdevDurumInputToggle('${o.odev_id}')">
+                  <option value="TAMAMLANDI" ${o.durum==='TAMAMLANDI'?'selected':''}>✅ TAMAMLANDI</option>
+                  <option value="EKSİK" ${o.durum==='EKSİK'?'selected':''}>⚠️ EKSİK</option>
+                  <option value="YAPILMADI" ${o.durum==='YAPILMADI'?'selected':''}>❌ YAPILMADI</option>
+                </select>
+              </div>
+              <div class="ogr-form-dyb ${o.durum!=='TAMAMLANDI'?'hidden':''} mb-3">
+                <div class="grid grid-cols-4 gap-2">
+                  <div>
+                    <div class="text-xs font-semibold mb-1" style="color:#00661d;">D</div>
+                    <input type="number" class="ogr-form-d w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.dogru||''}" placeholder="0"/>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold mb-1" style="color:#ba1a1a;">Y</div>
+                    <input type="number" class="ogr-form-y w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.yanlis||''}" placeholder="0"/>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold mb-1 text-outline">B</div>
+                    <input type="number" class="ogr-form-b w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.bos||''}" placeholder="0"/>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold mb-1 text-outline">Top</div>
+                    <input type="number" class="ogr-form-top w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.toplam||''}" placeholder="0"/>
                   </div>
                 </div>
-                <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${durumClr}">${o.durum}</span>
               </div>
-              <div class="flex gap-1.5 flex-wrap">
-                <button onclick="durumDegistir('${o.odev_id}','TAMAMLANDI')"
-                  class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-tertiary-container/20 text-tertiary hover:bg-tertiary hover:text-on-primary transition-colors">
-                  ✅ Yapıldı
-                </button>
-                <button onclick="durumDegistir('${o.odev_id}','EKSİK')"
-                  class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-error-container/20 text-error hover:bg-error hover:text-on-primary transition-colors">
-                  ⚠️ Eksik
-                </button>
-                <button onclick="durumDegistir('${o.odev_id}','YAPILMADI')"
-                  class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">
-                  ❌ Yapılmadı
-                </button>
-                <button onclick="odevSonucGir('${o.odev_id}')"
-                  class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors">
-                  📝 Sonuç Gir
-                </button>
+              <div class="flex gap-2 justify-end">
+                <button onclick="ogretmenOdevDuzenleToggle('${o.odev_id}')"
+                  class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant">İptal</button>
+                <button onclick="ogretmenOdevDuzenleKaydet('${o.odev_id}')"
+                  class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-on-primary">Kaydet</button>
               </div>
-            </div>`;
+            </div>
+          </div>`;
         }).join('')}
       </div>
-    </div>`;
+    </div>` : '';
+
+  bekEl.innerHTML = bekleyenHTML + tamamlananHTML;
 }
 
 async function durumDegistir(odevId, yeniDurum) {
@@ -1853,6 +1935,35 @@ async function durumDegistir(odevId, yeniDurum) {
   const { error } = await sb.from('odevler').update({ durum: yeniDurum }).eq('odev_id', odevId);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Durum güncellendi');
+  const ogrenciId = document.getElementById('odev-ogrenci').value;
+  if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
+}
+
+function ogretmenOdevDuzenleToggle(odevId) {
+  document.getElementById('ogr-ogr-form-' + odevId)?.classList.toggle('hidden');
+}
+
+function ogretmenOdevDurumInputToggle(odevId) {
+  const form = document.getElementById('ogr-ogr-form-' + odevId);
+  if (!form) return;
+  const durum = form.querySelector('.ogr-form-durum')?.value;
+  form.querySelector('.ogr-form-dyb')?.classList.toggle('hidden', durum !== 'TAMAMLANDI');
+}
+
+async function ogretmenOdevDuzenleKaydet(odevId) {
+  const form = document.getElementById('ogr-ogr-form-' + odevId);
+  if (!form) return;
+  const durum = form.querySelector('.ogr-form-durum').value;
+  const d   = parseInt(form.querySelector('.ogr-form-d').value)   || 0;
+  const y   = parseInt(form.querySelector('.ogr-form-y').value)   || 0;
+  const b   = parseInt(form.querySelector('.ogr-form-b').value)   || 0;
+  const top = parseInt(form.querySelector('.ogr-form-top').value) || (d+y+b) || 0;
+  showToast('Kaydediliyor...');
+  const update = { durum };
+  if (durum === 'TAMAMLANDI') { update.dogru = d; update.yanlis = y; update.bos = b; update.toplam = top; }
+  const { error } = await sb.from('odevler').update(update).eq('odev_id', odevId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Kaydedildi');
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
 }
@@ -3713,22 +3824,17 @@ async function loadOgrenciPanel() {
   // Hedef yükle
   hedefYukle();
 
-  const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id);
-  const tumOdevler = odevler || [];
+  const { data: odevler } = await sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).order('verilis_tarihi', { ascending: false });
+  const tumOdevler    = odevler || [];
   const bekleyen      = tumOdevler.filter(o => String(o.durum).trim().toUpperCase() === 'BEKLİYOR');
-  const birHaftaOnce  = new Date(); birHaftaOnce.setDate(birHaftaOnce.getDate() - 7);
-  const tamamlanan    = tumOdevler.filter(o => {
-    if (String(o.durum).trim().toUpperCase() !== 'TAMAMLANDI') return false;
-    const tarih = o.verilis_tarihi || o.created_at;
-    return !tarih || new Date(tarih) >= birHaftaOnce;
-  });
-  const yapilamayanlar = tumOdevler.filter(o => ['YAPILMADI','EKSİK'].includes(String(o.durum).trim().toUpperCase()));
+  const tamamlananlar = tumOdevler.filter(o => ['TAMAMLANDI','EKSİK','YAPILMADI'].includes(String(o.durum).trim().toUpperCase()));
+  const tamamlandiSayisi = tumOdevler.filter(o => String(o.durum).trim().toUpperCase() === 'TAMAMLANDI').length;
 
   document.getElementById('ogr-stat-bekleyen').textContent   = bekleyen.length;
-  document.getElementById('ogr-stat-tamamlanan').textContent = tamamlanan.length;
+  document.getElementById('ogr-stat-tamamlanan').textContent = tamamlandiSayisi;
 
-  const topDogru  = tamamlanan.reduce((s,o)=>s+(Number(o.dogru)||0),0);
-  const topToplam = tamamlanan.reduce((s,o)=>s+(Number(o.toplam)||0),0);
+  const topDogru  = tumOdevler.filter(o=>o.durum==='TAMAMLANDI').reduce((s,o)=>s+(Number(o.dogru)||0),0);
+  const topToplam = tumOdevler.filter(o=>o.durum==='TAMAMLANDI').reduce((s,o)=>s+(Number(o.toplam)||0),0);
   document.getElementById('ogr-stat-basari').textContent = topToplam > 0 ? '%'+Math.round(topDogru/topToplam*100) : '—';
 
   // Bekleyen toggle listesi (basit, formsuz)
@@ -3744,7 +3850,7 @@ async function loadOgrenciPanel() {
       <div class="px-4 py-2 text-xs italic" style="color:var(--outline);opacity:.7;">Tüm bekleyen ödevleriniz listelenmektedir.</div>
     </div>` : '';
 
-  // Bekleyen
+  // ── Bekleyenler sub-tab ──────────────────────────────────────
   const bekEl = document.getElementById('ogr-bekleyen-bolum');
   if (!bekleyen.length) {
     bekEl.innerHTML = `
@@ -3809,75 +3915,169 @@ async function loadOgrenciPanel() {
       </div>`;
   }
 
-  // Tamamlanan
+  // ── Tamamlananlar sub-tab (TAMAMLANDI + EKSİK + YAPILMADI) ──
   const tamEl = document.getElementById('ogr-tamamlanan-bolum');
-  if (!tamamlanan.length) { tamEl.innerHTML = ''; }
-  else { tamEl.innerHTML = `
-    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
-      <div class="px-5 py-4 border-b border-outline-variant/20">
-        <span class="font-headline font-bold text-on-surface text-sm">✅ Tamamlanan Ödevler</span>
-        <div class="text-xs text-outline mt-1">Son 7 güne ait tamamlanan ödevler gösterilmektedir.</div>
-      </div>
-      ${tamamlanan.map(o => {
-        const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0;
-        const top=Number(o.toplam)||(d+y+b);
-        const pct=top>0?Math.round(d/top*100):0;
-        const col=pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
-        const bg=pct>=80?'rgba(0,130,40,0.1)':pct>=60?'rgba(254,178,35,0.2)':'rgba(186,26,26,0.1)';
-        return `
-          <div class="px-5 py-4 border-b border-outline-variant/20 last:border-0">
-            <div class="flex items-start justify-between mb-2">
-              <div>
-                <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
-                <div class="text-xs text-outline mt-0.5">${o.gun||''} — ${o.kaynak||''}</div>
-              ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
+  if (!tamamlananlar.length) {
+    tamEl.innerHTML = `
+      <div class="bg-surface-container-lowest rounded-xl p-6 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+        <div class="text-3xl mb-2">📭</div>
+        <div class="font-headline font-bold text-outline text-sm">Henüz tamamlanan ödev yok</div>
+      </div>`;
+  } else {
+    tamEl.innerHTML = `
+      <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+        <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
+          <span class="font-headline font-bold text-on-surface text-sm">Tamamlanan Ödevler</span>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">${tamamlananlar.length}</span>
+        </div>
+        ${tamamlananlar.map(o => {
+          const oid = o.odev_id || o.id || '';
+          const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0;
+          const top=Number(o.toplam)||(d+y+b);
+          const pct=top>0?Math.round(d/top*100):0;
+          const durumBg   = o.durum==='TAMAMLANDI' ? (pct>=80?'rgba(0,130,40,0.12)':pct>=60?'rgba(254,178,35,0.2)':'rgba(186,26,26,0.1)')
+                          : o.durum==='EKSİK'       ? 'rgba(254,178,35,0.2)'
+                          : 'rgba(186,26,26,0.1)';
+          const durumRenk = o.durum==='TAMAMLANDI' ? (pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a')
+                          : o.durum==='EKSİK'       ? '#805600'
+                          : '#ba1a1a';
+          return `
+          <div class="border-b border-outline-variant/15 last:border-0">
+            <div class="px-5 py-4">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
+                  <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
+                  ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
+                </div>
+                <span class="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0" style="background:${durumBg};color:${durumRenk};">${o.durum}</span>
               </div>
-              <span class="text-sm font-extrabold px-2.5 py-1 rounded-full" style="background:${bg};color:${col}">%${pct}</span>
+              ${o.durum==='TAMAMLANDI' && top>0 ? `
+              <div class="flex gap-3 text-xs mb-2">
+                <span class="font-semibold" style="color:#00661d;">✅ ${d}</span>
+                <span class="font-semibold" style="color:#ba1a1a;">❌ ${y}</span>
+                <span class="text-outline">⬜ ${b} / ${top} soru &nbsp;•&nbsp; <b>%${pct}</b></span>
+              </div>
+              <div class="progress-bar mb-2"><div class="progress-fill" style="width:${pct}%;background:${durumRenk}"></div></div>` : ''}
+              <button onclick="ogrOdevDuzenleToggle('${oid}')"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style="background:#e8f4fb;color:#005d8d;border:1px solid #b5d4f4;">✏️ Düzenle</button>
+              <!-- Düzenleme formu (gizli) -->
+              <div id="ogr-duzenle-form-${oid}" class="hidden mt-3 bg-surface-container rounded-xl p-4">
+                <div class="mb-3">
+                  <div class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Durum</div>
+                  <select class="ogr-duzenle-durum w-full rounded-lg px-3 py-2 text-sm bg-surface border border-outline-variant focus:outline-none"
+                    onchange="ogrOdevDurumInputToggle('${oid}')">
+                    <option value="TAMAMLANDI" ${o.durum==='TAMAMLANDI'?'selected':''}>✅ TAMAMLANDI</option>
+                    <option value="EKSİK" ${o.durum==='EKSİK'?'selected':''}>⚠️ EKSİK</option>
+                    <option value="YAPILMADI" ${o.durum==='YAPILMADI'?'selected':''}>❌ YAPILMADI</option>
+                  </select>
+                </div>
+                <div class="ogr-duzenle-dyb ${o.durum!=='TAMAMLANDI'?'hidden':''} mb-3">
+                  <div class="grid grid-cols-4 gap-2">
+                    <div>
+                      <div class="text-xs font-semibold mb-1" style="color:#00661d;">D</div>
+                      <input type="number" class="ogr-duzenle-d w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.dogru||''}" placeholder="0"/>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold mb-1" style="color:#ba1a1a;">Y</div>
+                      <input type="number" class="ogr-duzenle-y w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.yanlis||''}" placeholder="0"/>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold mb-1 text-outline">B</div>
+                      <input type="number" class="ogr-duzenle-b w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.bos||''}" placeholder="0"/>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold mb-1 text-outline">Top</div>
+                      <input type="number" class="ogr-duzenle-top w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.toplam||''}" placeholder="0"/>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex gap-2 justify-end">
+                  <button onclick="ogrOdevDuzenleToggle('${oid}')"
+                    class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant">İptal</button>
+                  <button onclick="ogrOdevDuzenleKaydet('${oid}')"
+                    class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-on-primary">Kaydet</button>
+                </div>
+              </div>
             </div>
-            <div class="flex gap-3 text-xs mb-2">
-              <span class="font-semibold text-tertiary">✅ ${d}</span>
-              <span class="font-semibold text-error">❌ ${y}</span>
-              <span class="text-outline">⬜ ${b} / ${top} soru</span>
-            </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
           </div>`;
-      }).join('')}
-    </div>`; }
+        }).join('')}
+      </div>`;
+  }
 
-  // YAPILMADI / EKSİK
-  const yapEl = document.getElementById('ogr-yapilmayan-bolum');
-  if (!yapilamayanlar.length) { yapEl.innerHTML = ''; return; }
-  yapEl.innerHTML = `
-    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden" style="margin-top:16px;">
-      <div class="px-5 py-4 border-b border-outline-variant/20">
-        <span class="font-headline font-bold text-on-surface text-sm">⚠️ Yapılmayan / Eksik Ödevler</span>
-      </div>
-      ${yapilamayanlar.map(o => {
-        const durumBg   = o.durum === 'YAPILMADI' ? 'rgba(186,26,26,0.1)' : 'rgba(254,178,35,0.2)';
-        const durumRenk = o.durum === 'YAPILMADI' ? '#ba1a1a' : '#805600';
-        const oid = o.odev_id || o.id || '';
-        return `
-          <div class="px-5 py-4 border-b border-outline-variant/20 last:border-0">
-            <div class="flex items-start justify-between gap-3">
+  // ── Tümü sub-tab ─────────────────────────────────────────────
+  const tumEl = document.getElementById('ogr-tumsi-bolum');
+  if (!tumOdevler.length) {
+    tumEl.innerHTML = `<div class="bg-surface-container-lowest rounded-xl p-6 text-center text-sm text-outline">Henüz ödev kaydı yok.</div>`;
+  } else {
+    const durumBadge = durum => {
+      if (durum === 'BEKLİYOR')   return 'background:#e8f4fb;color:#005d8d;';
+      if (durum === 'TAMAMLANDI') return 'background:rgba(0,130,40,0.12);color:#00661d;';
+      if (durum === 'EKSİK')      return 'background:rgba(254,178,35,0.2);color:#805600;';
+      return 'background:rgba(186,26,26,0.1);color:#ba1a1a;';
+    };
+    tumEl.innerHTML = `
+      <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+        <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
+          <span class="font-headline font-bold text-on-surface text-sm">Tüm Ödevler</span>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">${tumOdevler.length}</span>
+        </div>
+        ${tumOdevler.map(o => {
+          const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0, top=Number(o.toplam)||(d+y+b);
+          return `
+          <div class="px-5 py-3 border-b border-outline-variant/10 last:border-0">
+            <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
                 <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
-                ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
+                ${o.durum==='TAMAMLANDI'&&top>0 ? `<div class="text-xs mt-0.5 text-outline">✅${d} ❌${y} ⬜${b} / ${top}</div>` : ''}
               </div>
-              <span class="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0" style="background:${durumBg};color:${durumRenk};">${o.durum}</span>
+              <span class="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0" style="${durumBadge(o.durum)}">${o.durum}</span>
             </div>
-            <button onclick="ogrTekrarVer('${oid}')"
-              class="mt-3 text-xs font-bold px-4 py-2 rounded-full"
-              style="background:#e8f4fb;color:#005d8d;border:1px solid #b5d4f4;cursor:pointer;">
-              ↺ Tekrar Ver
-            </button>
           </div>`;
-      }).join('')}
-    </div>`;
+        }).join('')}
+      </div>`;
 }
 
 function toggleBekleyenListe() {
   document.getElementById('bekleyen-toggle-liste').classList.toggle('hidden');
+}
+
+function ogrOdevSubTab(tab) {
+  ['bekleyen','tamamlanan','tumsi'].forEach(t => {
+    document.getElementById('ogr-sub-' + t).classList.toggle('hidden', t !== tab);
+    document.getElementById('ogr-sub-tab-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+function ogrOdevDuzenleToggle(odevId) {
+  document.getElementById('ogr-duzenle-form-' + odevId)?.classList.toggle('hidden');
+}
+
+function ogrOdevDurumInputToggle(odevId) {
+  const form = document.getElementById('ogr-duzenle-form-' + odevId);
+  if (!form) return;
+  const durum = form.querySelector('.ogr-duzenle-durum')?.value;
+  form.querySelector('.ogr-duzenle-dyb')?.classList.toggle('hidden', durum !== 'TAMAMLANDI');
+}
+
+async function ogrOdevDuzenleKaydet(odevId) {
+  const form = document.getElementById('ogr-duzenle-form-' + odevId);
+  if (!form) return;
+  const durum = form.querySelector('.ogr-duzenle-durum').value;
+  const d   = parseInt(form.querySelector('.ogr-duzenle-d').value)   || 0;
+  const y   = parseInt(form.querySelector('.ogr-duzenle-y').value)   || 0;
+  const b   = parseInt(form.querySelector('.ogr-duzenle-b').value)   || 0;
+  const top = parseInt(form.querySelector('.ogr-duzenle-top').value) || (d+y+b) || 0;
+  showToast('Kaydediliyor...');
+  const update = { durum };
+  if (durum === 'TAMAMLANDI') { update.dogru = d; update.yanlis = y; update.bos = b; update.toplam = top; }
+  const { error } = await sb.from('odevler').update(update)
+    .eq('odev_id', odevId).eq('ogrenci_id', state.user.ogrenci_id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Kaydedildi');
+  loadOgrenciPanel();
 }
 
 async function ogrTekrarVer(odevId) {

@@ -5871,6 +5871,8 @@ async function loadAdaptixOgretmenler() {
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:#e8f4fb;color:#005d8d;border:none;cursor:pointer;">👁 Görüntüle</button>
                     <button onclick="adaptixOgretmenModalAc('${o.ogretmen_id}')"
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">✏️ Düzenle</button>
+                    ${!aktif && o.ogretmen_id !== 'b373a4e6-01b1-4131-99d4-a2deae98b1ea' ? `<button onclick="adaptixOgretmenSil('${o.ogretmen_id}')"
+                      style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:rgba(186,26,26,0.1);color:#ba1a1a;border:none;cursor:pointer;">🗑 Sil</button>` : ''}
                   </div>
                 </td>
               </tr>`;
@@ -5879,6 +5881,32 @@ async function loadAdaptixOgretmenler() {
         </table>
       </div>
     </div>`;
+}
+
+// ── Öğretmen Sil ──────────────────────────────────────────────
+async function adaptixOgretmenSil(ogretmenId) {
+  if (!confirm('Bu öğretmen ve tüm verileri kalıcı olarak silinecek. Emin misiniz?')) return;
+  showToast('Siliniyor...');
+
+  const { data: ogrenciler } = await sb.from('ogrenciler').select('ogrenci_id').eq('ogretmen_id', ogretmenId);
+  const ogrenciIds = (ogrenciler || []).map(o => o.ogrenci_id);
+
+  if (ogrenciIds.length > 0) {
+    await sb.from('ders_programi').delete().in('ogrenci_id', ogrenciIds);
+    await sb.from('ogrn_kaynak').delete().in('ogrenci_id', ogrenciIds);
+    await sb.from('konu_uyarilari').delete().in('ogrenci_id', ogrenciIds);
+    await sb.from('denemeler').delete().in('ogrenci_id', ogrenciIds);
+    await sb.from('odevler').delete().in('ogrenci_id', ogrenciIds);
+    await sb.from('dersler').delete().in('ogrenci_id', ogrenciIds);
+    await sb.from('ogrenciler').delete().in('ogrenci_id', ogrenciIds);
+  }
+
+  await sb.from('kullanicilar').delete().eq('deger', ogretmenId);
+  const { error } = await sb.from('ogretmenler').delete().eq('ogretmen_id', ogretmenId);
+  if (error) { showToast('❌ ' + error.message); return; }
+
+  showToast('✅ Öğretmen silindi');
+  loadAdaptixOgretmenler();
 }
 
 // ── Öğretmen Toggle Durum ─────────────────────────────────────

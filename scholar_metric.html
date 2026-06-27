@@ -1115,7 +1115,7 @@ tailwind.config = {
 
 <!-- ── AdaptiX: Öğretmen Ekle/Düzenle Modali ──────────────── -->
 <div id="adaptix-ogr-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;">
-  <div style="background:var(--surface);border-radius:20px;padding:26px 24px;max-width:420px;width:92%;box-shadow:0 8px 40px rgba(1,49,73,.25);max-height:90vh;overflow-y:auto;">
+  <div style="background:#fff;border-radius:20px;padding:26px 24px;max-width:420px;width:92%;box-shadow:0 8px 40px rgba(1,49,73,.25);max-height:90vh;overflow-y:auto;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);" id="aom-title">Yeni Öğretmen Ekle</div>
       <button onclick="adaptixOgretmenModalKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
@@ -5954,8 +5954,8 @@ async function adaptixOgretmenKaydet() {
     const hash = await hashSifre(sifre);
     const { error: kErr } = await sb.from('kullanicilar').insert({
       rol: 'ogretmen', sifre_hash: hash, deger: ogretmen.ogretmen_id
-    });
-    if (kErr) { errEl.textContent = 'Öğretmen eklendi ama giriş kaydı oluşturulamadı: ' + kErr.message; errEl.style.display = 'block'; return; }
+    }, { returning: 'minimal' });
+    if (kErr) { console.error('kullanicilar insert hatası:', kErr); errEl.textContent = 'Öğretmen eklendi ama giriş kaydı oluşturulamadı: ' + kErr.message; errEl.style.display = 'block'; return; }
     showToast('✅ Öğretmen eklendi');
   }
 

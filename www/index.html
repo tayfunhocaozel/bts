@@ -200,7 +200,9 @@ tailwind.config = {
     main { padding: 0 !important; max-width: 100% !important; }
     .page { display: none !important; }
     #page-rapor { display: block !important; }
-    #rapor-content { font-size: 10px !important; }
+    #rapor-sayfa-baslik, #rapor-ogrenci-secim { display: none !important; }
+    #rapor-content { display: none !important; }
+    #rapor-print-view { display: block !important; }
     #rapor-content .rounded-2xl { border-radius: 4px !important; }
     #rapor-content .shadow-\[0_4px_16px_rgba\(0\2c 29\2c 49\2c 0\.06\)\] { box-shadow: none !important; border: 1px solid #c0c7d1 !important; }
     #rapor-content .gap-5 { gap: 6px !important; }
@@ -231,6 +233,20 @@ tailwind.config = {
     #rapor-content .h-2\.5 { height: 5px !important; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   }
+  /* ── ADA CHATBOX ── */
+  #page-ada.active { display: flex !important; }
+  .ada-mesaj { max-width:82%; padding:11px 14px; border-radius:16px; font-size:14px; line-height:1.55; word-break:break-word; }
+  .ada-mesaj.ada { background:#e8f4fb; color:#0d2c3d; border-bottom-left-radius:4px; }
+  .ada-mesaj.ogretmen { background:#005d8d; color:#fff; border-bottom-right-radius:4px; margin-left:auto; }
+  .ada-mesaj.sistem { background:#f0f0f0; color:#555; font-size:12px; text-align:center; max-width:100%; border-radius:8px; padding:7px 12px; }
+  .ada-mesaj p { margin:0 0 6px; } .ada-mesaj p:last-child { margin:0; }
+  .ada-mesaj ul { margin:4px 0 4px 16px; padding:0; } .ada-mesaj li { margin:2px 0; }
+  .ada-yazıyor { display:flex;align-items:center;gap:5px;padding:10px 14px; }
+  .ada-yazıyor span { width:7px;height:7px;border-radius:50%;background:#005d8d;display:inline-block;animation:adaDot 1.2s infinite; }
+  .ada-yazıyor span:nth-child(2){animation-delay:.2s} .ada-yazıyor span:nth-child(3){animation-delay:.4s}
+  @keyframes adaDot { 0%,60%,100%{opacity:.2;transform:scale(.9)} 30%{opacity:1;transform:scale(1.1)} }
+  #ada-mesajlar::-webkit-scrollbar { width: 4px; }
+  #ada-mesajlar::-webkit-scrollbar-thumb { background: #cce5ff; border-radius: 4px; }
 </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen">
@@ -240,7 +256,9 @@ tailwind.config = {
   <!-- Sol: Marka paneli -->
   <div style="background:linear-gradient(150deg,#005d8d,#013149 70%);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:54px 56px;">
     <div style="position:absolute;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(245,124,0,.32),transparent 65%);right:-120px;top:-80px;"></div>
-    <div style="position:absolute;width:340px;height:340px;border-radius:50%;border:1px solid rgba(255,255,255,.12);right:60px;bottom:-120px;"></div>
+    <div style="position:absolute;width:340px;height:340px;border-radius:50%;border:1px solid rgba(255,255,255,.12);right:60px;bottom:-120px;display:flex;align-items:center;justify-content:center;">
+      <img src="public/adaptix_renk_logo.png" alt="AdaptiX" style="width:242px;height:auto;object-fit:contain;opacity:0.92;">
+    </div>
     <!-- Logo -->
     <div style="display:flex;align-items:center;gap:12px;position:relative;">
       <img src="public/adaptix_logo.png" alt="AdaptiX" style="width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.18));">
@@ -251,7 +269,7 @@ tailwind.config = {
     </div>
     <!-- Slogan -->
     <div style="position:relative;">
-      <h1 style="color:#fff;font-size:38px;line-height:1.12;font-weight:800;margin:0 0 16px;max-width:460px;"><span style="color:#feb223;">Ölçemediğin</span> hiçbir şeyi yönetemezsiniz!</h1>
+      <h1 style="color:#fff;font-size:38px;line-height:1.12;font-weight:800;margin:0 0 16px;max-width:460px;"><span style="color:#feb223;">Ölçemediğiniz</span> hiçbir şeyi yönetemezsiniz!</h1>
       <p style="color:rgba(255,255,255,.82);font-size:15px;max-width:420px;margin:0 0 34px;line-height:1.55;">LGS hazırlık sürecinde ders, ödev ve deneme performansını gerçek zamanlı izleyin.</p>
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div style="display:flex;gap:13px;align-items:center;color:rgba(255,255,255,.92);font-weight:600;font-size:14px;"><span style="width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">insights</span></span>Net trendi &amp; analiz</div>
@@ -397,14 +415,14 @@ tailwind.config = {
 
       <!-- Stats -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;" id="dashStats">
-        <div class="card-2xl stat-navy" style="padding:20px 22px;">
+        <div class="card-2xl stat-navy" style="padding:20px 22px;cursor:pointer;" onclick="goPage('ogrenciler')">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">group</span>
             <span style="font-size:12px;font-weight:600;opacity:.85;">Öğrenci</span>
           </div>
           <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-ogrenci"><div class="spinner"></div></div>
         </div>
-        <div class="card-2xl stat-amber" style="padding:20px 22px;">
+        <div class="card-2xl stat-amber" style="padding:20px 22px;cursor:pointer;" onclick="acBekleyenModal()">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">assignment_late</span>
             <span style="font-size:12px;font-weight:600;opacity:.85;">Bekleyen Ödev</span>
@@ -449,6 +467,10 @@ tailwind.config = {
           </select>
         </div>
         <div>
+          <label class="lbl">Ders Tarihi</label>
+          <input type="date" id="ders-tarih" class="field">
+        </div>
+        <div>
           <label class="lbl">Konu</label>
           <select id="ders-konu" onchange="konuSecildi()" class="field">
             <option value="">— Önce öğrenci seçin —</option>
@@ -468,9 +490,20 @@ tailwind.config = {
           <label class="lbl">Sonraki Ders Notu</label>
           <textarea id="ders-hatirlatma" rows="2" placeholder="Örn: EBOB'u derinleştir, yeni nesil soru çöz..." class="field" style="resize:vertical;"></textarea>
         </div>
-        <button onclick="dersSave()" class="btn btn-primary" style="width:100%;justify-content:center;">
+        <button onclick="dersSave()" id="btn-ders-kaydet" class="btn btn-primary" style="width:100%;justify-content:center;">
           <span class="material-symbols-outlined" style="font-size:18px;">save</span> Dersi Kaydet
         </button>
+      </div>
+
+      <!-- Son Dersler -->
+      <div id="ders-gecmis-wrapper" style="display:none;margin-top:16px;">
+        <div class="card-2xl" style="padding:20px 24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Kayıtlı Dersler</h2>
+            <span id="ders-gecmis-sayac" class="badge badge-blue">0</span>
+          </div>
+          <div id="ders-gecmis-liste"></div>
+        </div>
       </div>
     </div>
 
@@ -555,9 +588,19 @@ tailwind.config = {
           <div><label class="lbl">Okul</label><input type="text" id="yeni-okul" placeholder="Okul adı" class="field"/></div>
           <div><label class="lbl">Okul No</label><input type="number" id="yeni-okulno" placeholder="145" class="field"/></div>
         </div>
-        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div><label class="lbl">Veli Adı</label><input type="text" id="yeni-veli" placeholder="Ahmet Yılmaz" class="field"/></div>
-          <div><label class="lbl">Veli Telefonu</label><input type="number" id="yeni-tel" placeholder="5051234567" class="field"/></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <label class="lbl" style="margin:0;">Veliler *</label>
+            <button type="button" onclick="veliSatirEkle('yeni-veli-container')" style="font-size:12px;font-weight:700;color:var(--primary);background:none;border:none;cursor:pointer;padding:0;">+ Veli Ekle</button>
+          </div>
+          <div id="yeni-veli-container">
+            <div class="veli-satir" style="display:grid;grid-template-columns:100px 1fr 1fr 32px;gap:6px;align-items:end;margin-bottom:4px;">
+              <div><label class="lbl">Yakınlık</label><select class="field veli-yakinlik"><option>Anne</option><option>Baba</option><option>Vasi</option><option>Diğer</option></select></div>
+              <div><label class="lbl">Veli Adı</label><input type="text" class="field veli-adi" placeholder="Ahmet Yılmaz"/></div>
+              <div><label class="lbl">Telefon</label><input type="text" inputmode="numeric" class="field veli-tel" placeholder="05XXXXXXXXX"/></div>
+              <div style="display:flex;align-items:flex-end;"><button type="button" onclick="veliSatirSil(this)" style="width:32px;height:34px;border-radius:8px;background:#ffdad6;color:#ba1a1a;border:none;cursor:pointer;font-size:13px;line-height:1;">✕</button></div>
+            </div>
+          </div>
         </div>
         <button onclick="ogrenciEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
           <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
@@ -769,7 +812,7 @@ tailwind.config = {
 
     <!-- ── RAPOR -->
     <div id="page-rapor" class="page">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div id="rapor-sayfa-baslik" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div>
           <h2 style="font-family:Manrope;font-size:20px;font-weight:800;margin:0;color:var(--ink);">Performans Raporu</h2>
           <p style="font-size:13px;color:var(--ink-soft);margin:3px 0 0;">Konu bazlı detaylı analiz</p>
@@ -778,12 +821,13 @@ tailwind.config = {
           <span class="material-symbols-outlined" style="font-size:18px;">print</span> PDF / Yazdır
         </button>
       </div>
-      <div class="card-2xl" style="padding:18px 20px;margin-bottom:16px;">
+      <div id="rapor-ogrenci-secim" class="card-2xl" style="padding:18px 20px;margin-bottom:16px;">
         <select id="rapor-ogrenci" onchange="loadRapor()" class="field">
           <option value="">— Öğrenci seçin —</option>
         </select>
       </div>
       <div id="rapor-content"></div>
+      <div id="rapor-print-view" style="display:none;"></div>
     </div>
 
     <!-- ── ÖĞRENCİ PANELI -->
@@ -832,11 +876,21 @@ tailwind.config = {
       <!-- Hedefim -->
       <div class="card-2xl" style="padding:18px 22px;margin-bottom:16px;">
         <p style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">Hedefim</p>
-        <textarea id="ogr-hedef-input" rows="2" placeholder="Hedefini buraya yaz... (Örn: LGS'de matematik bölümünü tam yapacağım!)" class="field" style="resize:vertical;"></textarea>
-        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-          <button onclick="hedefKaydet()" class="btn btn-orange">
-            <span class="material-symbols-outlined" style="font-size:17px;">save</span> Kaydet
-          </button>
+        <div id="hedef-edit-mode">
+          <textarea id="ogr-hedef-input" rows="2" placeholder="Hedefini buraya yaz... (Örn: LGS'de matematik bölümünü tam yapacağım!)" class="field" style="resize:vertical;transition:opacity .2s;"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button onclick="hedefKaydet()" class="btn btn-orange">
+              <span class="material-symbols-outlined" style="font-size:17px;">save</span> Kaydet
+            </button>
+          </div>
+        </div>
+        <div id="hedef-view-mode" style="display:none;transition:opacity .2s;">
+          <p id="ogr-hedef-label" style="margin:0 0 10px;font-size:14px;line-height:1.6;color:var(--ink);"></p>
+          <div style="display:flex;justify-content:flex-end;">
+            <button onclick="hedefDuzenle()" class="btn" style="background:transparent;color:#f57c00;border:1.5px solid #f57c00;">
+              <span class="material-symbols-outlined" style="font-size:17px;">edit</span> Düzenle
+            </button>
+          </div>
         </div>
       </div>
 
@@ -851,9 +905,9 @@ tailwind.config = {
       <div id="ogr-tab-odevler">
         <!-- İstatistikler -->
         <div id="ogr-stat-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
-          <div class="card-2xl stat-orange" style="padding:16px;text-align:center;">
+          <div onclick="toggleBekleyenListe()" class="card-2xl" style="padding:16px;text-align:center;background:#005d8d;color:#fff;cursor:pointer;user-select:none;">
             <div style="font-family:Manrope;font-size:28px;font-weight:800;line-height:1;" id="ogr-stat-bekleyen">—</div>
-            <div style="font-size:11.5px;opacity:.85;margin-top:5px;font-weight:600;">Bekleyen</div>
+            <div style="font-size:11.5px;opacity:.85;margin-top:5px;font-weight:600;">Bekleyen ▾</div>
           </div>
           <div class="card-2xl stat-green" style="padding:16px;text-align:center;">
             <div style="font-family:Manrope;font-size:28px;font-weight:800;line-height:1;" id="ogr-stat-tamamlanan">—</div>
@@ -864,6 +918,7 @@ tailwind.config = {
             <div style="font-size:11.5px;opacity:.85;margin-top:5px;font-weight:600;">Başarı</div>
           </div>
         </div>
+        <div id="bekleyen-toggle-liste" class="hidden" style="margin-bottom:16px;"></div>
         <!-- Ödev Alt Sekmeleri -->
         <div class="tabbar" style="margin-bottom:16px;">
           <button onclick="ogrOdevSubTab('bekleyen')" id="ogr-sub-tab-bekleyen" class="tab active">⏳ Bekleyenler</button>
@@ -935,11 +990,166 @@ tailwind.config = {
       <div id="veli-tab-basari" class="hidden"></div>
     </div>
 
+    <!-- ── ADA WhatsApp Veli Seçici -->
+    <div id="ada-wa-modal" style="display:none;position:fixed;inset:0;background:rgba(1,49,73,.45);z-index:200;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:20px;padding:22px 20px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(1,49,73,.22);">
+        <div style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);margin-bottom:4px;">Hangi veliye gönderilsin?</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;">WhatsApp'ta açılacak, gönderimi siz onaylarsınız.</div>
+        <div id="ada-wa-veli-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button onclick="document.getElementById('ada-wa-modal').style.display='none'" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:12px;font-size:13px;">İptal</button>
+      </div>
+    </div>
+
+    <!-- ── ADA AI KOÇU -->
+    <div id="page-ada" class="page" style="flex-direction:column;height:calc(100vh - 130px);">
+      <!-- Ada Header -->
+      <div class="card-2xl" style="padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <img src="public/ai_simge.png" style="width:38px;height:38px;object-fit:contain;background:transparent;">
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">Ada</div>
+          <div style="font-size:12px;color:var(--ink-soft);">Yapay Zeka Destekli Öğrenci Koçu</div>
+        </div>
+        <select id="ada-ogrenci" class="field" onchange="adaOgrenciSecildi()" style="max-width:190px;font-size:13px;flex-shrink:0;">
+          <option value="">— Öğrenci seçin —</option>
+        </select>
+        <button onclick="adaTemizle()" class="btn btn-ghost" style="padding:8px 12px;font-size:13px;flex-shrink:0;" title="Sohbeti temizle">
+          <span class="material-symbols-outlined" style="font-size:17px;">refresh</span>
+        </button>
+      </div>
+      <!-- Mesaj Alanı -->
+      <div id="ada-mesajlar" style="flex:1;overflow-y:auto;padding:4px 0 12px;display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;padding:32px 20px;">
+          <div style="width:88px;height:88px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+            <img src="public/ai_simge.png" style="width:80px;height:80px;object-fit:contain;background:transparent;">
+          </div>
+          <div style="font-family:Manrope;font-weight:800;font-size:18px;color:var(--ink);margin-bottom:6px;">Merhaba, ben Ada!</div>
+          <div style="font-size:13.5px;color:var(--ink-soft);max-width:360px;margin:0 auto;line-height:1.6;">Öğrencileriniz hakkında sorularınızı yanıtlıyor, ders hazırlığınıza yardım ediyorum. Başlamak için bir öğrenci seçin veya doğrudan sorunuzu yazın.</div>
+        </div>
+      </div>
+      <!-- Input Alanı -->
+      <div style="flex-shrink:0;padding-top:10px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:flex-end;">
+        <textarea id="ada-input" rows="2" class="field" placeholder="Mesajınızı yazın… (Shift+Enter: yeni satır)" style="flex:1;resize:none;font-size:14px;padding:10px 14px;line-height:1.5;" onkeydown="adaKeyDown(event)"></textarea>
+        <button id="ada-gonder-btn" onclick="adaGonder()" class="btn btn-primary" style="padding:10px 16px;flex-shrink:0;align-self:flex-end;">
+          <span class="material-symbols-outlined" style="font-size:20px;">send</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── AdaptiX PANELİ ─────────────────────────────────────── -->
+    <div id="page-adaptix" class="page">
+
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg,#005d8d,#013149);color:#fff;border-radius:20px;padding:22px 26px;margin-bottom:20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(245,124,0,.25),transparent 65%);pointer-events:none;"></div>
+        <div style="width:46px;height:46px;background:rgba(255,255,255,.15);border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span class="material-symbols-outlined" style="font-size:24px;color:#fff;">admin_panel_settings</span>
+        </div>
+        <div style="position:relative;">
+          <div style="font-size:10.5px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.07em;">AdaptiX</div>
+          <div style="font-family:Manrope;font-size:20px;font-weight:800;margin-top:2px;">Platform Yönetimi</div>
+        </div>
+      </div>
+
+      <!-- Alt Sekmeler -->
+      <div class="tabbar" style="margin-bottom:20px;">
+        <button onclick="adaptixTab('dashboard')" id="atab-dashboard" class="tab active">
+          <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">home</span> Genel Bakış
+        </button>
+        <button onclick="adaptixTab('ogretmenler')" id="atab-ogretmenler" class="tab">
+          <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">school</span> Öğretmenler
+        </button>
+        <button onclick="adaptixTab('faturalar')" id="atab-faturalar" class="tab">
+          <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">receipt_long</span> Faturalar
+        </button>
+      </div>
+
+      <!-- ── Genel Bakış ─────────────────────────────────────── -->
+      <div id="adaptix-tab-dashboard">
+        <div id="adaptix-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px;"></div>
+        <div id="adaptix-son-ogretmenler"></div>
+      </div>
+
+      <!-- ── Öğretmenler ────────────────────────────────────── -->
+      <div id="adaptix-tab-ogretmenler" class="hidden">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+          <button onclick="adaptixOgretmenModalAc()" class="btn btn-primary">
+            <span class="material-symbols-outlined" style="font-size:18px;">person_add</span> Yeni Öğretmen
+          </button>
+        </div>
+        <div id="adaptix-ogretmenler-tablo"></div>
+      </div>
+
+      <!-- ── Faturalar ──────────────────────────────────────── -->
+      <div id="adaptix-tab-faturalar" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="adaptixFaturaFiltre('tumsi')"   id="ffiltre-tumsi"    class="btn btn-ghost"   style="font-size:12px;padding:6px 14px;">Tümü</button>
+            <button onclick="adaptixFaturaFiltre('bekleyen')" id="ffiltre-bekleyen" class="btn btn-outline" style="font-size:12px;padding:6px 14px;">Bekleyen</button>
+            <button onclick="adaptixFaturaFiltre('odendi')"   id="ffiltre-odendi"   class="btn btn-outline" style="font-size:12px;padding:6px 14px;">Ödenen</button>
+          </div>
+          <button onclick="adaptixFaturaOlustur()" class="btn btn-primary" style="font-size:13px;">
+            <span class="material-symbols-outlined" style="font-size:18px;">receipt</span> Bu Ay Fatura Oluştur
+          </button>
+        </div>
+        <div id="adaptix-faturalar-tablo"></div>
+      </div>
+
+      <!-- ── Öğretmen Detayı ────────────────────────────────── -->
+      <div id="adaptix-tab-detay" class="hidden">
+        <button onclick="adaptixTab('ogretmenler')" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#005d8d;background:none;border:none;cursor:pointer;margin-bottom:16px;padding:0;">
+          <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span> Öğretmenler'e Dön
+        </button>
+        <div id="adaptix-detay-content"></div>
+      </div>
+
+    </div><!-- /page-adaptix -->
+
     </main>
   </div><!-- /sağ taraf -->
 
   <!-- Bottom Nav (Mobile) -->
   <nav style="display:none;" id="bottomNav" class="no-print"></nav>
+</div>
+
+<!-- ── AdaptiX: Öğretmen Ekle/Düzenle Modali ──────────────── -->
+<div id="adaptix-ogr-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:20px;padding:26px 24px;max-width:420px;width:92%;box-shadow:0 8px 40px rgba(1,49,73,.25);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);" id="aom-title">Yeni Öğretmen Ekle</div>
+      <button onclick="adaptixOgretmenModalKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div><label class="lbl">Ad Soyad *</label><input type="text" id="aom-ad" class="field" placeholder="Ahmet Yılmaz"/></div>
+      <div><label class="lbl">Email</label><input type="email" id="aom-email" class="field" placeholder="ogretmen@email.com"/></div>
+      <div><label class="lbl">Telefon</label><input type="text" id="aom-tel" class="field" placeholder="05xxxxxxxxx"/></div>
+      <div id="aom-sifre-grup">
+        <label class="lbl">Şifre *</label>
+        <input type="password" id="aom-sifre" class="field" placeholder="••••••••"/>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">Öğretmen bu şifreyle sisteme giriş yapar.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px;">
+      <button onclick="adaptixOgretmenModalKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">İptal</button>
+      <button onclick="adaptixOgretmenKaydet()" class="btn btn-primary" style="flex:1;justify-content:center;">Kaydet</button>
+    </div>
+    <div id="aom-error" style="display:none;margin-top:12px;padding:10px 14px;background:#ffdad6;color:#ba1a1a;border-radius:10px;font-size:13px;font-weight:600;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ── AdaptiX: Fatura Not Modali ──────────────────────────── -->
+<div id="adaptix-not-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:380px;width:92%;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);margin-bottom:14px;">Fatura Notu</div>
+    <textarea id="anm-not" class="field" rows="4" placeholder="Not girin..." style="resize:vertical;"></textarea>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="adaptixNotModalKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">İptal</button>
+      <button onclick="adaptixNotKaydet()" class="btn btn-primary" style="flex:1;justify-content:center;">Kaydet</button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -953,9 +1163,11 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── STATE ─────────────────────────────────────────────────────
 let state = {
-  rol: null, user: null,
+  rol: null, user: null, ogretmen_id: null,
   ogrenciler: [], kazanimlar: [], kaynaklar: [],
   _dersKazanimlar: [],
+  _dersGecmisGruplar: [],
+  _dersEditSession: null,
   _odevKazanimlar: [], _odevKaynaklar: [], _odevSinif: '',
   _odevTaslaklari: [],
   _haftalikProgram: []
@@ -995,11 +1207,32 @@ async function doLogin() {
     if (activeRole === 'ogretmen') {
       const sifre = document.getElementById('ogr-sifre').value;
       const hash = await hashSifre(sifre);
-      const { data: kullanici, error: kulErr } = await sb.from('kullanicilar')
-        .select('id').eq('rol', 'ogretmen').eq('sifre_hash', hash).limit(1);
-      if (kulErr || !kullanici || kullanici.length === 0) { showError('Şifre hatalı'); return; }
+      const { data: kullanicilar, error: kulErr } = await sb.from('kullanicilar')
+        .select('id, rol, deger').eq('sifre_hash', hash).limit(1);
+      if (kulErr || !kullanicilar || kullanicilar.length === 0) { showError('Şifre hatalı'); return; }
+      const kullanici = kullanicilar[0];
+
+      if (kullanici.rol === 'adaptix') {
+        state.rol  = 'adaptix';
+        state.user = { ad: 'AdaptiX', rol: 'adaptix' };
+        initApp();
+        return;
+      }
+
+      // ogretmen rolü — deger alanı ogretmen_id taşır
+      const ogretmenId = kullanici.deger;
+      let ogretmenQuery = sb.from('ogretmenler').select('*');
+      if (ogretmenId) {
+        ogretmenQuery = ogretmenQuery.eq('ogretmen_id', ogretmenId);
+      } else {
+        ogretmenQuery = ogretmenQuery.eq('durum', 'aktif');
+      }
+      const { data: ogretmen } = await ogretmenQuery.single();
       state.rol = 'ogretmen';
-      state.user = { ad: 'Tayfun Hoca', rol: 'ogretmen' };
+      state.ogretmen_id = ogretmen?.ogretmen_id || '';
+      state.user = { ad: ogretmen?.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
+      localStorage.setItem('adaptix_ogretmen_id', state.ogretmen_id);
+      localStorage.setItem('adaptix_ogretmen_adi', ogretmen?.ad_soyad || '');
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
@@ -1014,13 +1247,16 @@ async function doLogin() {
 
     } else {
       const tel = document.getElementById('veli-tel').value.trim();
-      const { data: tumVeli, error: veliErr } = await sb.from('ogrenciler').select('ogrenci_id, veli_telefon, ad_soyad');
+      const { data: veliKayit, error: veliErr } = await sb.from('veliler')
+        .select('*, ogrenciler(*)')
+        .eq('telefon', tel)
+        .limit(1);
       if (veliErr) { showError('Bağlantı hatası: ' + veliErr.message); return; }
-      const veliOgr = (tumVeli||[]).find(o => String(o.veli_telefon||'').trim() === tel);
-      if (!veliOgr) { showError(`Bulunamadı (${(tumVeli||[]).length} kayıt içinde arandı)`); return; }
-      const { data: veliFullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', veliOgr.ogrenci_id).limit(1);
+      if (!veliKayit || !veliKayit.length) { showError('Bu telefon numarasıyla kayıtlı veli bulunamadı'); return; }
+      const ogr = veliKayit[0].ogrenciler;
+      if (!ogr) { showError('Öğrenci kaydı bulunamadı'); return; }
       state.rol = 'veli';
-      state.user = { ...((veliFullData||[])[0] || veliOgr), rol: 'veli' };
+      state.user = { ...ogr, rol: 'veli' };
     }
 
     initApp();
@@ -1040,7 +1276,7 @@ async function initApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'flex';
 
-  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
+  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user, ogretmen_id: state.ogretmen_id }));
 
   buildNav();
   updateUserInfo();
@@ -1050,6 +1286,9 @@ async function initApp() {
     fillSelects();
     loadDashboard();
     goPage('dashboard');
+  } else if (state.rol === 'adaptix') {
+    goPage('adaptix');
+    loadAdaptixDashboard();
   } else if (state.rol === 'ogrenci') {
     goPage('ogrenci-panel');
     loadOgrenciPanel();
@@ -1060,15 +1299,19 @@ async function initApp() {
 }
 
 function updateUserInfo() {
-  const ad = state.rol === 'ogretmen' ? 'Tayfun Hoca' :
+  const ad = state.rol === 'ogretmen' ? (state.user.ad || 'Öğretmen') :
+             state.rol === 'adaptix'  ? 'AdaptiX Admin' :
              state.rol === 'ogrenci'  ? (state.user.ad_soyad || state.user.ogrenci_id) :
              (state.user.ad_soyad || '') + ' — Veli';
   const sinif = state.user.sinif || '';
   const rolLabel = state.rol === 'ogretmen' ? 'Matematik Öğretmeni' :
+                   state.rol === 'adaptix'  ? 'Platform Yöneticisi' :
                    state.rol === 'ogrenci'  ? 'Öğrenci' : 'Veli';
   const rolBadge = state.rol === 'ogretmen' ? 'Öğretmen' :
+                   state.rol === 'adaptix'  ? 'AdaptiX' :
                    state.rol === 'ogrenci'  ? 'Öğrenci'  : 'Veli';
   const badgeClass = state.rol === 'ogretmen' ? 'badge badge-blue' :
+                     state.rol === 'adaptix'  ? 'badge badge-blue' :
                      state.rol === 'ogrenci'  ? 'badge badge-green' : 'badge badge-amber';
 
   const sName = document.getElementById('sidebar-name');
@@ -1098,6 +1341,9 @@ function buildNav() {
     { id: 'denemeler',    icon: 'quiz',           label: 'Denemeler' },
     { id: 'ders-programi', icon: 'calendar_month', label: 'Ders Programı' },
     { id: 'rapor',        icon: 'analytics',      label: 'Rapor' },
+    { id: 'ada',          icon: 'smart_toy',      label: 'Ada' },
+  ] : state.rol === 'adaptix' ? [
+    { id: 'adaptix', icon: 'admin_panel_settings', label: 'Platform Yönetimi' },
   ] : state.rol === 'ogrenci' ? [
     { id: 'ogrenci-panel', icon: 'dashboard', label: 'Panel' },
   ] : [
@@ -1114,7 +1360,10 @@ function buildNav() {
     const sEl = document.createElement('button');
     sEl.className = 'nav-item';
     sEl.dataset.page = p.id;
-    sEl.innerHTML = `<span class="material-symbols-outlined">${p.icon}</span>${p.label}`;
+    const iconHtml = p.id === 'ada'
+      ? `<img src="public/ai_simge.png" style="width:22px;height:22px;object-fit:contain;background:transparent;flex-shrink:0;">`
+      : `<span class="material-symbols-outlined">${p.icon}</span>`;
+    sEl.innerHTML = `${iconHtml}${p.label}`;
     sEl.onclick = () => goPage(p.id);
     sidebarNav.appendChild(sEl);
   });
@@ -1129,10 +1378,14 @@ const PAGE_TITLES = {
   'denemeler':    ['Denemeler',     'TYT/LGS deneme sonuçları'],
   'ders-programi':['Ders Programı', 'Haftalık ders takvimi'],
   'rapor':        ['Rapor',         'Öğrenci performans raporu'],
+  'ada':          ['Ada',           'Yapay zeka destekli öğrenci koçu'],
   'ogrenci-panel':['Öğrenci Paneli','Ödevler, dersler ve başarı'],
   'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
+  'adaptix':      ['Platform Yönetimi', 'Öğretmenler, faturalar ve genel bakış'],
 };
 function goPage(id) {
+  if (id === 'ada' && state.rol !== 'ogretmen') return;
+  if (state.rol === 'adaptix' && id !== 'adaptix') return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === id);
@@ -1140,6 +1393,8 @@ function goPage(id) {
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   if (id === 'ders-programi') loadHaftalikProgram();
+  if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = new Date().toISOString().split('T')[0]; }
+  if (id === 'ada') adaSayfaAcildi();
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
   const hdrSub   = document.getElementById('hdr-sub');
@@ -1159,7 +1414,7 @@ function goPage(id) {
 // ── MASTER DATA ───────────────────────────────────────────────
 async function loadMasterData() {
   const [o, k, ky] = await Promise.all([
-    sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').order('ad_soyad'),
+    sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad'),
     sb.from('kazanimlar').select('*').order('sinif').order('konu'),
     sb.from('kaynaklar').select('*').order('kaynak_adi'),
   ]);
@@ -1172,7 +1427,7 @@ function fillSelects() {
   const ogrOpts = '<option value="">— Öğrenci seçin —</option>' +
     state.ogrenciler.map(o => { const s = (o.sinif||'').trim(); return `<option value="${o.ogrenci_id}" data-sinif="${s}">${o.ad_soyad} (${s})</option>`; }).join('');
 
-  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci','program-ogrenci','deneme-ogrenci'].forEach(id => {
+  ['ders-ogrenci','odev-ogrenci','rapor-ogrenci','ata-ogrenci','program-ogrenci','deneme-ogrenci','ada-ogrenci'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = ogrOpts;
   });
@@ -1182,7 +1437,7 @@ function fillSelects() {
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function loadDashboard() {
-  document.getElementById('dash-welcome').textContent = 'Tayfun Hoca';
+  document.getElementById('dash-welcome').textContent = state.user.ad || 'Öğretmen';
   document.getElementById('stat-ogrenci').textContent = state.ogrenciler.length;
 
   // Sınıf dağılımı
@@ -1198,13 +1453,14 @@ async function loadDashboard() {
     </div>`).join('');
 
   // Ödevler
-  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','BEKLİYOR');
+  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','BEKLİYOR').eq('ogretmen_id', state.ogretmen_id);
   const bekleyen = odevler || [];
   document.getElementById('stat-bekleyen').textContent = bekleyen.length;
 
   // Bu ay ders
   const buAy = new Date();
   const { data: dersler } = await sb.from('dersler').select('kayit_id, tarih')
+    .eq('ogretmen_id', state.ogretmen_id)
     .gte('tarih', `${buAy.getFullYear()}-${String(buAy.getMonth()+1).padStart(2,'0')}-01`);
   const benzersiz = new Set((dersler||[]).map(d => d.kayit_id)).size;
   document.getElementById('stat-ders').textContent = benzersiz || (dersler||[]).length;
@@ -1267,6 +1523,8 @@ async function dersOgrenciSecildi() {
     konuSel.innerHTML = '<option value="">— Konu bulunamadı —</option>';
     showToast(`⚠️ ${sinif} için kazanım bulunamadı`);
   }
+
+  loadDersGecmisi();
 }
 
 function konuSecildi() {
@@ -1355,8 +1613,17 @@ async function dersSave() {
   if (!secili.length) { showToast('⚠️ En az bir kazanım seçin'); return; }
 
   showToast('Kaydediliyor...');
+
+  const edit = state._dersEditSession;
+  if (edit) {
+    const { error: delErr } = await sb.from('dersler').delete()
+      .eq('ogrenci_id', edit.ogrenciId).eq('tarih', edit.tarih).eq('islenen_konu', edit.konu);
+    if (delErr) { showToast('❌ Güncelleme hatası: ' + delErr.message); return; }
+  }
+
+  const tarih = edit ? edit.tarih : (document.getElementById('ders-tarih').value || new Date().toISOString().split('T')[0]);
   const rows = secili.map(s => ({
-    ogrenci_id: ogrenciId, tarih: new Date().toISOString().split('T')[0],
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih,
     islenen_konu: konu, kazanim_kodu: s.kod,
     tamamlama_durumu: s.td,
     ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma
@@ -1364,11 +1631,136 @@ async function dersSave() {
 
   const { error } = await sb.from('dersler').insert(rows);
   if (error) { showToast('❌ Hata: ' + error.message); return; }
-  showToast('✅ Ders kaydedildi!');
+
+  showToast(edit ? '✅ Ders güncellendi!' : '✅ Ders kaydedildi!');
+  state._dersEditSession = null;
+  const btn = document.getElementById('btn-ders-kaydet');
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">save</span> Dersi Kaydet';
+
   document.getElementById('ders-gorus').value = '';
   document.getElementById('ders-hatirlatma').value = '';
   document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
   document.getElementById('ders-konu').value = '';
+  document.getElementById('ders-tarih').value = new Date().toISOString().split('T')[0];
+  loadDersGecmisi();
+}
+
+async function loadDersGecmisi() {
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const wrapper = document.getElementById('ders-gecmis-wrapper');
+  const el = document.getElementById('ders-gecmis-liste');
+  if (!ogrenciId || !el) { if (wrapper) wrapper.style.display = 'none'; return; }
+
+  wrapper.style.display = '';
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div>';
+
+  const { data } = await sb.from('dersler')
+    .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
+    .order('tarih', { ascending: false })
+    .limit(60);
+
+  if (!data || !data.length) {
+    document.getElementById('ders-gecmis-sayac').textContent = '0';
+    el.innerHTML = '<div style="padding:16px;font-size:13px;color:var(--ink-soft);text-align:center;">Henüz ders kaydı yok.</div>';
+    return;
+  }
+
+  const gruplar = {};
+  data.forEach(d => {
+    const k = d.tarih + '||' + (d.islenen_konu || '');
+    if (!gruplar[k]) gruplar[k] = { tarih: d.tarih, konu: d.islenen_konu || '', kazanimlar: [], sorun: d.ders_gorusu || '' };
+    if (d.kazanim_kodu) gruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu || 'tam' });
+  });
+
+  state._dersGecmisGruplar = Object.values(gruplar);
+  document.getElementById('ders-gecmis-sayac').textContent = state._dersGecmisGruplar.length;
+
+  const tdCss = d => d === 'tam' ? 'background:#e8f5e9;color:#2e7d32;' : d === 'kismi' ? 'background:#fff3e0;color:#e65100;' : 'background:#e3f2fd;color:#1565c0;';
+  const tdLbl = d => d === 'tam' ? '✅ Tam' : d === 'kismi' ? '⚠️ Kısmi' : '🔵 Başlandı';
+
+  el.innerHTML = state._dersGecmisGruplar.map((g, i) => {
+    const tarihStr = g.tarih ? new Date(g.tarih).toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' }) : '—';
+    return `
+      <div style="border-bottom:1px solid var(--line);padding:12px 0;last:border-0;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px;">${g.konu || '—'}</div>
+            <div style="font-size:12px;color:var(--ink-soft);">📅 ${tarihStr}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button onclick="dersDuzenleAc(${i})"
+              style="display:flex;align-items:center;gap:4px;padding:5px 10px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;">
+              <span class="material-symbols-outlined" style="font-size:15px;">edit</span> Düzenle
+            </button>
+            <button onclick="dersSil(${i})"
+              style="display:flex;align-items:center;gap:4px;padding:5px 10px;font-size:12px;font-weight:600;border-radius:8px;border:1px solid #fca5a5;background:#fff5f5;color:#dc2626;cursor:pointer;">
+              <span class="material-symbols-outlined" style="font-size:15px;">delete</span> Sil
+            </button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+          ${g.kazanimlar.map(k => `
+            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface);border:1px solid var(--line);color:var(--ink);">${k.kod}</span>
+            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;${tdCss(k.durum)}">${tdLbl(k.durum)}</span>
+          `).join('')}
+        </div>
+        ${g.sorun ? `<div style="margin-top:6px;font-size:12px;color:var(--ink-soft);">⚠️ ${g.sorun}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+async function dersSil(idx) {
+  const g = state._dersGecmisGruplar[idx];
+  if (!g) return;
+  if (!confirm(`"${g.konu}" konusunu (${g.tarih}) silmek istediğinize emin misiniz?`)) return;
+
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const { error } = await sb.from('dersler').delete()
+    .eq('ogrenci_id', ogrenciId).eq('tarih', g.tarih).eq('islenen_konu', g.konu);
+  if (error) { showToast('❌ Hata: ' + error.message); return; }
+  showToast('🗑️ Ders silindi');
+  loadDersGecmisi();
+}
+
+async function dersDuzenleAc(idx) {
+  const g = state._dersGecmisGruplar[idx];
+  if (!g) return;
+
+  const ogrenciId = document.getElementById('ders-ogrenci').value;
+  const { data: rows } = await sb.from('dersler')
+    .select('kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).eq('tarih', g.tarih).eq('islenen_konu', g.konu);
+
+  if (!rows || !rows.length) return;
+
+  // Konuyu seç ve checkboxları render et
+  document.getElementById('ders-konu').value = g.konu;
+  konuSecildi();
+
+  // Kazanım map: kod → td durumu
+  const kazMap = {};
+  rows.forEach(r => { if (r.kazanim_kodu) kazMap[r.kazanim_kodu] = r.tamamlama_durumu || 'tam'; });
+
+  // Checkboxları işaretle
+  document.querySelectorAll('#kazanim-checkboxlar input[type=checkbox]').forEach(cb => {
+    if (kazMap[cb.value] !== undefined && !cb.checked) {
+      toggleKazanim({ preventDefault: () => {} }, 'kaz-' + cb.dataset.idx);
+      setTD(cb.dataset.idx, kazMap[cb.value]);
+    }
+  });
+
+  document.getElementById('ders-gorus').value = rows[0].ders_gorusu || '';
+  document.getElementById('ders-hatirlatma').value = rows[0].sonraki_ders_hatirlatma || '';
+  document.getElementById('ders-tarih').value = g.tarih;
+
+  state._dersEditSession = { ogrenciId, tarih: g.tarih, konu: g.konu };
+
+  const btn = document.getElementById('btn-ders-kaydet');
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">edit</span> Dersi Güncelle';
+
+  document.getElementById('page-ders').scrollIntoView({ behavior: 'smooth' });
+  showToast('✏️ Düzenleme modu — değişiklikleri kaydedin');
 }
 
 // ── ÖDEV GİR ──────────────────────────────────────────────────
@@ -1386,7 +1778,7 @@ async function odevOgrenciSecildi() {
 
   const [kazRes, kayRes] = await Promise.all([
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(sinif||'').replace(/[^0-9]/g,'')}%`).order('konu'),
-    sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId)
+    sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
   ]);
 
   state._odevKazanimlar = kazRes.data || [];
@@ -1498,7 +1890,7 @@ function renderTaslakTablo() {
       <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-primary flex-shrink-0 mt-0.5">${t.gun}</span>
       <div class="flex-1 min-w-0">
         <div class="text-sm font-semibold text-on-surface">${t.konu}${t.kazanim?' — '+t.kazanim:''}</div>
-        <div class="text-xs text-outline mt-0.5">📚 ${t.kaynak}${t.odev_detay?' &nbsp;•&nbsp; 📄 '+t.odev_detay:''}</div>
+        <div class="text-xs text-outline mt-0.5">📚 ${t.kaynak}${t.odev_detay && t.odev_detay.trim() ? ' &nbsp;•&nbsp; 📄 '+t.odev_detay.trim() : ''}</div>
       </div>
       <button onclick="taslakSil(${t._id})" class="text-error hover:bg-error-container/30 w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 text-lg font-bold">×</button>
     </div>`).join('');
@@ -1512,7 +1904,7 @@ async function odevSave() {
   showToast('Kaydediliyor...');
   const tarih = new Date().toISOString().split('T')[0];
   const rows = state._odevTaslaklari.map(t => ({
-    ogrenci_id: ogrenciId,
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
     verilis_tarihi: tarih,
     gun: t.gun,
     kaynak: t.kaynak,
@@ -1535,11 +1927,11 @@ async function odevSave() {
 // ── ÖDEV GİR: bekleyen + tamamlanan ödevleri göster ─────────
 async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
   const { data } = await sb.from('odevler').select('*')
-    .eq('ogrenci_id', ogrenciId)
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
     .order('verilis_tarihi', { ascending: false });
 
-  const tumOdevler    = data || [];
-  const bekleyenler   = tumOdevler.filter(o => o.durum === 'BEKLİYOR');
+  const tumOdevler  = data || [];
+  const bekleyenler = tumOdevler.filter(o => o.durum === 'BEKLİYOR');
   const tamamlananlar = tumOdevler.filter(o => ['TAMAMLANDI','EKSİK','YAPILMADI'].includes(o.durum));
   const bekEl = document.getElementById('bekleyen-odev-listesi-wrapper');
 
@@ -1571,7 +1963,7 @@ async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
                 <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
                 <div class="text-xs text-outline mt-0.5">
                   📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}
-                  ${o.odev_detay?'&nbsp;•&nbsp; 📄 '+o.odev_detay:''}
+                  ${o.odev_detay && o.odev_detay.trim() ? '&nbsp;•&nbsp; 📄 '+o.odev_detay.trim() : ''}
                   &nbsp;•&nbsp; <span class="opacity-60">${o.verilis_tarihi||''}</span>
                 </div>
               </div>
@@ -1711,6 +2103,137 @@ async function ogretmenOdevDuzenleKaydet(odevId) {
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
 }
 
+// ── BEKLEYENLERİ YÖNETİ MODAL ─────────────────────────────────
+async function acBekleyenModal() {
+  if (state.rol !== 'ogretmen') return;
+  const modal = document.getElementById('bekleyen-modal');
+  const liste = document.getElementById('bm-liste');
+  modal.classList.remove('hidden');
+  liste.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+
+  const { data } = await sb.from('odevler')
+    .select('*').eq('durum', 'BEKLİYOR').eq('ogretmen_id', state.ogretmen_id)
+    .order('verilis_tarihi', { ascending: true });
+
+  const odevler = data || [];
+  document.getElementById('bm-sayac').textContent = odevler.length;
+
+  if (!odevler.length) {
+    liste.innerHTML = '<div class="flex flex-col items-center justify-center py-16 text-outline"><div class="text-4xl mb-3">🎉</div><div class="text-sm font-semibold">Bekleyen ödev yok!</div></div>';
+    return;
+  }
+
+  const ogrMap = {};
+  state.ogrenciler.forEach(o => { ogrMap[o.ogrenci_id] = o.ad_soyad; });
+
+  liste.innerHTML = odevler.map(o => {
+    const ad   = ogrMap[o.ogrenci_id] || '—';
+    const konu = (o.konu||'—').split(' — ')[0];
+    const id   = o.odev_id;
+    return `
+      <div id="bm-row-${id}" class="border-b border-outline-variant/10 last:border-0">
+        <div class="flex items-start gap-2 px-4 py-3">
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-bold text-on-surface truncate">${ad}</div>
+            <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+              <span class="text-xs text-outline">${o.gun||'—'}</span>
+              <span class="text-xs font-medium text-on-surface-variant">${o.kaynak||'—'}</span>
+              <span class="text-xs text-primary">${konu}</span>
+            </div>
+          </div>
+          <div class="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+            <button onclick="bekleyenModalYapildi('${id}')"
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              style="background:#e8f5e9;color:#00661d;">✓ Yapıldı</button>
+            <button onclick="bekleyenModalDurumGuncelle('${id}','EKSİK')"
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              style="background:#fff3e0;color:#805600;">Eksik</button>
+            <button onclick="bekleyenModalDurumGuncelle('${id}','YAPILMADI')"
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              style="background:#fce8e8;color:#ba1a1a;">Yapılmadı</button>
+          </div>
+        </div>
+        <div id="bm-dyb-${id}" style="display:none;" class="px-4 pb-3">
+          <div class="bg-surface-container rounded-xl p-3">
+            <div class="grid grid-cols-4 gap-2 mb-2">
+              <div>
+                <div class="text-xs font-semibold mb-1" style="color:#00661d;">Doğru</div>
+                <input id="bm-d-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1" style="color:#ba1a1a;">Yanlış</div>
+                <input id="bm-y-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1 text-outline">Boş</div>
+                <input id="bm-b-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+              <div>
+                <div class="text-xs font-semibold mb-1 text-outline">Toplam</div>
+                <input id="bm-t-${id}" type="number" min="0" placeholder="0"
+                  class="w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              </div>
+            </div>
+            <div class="flex justify-end gap-2">
+              <button onclick="bekleyenModalYapildi('${id}')"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">İptal</button>
+              <button onclick="bekleyenModalDybKaydet('${id}')"
+                class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:bg-primary/80 transition-colors">Kaydet</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function bekleyenModalYapildi(id) {
+  const dyb = document.getElementById('bm-dyb-' + id);
+  if (!dyb) return;
+  const show = dyb.style.display === 'none';
+  dyb.style.display = show ? '' : 'none';
+  if (show) document.getElementById('bm-d-' + id)?.focus();
+}
+
+async function bekleyenModalDurumGuncelle(id, durum) {
+  showToast('Güncelleniyor...');
+  const { error } = await sb.from('odevler').update({ durum }).eq('odev_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  document.getElementById('bm-row-' + id)?.remove();
+  bmSayacGuncelle();
+  showToast(durum === 'EKSİK' ? '⚠️ Eksik işaretlendi' : '❌ Yapılmadı işaretlendi');
+}
+
+async function bekleyenModalDybKaydet(id) {
+  const d = parseInt(document.getElementById('bm-d-' + id)?.value) || 0;
+  const y = parseInt(document.getElementById('bm-y-' + id)?.value) || 0;
+  const b = parseInt(document.getElementById('bm-b-' + id)?.value) || 0;
+  const t = parseInt(document.getElementById('bm-t-' + id)?.value) || (d + y + b) || 0;
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('odevler').update({
+    durum: 'TAMAMLANDI', dogru: d, yanlis: y, bos: b, toplam: t
+  }).eq('odev_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  document.getElementById('bm-row-' + id)?.remove();
+  bmSayacGuncelle();
+  const pct = t > 0 ? Math.round(d / t * 100) : 0;
+  showToast(`✅ Kaydedildi (%${pct} doğru)`);
+}
+
+function bmSayacGuncelle() {
+  const kalan = document.querySelectorAll('#bm-liste [id^="bm-row-"]').length;
+  const el = document.getElementById('bm-sayac');
+  if (el) el.textContent = kalan;
+  if (kalan === 0) {
+    document.getElementById('bm-liste').innerHTML =
+      '<div class="flex flex-col items-center justify-center py-16 text-outline"><div class="text-4xl mb-3">🎉</div><div class="text-sm font-semibold">Tüm ödevler işlendi!</div></div>';
+  }
+  const statEl = document.getElementById('stat-bekleyen');
+  if (statEl) statEl.textContent = kalan;
+}
+
 function odevSonucGir(odevId) {
   const modal = document.getElementById('sonuc-modal');
   modal.dataset.odevId = odevId;
@@ -1755,16 +2278,18 @@ function renderOgrenciler() {
   if (!filtered.length) { el.innerHTML = '<div class="p-4 text-sm text-outline">Öğrenci bulunamadı</div>'; return; }
 
   el.innerHTML = filtered.map(o => `
-    <div class="flex items-center gap-3 px-4 py-3">
-      <div class="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center font-headline font-bold text-primary text-sm flex-shrink-0">
-        ${(o.ad_soyad||'?').charAt(0)}
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-sm font-semibold text-on-surface truncate">${o.ad_soyad||'—'}</div>
-        <div class="text-xs text-outline">${o.sinif||'—'} — ${o.ogrenci_id}</div>
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/10 last:border-0">
+      <div onclick="goRaporFor('${o.ogrenci_id}')" class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-75 transition-opacity">
+        <div class="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center font-headline font-bold text-primary text-sm flex-shrink-0">
+          ${(o.ad_soyad||'?').charAt(0)}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-on-surface truncate">${o.ad_soyad||'—'}</div>
+          <div class="text-xs text-outline">${o.sinif||'—'} — ${o.ogrenci_id}</div>
+        </div>
       </div>
       <button onclick="ogrenciDuzenle('${o.ogrenci_id}')"
-        class="text-xs font-bold px-3 py-1.5 rounded-full bg-tertiary-container text-on-tertiary-container hover:bg-tertiary hover:text-on-tertiary transition-colors">
+        class="text-xs font-bold px-3 py-1.5 rounded-full bg-tertiary-container text-on-tertiary-container hover:bg-tertiary hover:text-on-tertiary transition-colors flex-shrink-0">
         ✏️ Düzenle
       </button>
     </div>`).join('');
@@ -1776,21 +2301,25 @@ function goRaporFor(id) {
   loadRapor();
 }
 
-function ogrenciDuzenle(id) {
+async function ogrenciDuzenle(id) {
   const o = state.ogrenciler.find(x => x.ogrenci_id === id);
   if (!o) return;
   const m = document.getElementById('ogr-duzenle-modal');
   m.dataset.ogrenciId = id;
-  m.querySelector('#od-ad').value     = o.ad_soyad    || '';
-  m.querySelector('#od-sinif').value  = o.sinif        || '';
-  m.querySelector('#od-sube').value   = o.sube         || '';
-  m.querySelector('#od-okul').value   = o.okul         || '';
+  m.querySelector('#od-ad').value     = o.ad_soyad || '';
+  m.querySelector('#od-sinif').value  = o.sinif    || '';
+  m.querySelector('#od-sube').value   = o.sube     || '';
+  m.querySelector('#od-okul').value   = o.okul     || '';
   m.querySelector('#od-tc').value     = o.tc_no    || '';
-  m.querySelector('#od-okulno').value = o.okul_no      || '';
-  m.querySelector('#od-veli').value   = o.veli_ad_soyad     || '';
-  m.querySelector('#od-tel').value    = o.veli_telefon|| '';
+  m.querySelector('#od-okulno').value = o.okul_no  || '';
   m.classList.remove('hidden');
   m.querySelector('#od-ad').focus();
+  const container = document.getElementById('od-veli-container');
+  container.innerHTML = '<div style="font-size:12px;color:#888;padding:4px 0;">Yükleniyor...</div>';
+  const { data: mevVeliler } = await sb.from('veliler').select('*').eq('ogrenci_id', id);
+  container.innerHTML = (mevVeliler && mevVeliler.length)
+    ? mevVeliler.map(v => veliSatirHTML(v.yakinlik||'Diğer', v.veli_adi, v.telefon)).join('')
+    : veliSatirHTML('Anne', o.veli_ad_soyad||'', o.veli_telefon||'');
 }
 
 async function ogrenciDuzenleKaydet() {
@@ -1798,22 +2327,26 @@ async function ogrenciDuzenleKaydet() {
   const id = m.dataset.ogrenciId;
   const ad = m.querySelector('#od-ad').value.trim();
   if (!ad) { showToast('⚠️ Ad Soyad zorunlu'); return; }
+  const yeniVeliler = getVeliFormData('od-veli-container');
+  if (!yeniVeliler.length) { showToast('⚠️ En az 1 veli zorunlu'); return; }
   const payload = {
-    ad_soyad:      ad,
-    sinif:         m.querySelector('#od-sinif').value,
-    sube:          m.querySelector('#od-sube').value.trim(),
-    okul:          m.querySelector('#od-okul').value.trim(),
-    tc_no:     m.querySelector('#od-tc').value.trim(),
-    okul_no:       m.querySelector('#od-okulno').value.trim(),
-    veli_ad_soyad:      m.querySelector('#od-veli').value.trim(),
-    veli_telefon: m.querySelector('#od-tel').value.trim(),
+    ad_soyad: ad,
+    sinif:    m.querySelector('#od-sinif').value,
+    sube:     m.querySelector('#od-sube').value.trim(),
+    okul:     m.querySelector('#od-okul').value.trim(),
+    tc_no:    m.querySelector('#od-tc').value.trim(),
+    okul_no:  m.querySelector('#od-okulno').value.trim(),
   };
   m.classList.add('hidden');
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').update(payload).eq('ogrenci_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
-  showToast('✅ Bilgiler güncellendi');
-  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  await sb.from('veliler').delete().eq('ogrenci_id', id);
+  const { error: vErr } = await sb.from('veliler').insert(
+    yeniVeliler.map(v => ({ ogrenci_id: id, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
+  );
+  if (vErr) { showToast('⚠️ Veli kaydedilemedi: ' + vErr.message); } else { showToast('✅ Bilgiler güncellendi'); }
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
@@ -1834,10 +2367,40 @@ async function ogrenciSil() {
   const { error } = await sb.from('ogrenciler').delete().eq('ogrenci_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('🗑️ Öğrenci silindi');
-  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
+}
+
+function veliSatirHTML(yakinlik, adi, tel) {
+  const opts = ['Anne','Baba','Vasi','Diğer'].map(o =>
+    `<option${o===yakinlik?' selected':''}>${o}</option>`).join('');
+  return `<div class="veli-satir" style="display:grid;grid-template-columns:100px 1fr 1fr 32px;gap:6px;align-items:end;margin-bottom:4px;">
+    <div><label class="lbl">Yakınlık</label><select class="field veli-yakinlik" style="font-size:13px;">${opts}</select></div>
+    <div><label class="lbl">Veli Adı</label><input type="text" class="field veli-adi" placeholder="Ahmet Yılmaz" value="${(adi||'').replace(/"/g,'&quot;')}" style="font-size:13px;"></div>
+    <div><label class="lbl">Telefon</label><input type="text" inputmode="numeric" class="field veli-tel" placeholder="05XXXXXXXXX" value="${(tel||'').replace(/"/g,'&quot;')}" style="font-size:13px;"></div>
+    <div style="display:flex;align-items:flex-end;"><button type="button" onclick="veliSatirSil(this)" style="width:32px;height:34px;border-radius:8px;background:#ffdad6;color:#ba1a1a;border:none;cursor:pointer;font-size:13px;line-height:1;">✕</button></div>
+  </div>`;
+}
+function veliSatirEkle(containerId) {
+  const c = document.getElementById(containerId);
+  if (c.querySelectorAll('.veli-satir').length >= 3) { showToast('⚠️ En fazla 3 veli eklenebilir'); return; }
+  c.insertAdjacentHTML('beforeend', veliSatirHTML('Anne', '', ''));
+}
+function veliSatirSil(btn) {
+  const c = btn.closest('[id$="-veli-container"]');
+  if (c.querySelectorAll('.veli-satir').length <= 1) { showToast('⚠️ En az 1 veli zorunlu'); return; }
+  btn.closest('.veli-satir').remove();
+}
+function getVeliFormData(containerId) {
+  return Array.from(document.getElementById(containerId).querySelectorAll('.veli-satir'))
+    .map(row => ({
+      yakinlik: row.querySelector('.veli-yakinlik').value,
+      veli_adi: row.querySelector('.veli-adi').value.trim(),
+      telefon:  row.querySelector('.veli-tel').value.trim()
+    }))
+    .filter(v => v.veli_adi && v.telefon);
 }
 
 async function ogrenciEkle() {
@@ -1845,13 +2408,13 @@ async function ogrenciEkle() {
   const tc = document.getElementById('yeni-tc').value.trim();
   if (!ad) { showToast('⚠️ Ad Soyad zorunlu'); return; }
   if (!tc) { showToast('⚠️ TC kimlik zorunlu'); return; }
+  const veliler = getVeliFormData('yeni-veli-container');
+  if (!veliler.length) { showToast('⚠️ En az 1 veli eklenmeli'); return; }
 
-  const sinif = document.getElementById('yeni-sinif').value;
-  const sube  = document.getElementById('yeni-sube').value.trim();
-  const okul  = document.getElementById('yeni-okul').value.trim();
+  const sinif  = document.getElementById('yeni-sinif').value;
+  const sube   = document.getElementById('yeni-sube').value.trim();
+  const okul   = document.getElementById('yeni-okul').value.trim();
   const okulno = document.getElementById('yeni-okulno').value;
-  const veli  = document.getElementById('yeni-veli').value.trim();
-  const tel   = document.getElementById('yeni-tel').value.trim();
 
   const lastId = state.ogrenciler.length + 1001;
   const newId  = 'OGR-' + lastId;
@@ -1859,16 +2422,20 @@ async function ogrenciEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').insert({
     ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
-    tc_no: tc, okul_no: okulno, veli_ad_soyad: veli, veli_telefon: tel, kayit_durumu: 'AKTİF'
+    tc_no: tc, okul_no: okulno, kayit_durumu: 'AKTİF', ogretmen_id: state.ogretmen_id
   });
   if (error) { showToast('❌ ' + error.message); return; }
-  showToast('✅ Öğrenci eklendi!');
-  // Listeyi güncelle
-  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').order('ad_soyad');
+  const { error: vErr } = await sb.from('veliler').insert(
+    veliler.map(v => ({ ogrenci_id: newId, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
+  );
+  if (vErr) { showToast('⚠️ Öğrenci eklendi ancak veli kaydedilemedi: ' + vErr.message); }
+  else { showToast('✅ Öğrenci eklendi!'); }
+  const { data } = await sb.from('ogrenciler').select('*').eq('kayit_durumu','AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad');
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
-  ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno','yeni-veli','yeni-tel'].forEach(id => document.getElementById(id).value = '');
+  ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('yeni-veli-container').innerHTML = veliSatirHTML('Anne', '', '');
 }
 
 // ── KAYNAKLAR ─────────────────────────────────────────────────
@@ -1932,7 +2499,7 @@ async function ataOgrenciSecildi() {
   if (!ogrenciId) { document.getElementById('ogrenci-kaynak-listesi').innerHTML = ''; return; }
 
   // ogrn_kaynak: kayit_id, ogrenci_id, kaynak_adi, konu_sayisi, islenen_konu, ilerleme_yuzdesi
-  const { data } = await sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId);
+  const { data } = await sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id);
   const kaynaklar = data || [];
   const el = document.getElementById('ogrenci-kaynak-listesi');
 
@@ -1971,12 +2538,12 @@ async function kaynakAta() {
 
   showToast('Atanıyor...');
   // kaynakId burada kaynak_adi değeri taşıyor (select value="kaynak_adi")
-  const { error } = await sb.from('ogrn_kaynak').insert({ 
-    ogrenci_id: ogrenciId, 
-    kaynak_adi: kaynakId, 
+  const { error } = await sb.from('ogrn_kaynak').insert({
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
+    kaynak_adi: kaynakId,
     konu_sayisi: 12,
-    islenen_konu: 0, 
-    ilerleme_yuzdesi: 0 
+    islenen_konu: 0,
+    ilerleme_yuzdesi: 0
   });
   if (error) { showToast('❌ ' + (error.code === '23505' ? 'Bu kaynak zaten atanmış' : error.message)); return; }
   showToast('✅ Kaynak atandı!');
@@ -2099,7 +2666,7 @@ async function denemeEkle() {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('denemeler').insert({
     deneme_id: crypto.randomUUID(),
-    ogrenci_id: ogrenciId, tarih, deneme_adi: adi,
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih, deneme_adi: adi,
     dogru: d, yanlis: y, bos: b, toplam_soru: top,
     net, basari_yuzdesi: pct
   });
@@ -2118,7 +2685,7 @@ async function loadDenemeler() {
   el.innerHTML = '<div class="flex justify-center py-8"><div class="spinner"></div></div>';
 
   const { data, error } = await sb.from('denemeler').select('*')
-    .eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false });
+    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).order('tarih', { ascending: false });
 
   if (error) { el.innerHTML = `<div class="text-sm text-error text-center py-4">${error.message}</div>`; return; }
   const liste = data || [];
@@ -2204,13 +2771,15 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', ogrenciId).eq('durum','TAMAMLANDI'),
+    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId),
     sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
-    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
-  const odevler  = odevRes.data  || [];
+  if (odevRes.error) console.error('Rapor ödev sorgu hatası:', odevRes.error.message);
+  const tumOdevler        = odevRes.data || [];
+  const tamamlananOdevler = tumOdevler.filter(o => o.durum === 'TAMAMLANDI');
   const kazData  = kazRes.data   || [];
   const dersler  = dersRes.data  || [];
   const denemeler = denemeRes.data || [];
@@ -2218,7 +2787,7 @@ async function loadRapor() {
 
   // Konu istatistikleri
   const konuMap = {};
-  odevler.forEach(o => {
+  tamamlananOdevler.forEach(o => {
     const konu = (o.konu||'').split(' — ')[0];
     if (!konu) return;
     if (!konuMap[konu]) konuMap[konu] = { dogru:0, yanlis:0, bos:0, toplam:0 };
@@ -2233,7 +2802,7 @@ async function loadRapor() {
 
   // Konu bazlı zaman serisi (tamamlanan ödevler, tarihe göre sıralı)
   const konuOdevler = {};
-  odevler.forEach(o => {
+  tamamlananOdevler.forEach(o => {
     const konu = (o.konu||'').split(' — ')[0];
     if (!konu) return;
     const tot = Number(o.toplam)||0;
@@ -2258,7 +2827,7 @@ async function loadRapor() {
   let mevcutUyarilar = [];
   if (state.rol === 'ogretmen') {
     const { data: uyD } = await sb.from('konu_uyarilari')
-      .select('*').eq('ogrenci_id', ogrenciId)
+      .select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
       .order('uyari_tarihi', { ascending: false });
     mevcutUyarilar = uyD || [];
   }
@@ -2278,13 +2847,21 @@ async function loadRapor() {
   const dersGrup = {};
   dersler.forEach(d => {
     const k = d.tarih+'||'+(d.islenen_konu||'');
-    if (!dersGrup[k]) dersGrup[k] = { tarih:d.tarih, konu:d.islenen_konu, kazanimlar:[] };
+    if (!dersGrup[k]) dersGrup[k] = { tarih:d.tarih, konu:d.islenen_konu, kazanimlar:[], tamamlamaDurumu: d.tamamlama_durumu||'tam' };
     if (d.kazanim_kodu) dersGrup[k].kazanimlar.push(d.kazanim_kodu);
   });
-  const dersSatir = Object.values(dersGrup).slice(0, 15);
+  const dersGrupArr    = Object.values(dersGrup);
+  const dersOturumSayisi = dersGrupArr.length;
+  const dersSatir      = dersGrupArr.slice(0, 15);
 
   // Tarih
   const bugun = new Date().toLocaleDateString('tr-TR');
+
+  // Ödev istatistikleri
+  const odevTamamlananSayi = tamamlananOdevler.length;
+  const odevYapilmadiSayi  = tumOdevler.filter(o => o.durum === 'YAPILMADI').length;
+  const odevEksikSayi      = tumOdevler.filter(o => o.durum === 'EKSİK').length;
+  const odevBekleyenSayi   = tumOdevler.filter(o => o.durum === 'BEKLİYOR').length;
 
   el.innerHTML = `
   <!-- Başlık -->
@@ -2297,7 +2874,7 @@ async function loadRapor() {
       </div>
       <div class="text-right">
         <div class="text-xs text-outline">${bugun}</div>
-        <div class="text-xs font-semibold text-primary mt-1">${dersler.length} ders kaydı</div>
+        <div class="text-xs font-semibold text-primary mt-1">${dersOturumSayisi} ders oturumu</div>
       </div>
     </div>
   </div>
@@ -2422,6 +2999,40 @@ async function loadRapor() {
     </div>
   </div>
 
+  <!-- Ödev Analizi -->
+  <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mt-5">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-xl">assignment</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Ödevler</h2>
+      <span class="ml-auto text-xs text-outline">${tumOdevler.length} ödev</span>
+    </div>
+    <div class="p-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-90 transition-opacity" style="background:#005d8d;" onclick="toggleRaporOdevFiltre('BEKLİYOR')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:rgba(255,255,255,.8);">Bekleyen</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#fff;">${odevBekleyenSayi}</div>
+        </div>
+        <div class="rounded-2xl p-4 bg-surface-container">
+          <div class="text-xs font-semibold text-outline uppercase tracking-wide mb-1">Toplam</div>
+          <div class="font-headline text-2xl font-extrabold text-on-surface">${tumOdevler.length}</div>
+        </div>
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-80 transition-opacity" style="background:#e8f5e9;" onclick="toggleRaporOdevFiltre('TAMAMLANDI')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:#00661d;">Tamamlanan</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#00661d;">${odevTamamlananSayi}</div>
+        </div>
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-80 transition-opacity" style="background:#fce8e8;" onclick="toggleRaporOdevFiltre('YAPILMADI')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:#ba1a1a;">Yapılmadı</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#ba1a1a;">${odevYapilmadiSayi}</div>
+        </div>
+        <div class="rounded-2xl p-4 cursor-pointer hover:opacity-80 transition-opacity" style="background:#fff3e0;" onclick="toggleRaporOdevFiltre('EKSİK')">
+          <div class="text-xs font-semibold uppercase tracking-wide mb-1" style="color:#805600;">Eksik</div>
+          <div class="font-headline text-2xl font-extrabold" style="color:#805600;">${odevEksikSayi}</div>
+        </div>
+      </div>
+      <div id="rapor-odev-filtre" style="display:none;margin-top:14px;"></div>
+    </div>
+  </div>
+
   ${denemeler.length ? `
   <!-- Denemeler -->
   <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mt-5">
@@ -2499,10 +3110,21 @@ async function loadRapor() {
     </div>
   </div>`;
 
+  // Print görünümünü render et
+  renderRaporPrintHTML({
+    ogr, dersOturumSayisi, dersSatir, derslerRaw: dersler,
+    tumOdevler, tamamlananOdevler, denemeler,
+    konuMap, allKonular,
+    topDogru, topYanlis, topBos, topToplam, genelPct,
+    odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi,
+    uyarilar: mevcutUyarilar
+  });
+
   // Rapor verisini global'e yaz (acKonuGrafigi için)
   window._raporData = {
     ogrenciId, konuOdevler, uyariSonuclari,
-    uyarilar: mevcutUyarilar, _chart: null, _activeKonu: null
+    uyarilar: mevcutUyarilar, _chart: null, _activeKonu: null,
+    tumOdevler, _rol: state.rol
   };
 
   // DB uyarı upsert (sadece öğretmen)
@@ -2522,7 +3144,7 @@ async function loadRapor() {
         if (!acik) {
           const yeniDurum = aksiyonlu ? 'kronik_tekrar' : 'acik';
           yeniUyarilar.push({
-            uyari_id: crypto.randomUUID(), ogrenci_id: ogrenciId,
+            uyari_id: crypto.randomUUID(), ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
             konu, uyari_tipi: analiz.tip,
             uyari_tarihi: new Date().toISOString().split('T')[0],
             tetikleyen_deger: analiz.deger, durum: yeniDurum
@@ -2538,10 +3160,326 @@ async function loadRapor() {
 
     if (yeniUyarilar.length || cozulenIds.length) {
       const { data: guncel } = await sb.from('konu_uyarilari')
-        .select('*').eq('ogrenci_id', ogrenciId).order('uyari_tarihi', { ascending: false });
+        .select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).order('uyari_tarihi', { ascending: false });
       window._raporData.uyarilar = guncel || [];
     }
   }
+}
+
+// ── RAPOR PRINT VIEW (V2) ─────────────────────────────────────
+function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi, uyarilar }) {
+  const el = document.getElementById('rapor-print-view');
+  if (!el) return;
+
+  const raporTarihi = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const raporAyYil  = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+  const initials    = (ogr?.ad_soyad || '?').split(' ').map(w => w[0]||'').join('').toUpperCase().slice(0, 2);
+
+  const allUyarilar    = uyarilar || [];
+  const uyarilarAcik   = allUyarilar.filter(u => u.durum === 'acik' || u.durum === 'kronik_tekrar');
+  const uyarilarNot    = allUyarilar.filter(u => u.ogretmen_notu && u.ogretmen_notu.trim());
+  const kronikler      = uyarilarAcik.filter(u => u.uyari_tipi === 'kronik' || u.uyari_tipi === 'kronik_tekrar');
+  const dususler       = uyarilarAcik.filter(u => u.uyari_tipi === 'dusus');
+  const dalgalanmalar  = uyarilarAcik.filter(u => u.uyari_tipi === 'dalgalanma');
+
+  function rozetHtml(tip) {
+    if (!tip || tip === 'basarili') return `<span style="background:#EAF3DE;color:#3B6D11;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Başarılı / İstikrarlı</span>`;
+    if (tip === 'kronik' || tip === 'kronik_tekrar') return `<span style="background:#FCEBEB;color:#A32D2D;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Kronik Riskli Konu</span>`;
+    if (tip === 'dusus') return `<span style="background:#FAEEDA;color:#854F0B;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Düşüşteki Konu</span>`;
+    if (tip === 'dalgalanma') return `<span style="background:#fff8e6;color:#854F0B;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Dalgalanma Gösteren</span>`;
+    return `<span style="background:#EAF3DE;color:#3B6D11;font-size:7pt;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;">Başarılı / İstikrarlı</span>`;
+  }
+
+  function secBas(txt) {
+    return `<div style="font-size:7.5pt;font-weight:800;color:#005d8d;text-transform:uppercase;letter-spacing:0.07em;border-left:3px solid #005d8d;padding-left:7px;margin-bottom:8px;">${txt}</div>`;
+  }
+
+  const konuSatirlari = allKonular.filter(k => konuMap[k] && konuMap[k].toplam > 0).map(konu => {
+    const r    = konuMap[konu];
+    const dPct = Math.round(r.dogru  / r.toplam * 100);
+    const yPct = Math.round(r.yanlis / r.toplam * 100);
+    const bPct = Math.max(0, 100 - dPct - yPct);
+    const uyari = uyarilarAcik.find(u => u.konu === konu);
+    return { konu, r, dPct, yPct, bPct, uyariTip: uyari?.uyari_tipi || null };
+  });
+
+  const sorunAlanlari = (derslerRaw || [])
+    .filter(d => d.ders_gorusu && d.ders_gorusu.trim())
+    .slice(0, 5);
+
+  el.innerHTML = `
+    <!-- BÖL 1: HEADER -->
+    <div style="background:#005d8d;color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="public/adaptix_renk_logo.png" alt="AdaptiX" style="height:32px;width:auto;object-fit:contain;flex-shrink:0;">
+        <span style="font-size:11.5pt;font-weight:800;font-family:Manrope,sans-serif;letter-spacing:0.02em;">ADAPTİX BTS | AKADEMİK PERFORMANS RAPORU</span>
+      </div>
+      <div style="font-size:9pt;opacity:0.85;white-space:nowrap;">${raporTarihi}</div>
+    </div>
+
+    <!-- BÖL 2: ÖĞRENCİ BANDI -->
+    <div style="background:#e8f4fb;border-bottom:0.5px solid #b5d4f4;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;">
+      <div style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;">
+        <div style="width:44px;height:44px;background:#005d8d;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span style="font-size:15px;font-weight:800;color:white;font-family:Manrope,sans-serif;">${initials}</span>
+        </div>
+        <div>
+          <div style="font-size:13pt;font-weight:800;color:#141d22;font-family:Manrope,sans-serif;">${ogr?.ad_soyad||'—'}</div>
+          <div style="font-size:9pt;color:#185fa5;margin-top:2px;">${[ogr?.sinif,ogr?.sube,ogr?.okul].filter(Boolean).join(' · ')||'—'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        ${[{label:'Toplam Ders',val:dersOturumSayisi},{label:'Toplam Ödev',val:tumOdevler.length},{label:'Deneme Sayısı',val:denemeler.length}].map(m=>
+          `<div style="background:white;border-radius:7px;padding:7px 13px;text-align:center;border:0.5px solid #b5d4f4;min-width:64px;">
+            <div style="font-size:16pt;font-weight:800;color:#005d8d;font-family:Manrope,sans-serif;">${m.val}</div>
+            <div style="font-size:7.5pt;color:#5a7fa8;margin-top:1px;">${m.label}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- BÖL 3: KONU ANALİZİ | KRİTİK UYARILAR + AKSİYON -->
+    <div style="padding:12px 20px 8px;display:grid;grid-template-columns:55% 43%;gap:2%;">
+
+      <div>
+        ${secBas('Konu Bazlı Analiz & Durum Rozetleri')}
+        ${konuSatirlari.length === 0
+          ? `<div style="font-size:9pt;color:#888;font-style:italic;padding:8px 0;">Henüz tamamlanan ödev verisi yok.</div>`
+          : konuSatirlari.map(({konu, r, dPct, yPct, bPct, uyariTip}) => `
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+              <span style="font-size:8pt;color:#141d22;font-weight:600;width:90px;min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${konu}">${konu}</span>
+              <div style="flex:1;height:11px;border-radius:3px;overflow:hidden;display:flex;min-width:60px;">
+                <div style="width:${dPct}%;background:#00661d;height:100%;"></div>
+                <div style="width:${yPct}%;background:#ba1a1a;height:100%;"></div>
+                <div style="width:${bPct}%;background:#b5d4f4;height:100%;"></div>
+              </div>
+              <span style="font-size:7pt;color:#555;white-space:nowrap;width:56px;text-align:right;flex-shrink:0;">D:${dPct}% Y:${yPct}%</span>
+              ${rozetHtml(uyariTip)}
+            </div>`).join('')}
+        <div style="display:flex;gap:12px;margin-top:8px;font-size:7.5pt;color:#555;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#00661d;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Doğru</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#ba1a1a;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Yanlış</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#b5d4f4;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Boş</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="border:0.5px solid #dce7f0;border-radius:7px;padding:10px 12px;">
+          ${secBas('Kritik Uyarılar & Düşüş Eğilimi')}
+          ${kronikler.length===0 && dususler.length===0 && dalgalanmalar.length===0
+            ? `<div style="background:#f0f9f4;border:0.5px solid #9FE1CB;border-radius:6px;padding:7px 10px;font-size:8pt;color:#1d3a2a;">Tüm konularda performans istikrarlı seyrediyor.</div>`
+            : [
+                kronikler.length ? `<div style="background:#FCEBEB;border-radius:5px;padding:6px 10px;margin-bottom:5px;"><div style="font-size:7.5pt;font-weight:800;color:#A32D2D;">🔴 Kronik Riskler</div><div style="font-size:7.5pt;color:#A32D2D;margin-top:2px;">${kronikler.map(u=>u.konu).join(', ')}</div></div>` : '',
+                dususler.length ? `<div style="background:#FAEEDA;border-radius:5px;padding:6px 10px;margin-bottom:5px;"><div style="font-size:7.5pt;font-weight:800;color:#854F0B;">⚠️ Düşüştekiler</div><div style="font-size:7.5pt;color:#854F0B;margin-top:2px;">${dususler.map(u=>u.konu).join(', ')}</div></div>` : '',
+                dalgalanmalar.length ? `<div style="background:#fff8e6;border-radius:5px;padding:6px 10px;"><div style="font-size:7.5pt;font-weight:800;color:#854F0B;">🟡 Dalgalanmalar</div><div style="font-size:7.5pt;color:#854F0B;margin-top:2px;">${dalgalanmalar.map(u=>u.konu).join(', ')}</div></div>` : ''
+              ].filter(Boolean).join('')}
+        </div>
+        <div style="border:0.5px solid #dce7f0;border-radius:7px;padding:10px 12px;flex:1;">
+          ${secBas('Akademik Aksiyon Planı & Öğretmen Notları')}
+          ${uyarilarNot.length === 0
+            ? `<div style="font-size:8pt;color:#888;font-style:italic;">Bu dönem için aksiyon notu bulunmamaktadır.</div>`
+            : uyarilarNot.map(u => {
+                const tarihStr = u.aksiyon_tarihi ? new Date(u.aksiyon_tarihi).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit'}) : '';
+                return `<div style="font-size:8pt;color:#1d2a36;margin-bottom:5px;line-height:1.5;">
+                  <span style="font-weight:700;color:#005d8d;">${u.konu}:</span> ${u.ogretmen_notu}${tarihStr?` <span style="color:#888;">(${tarihStr})</span>`:''}
+                </div>`;
+              }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖL 4: ÖDEV İSTATİSTİKLERİ | SORUN ALANLARI -->
+    <div style="padding:8px 20px;display:grid;grid-template-columns:55% 43%;gap:2%;">
+
+      <div>
+        ${secBas('Ödev ve Katılım İstatistikleri')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          ${[
+            {label:'Toplam Ödev',  val:tumOdevler.length,   bg:'#005d8d'},
+            {label:'Tamamlanan',   val:odevTamamlananSayi,  bg:'#00661d'},
+            {label:'Yapılmayan',   val:odevYapilmadiSayi,   bg:'#ba1a1a'},
+            {label:'Eksik',        val:odevEksikSayi,       bg:'#805600'}
+          ].map(k=>`
+            <div style="background:${k.bg};border-radius:7px;padding:9px 13px;">
+              <div style="font-size:18pt;font-weight:800;color:white;font-family:Manrope,sans-serif;">${k.val}</div>
+              <div style="font-size:8pt;color:rgba(255,255,255,0.85);margin-top:2px;">${k.label}</div>
+            </div>`).join('')}
+        </div>
+        ${topToplam > 0 ? `
+        <div style="background:#f5faff;border-radius:6px;padding:7px 12px;font-size:8pt;color:#141d22;border:0.5px solid #b5d4f4;">
+          <span style="font-weight:700;">Tamamlanan Ödev Net/Soru:</span>
+          D: <b style="color:#00661d;">${topDogru}</b> &nbsp;
+          Y: <b style="color:#ba1a1a;">${topYanlis}</b> &nbsp;
+          B: <b style="color:#888;">${topBos}</b> &nbsp;
+          Top: <b>${topToplam}</b>
+        </div>` : ''}
+      </div>
+
+      <div>
+        ${secBas('Sorun Alanları & Gelecek Planlaması')}
+        ${sorunAlanlari.length === 0
+          ? `<div style="font-size:8pt;color:#888;font-style:italic;margin-bottom:8px;">Kayıtlı sorun alanı bulunmamaktadır.</div>`
+          : `<ul style="margin:0 0 8px 0;padding:0;list-style:none;">
+              ${sorunAlanlari.map(d => {
+                const uyariEslesen = uyarilarAcik.find(u => u.konu && d.islenen_konu && d.islenen_konu.toLowerCase().includes(u.konu.toLowerCase()));
+                const oneri = uyariEslesen?.uyari_tipi === 'kronik' || uyariEslesen?.uyari_tipi === 'kronik_tekrar'
+                  ? 'tekrar seansı planlanması önerilmektedir.'
+                  : uyariEslesen?.uyari_tipi === 'dusus'
+                  ? 'ek çalışma materyali temin edilmesi önerilmektedir.'
+                  : 'takip edilmesi önerilmektedir.';
+                return `<li style="font-size:8pt;color:#1d2a36;margin-bottom:5px;line-height:1.5;">• ${d.ders_gorusu}; <span style="color:#555;font-style:italic;">${oneri}</span></li>`;
+              }).join('')}
+            </ul>`}
+        ${uyarilarAcik.length > 0 ? `
+          <div style="font-size:7.5pt;font-weight:700;color:#141d22;margin-bottom:4px;">Planlanan Odak Alanları:</div>
+          <ul style="margin:0;padding:0;list-style:none;">
+            ${uyarilarAcik.slice(0,4).map(u=>{
+              const aciklama = u.uyari_tipi==='kronik'||u.uyari_tipi==='kronik_tekrar'?'yoğun tekrar':u.uyari_tipi==='dusus'?'destekleyici çalışma':'dengeleme';
+              return `<li style="font-size:7.5pt;color:#1d2a36;margin-bottom:3px;">• <b>${u.konu}:</b> ${aciklama} odak çalışması planlanmaktadır.</li>`;
+            }).join('')}
+          </ul>` : ''}
+      </div>
+    </div>
+
+    <!-- BÖL 5: DENEME SONUÇLARI -->
+    <div style="padding:8px 20px;">
+      ${secBas('Deneme Sonuçları')}
+      ${denemeler.length === 0
+        ? `<div style="font-size:9pt;color:#888;font-style:italic;">Henüz deneme kaydı bulunmamaktadır.</div>`
+        : `<table style="border-collapse:collapse;width:100%;font-size:8pt;font-family:Inter,sans-serif;">
+            <thead>
+              <tr style="background:#005d8d;color:white;">
+                <th style="padding:5px 8px;text-align:left;font-weight:700;">Deneme Adı</th>
+                <th style="padding:5px 8px;text-align:left;font-weight:700;width:60px;">Tarih</th>
+                <th style="padding:5px 5px;text-align:center;width:26px;">D</th>
+                <th style="padding:5px 5px;text-align:center;width:26px;">Y</th>
+                <th style="padding:5px 5px;text-align:center;width:26px;">B</th>
+                <th style="padding:5px 5px;text-align:center;width:38px;">Net</th>
+                <th style="padding:5px 8px;text-align:center;width:56px;">Başarı</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${denemeler.map((r,i)=>{
+                const pct = parseFloat(r.basari_yuzdesi)||0;
+                const net = (parseFloat(r.dogru||0)-parseFloat(r.yanlis||0)/3).toFixed(1);
+                const tarih = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}) : '—';
+                const bbg = pct>=80?'#EAF3DE':pct>=60?'#FAEEDA':'#FCEBEB';
+                const bcl = pct>=80?'#3B6D11':pct>=60?'#854F0B':'#A32D2D';
+                return `<tr style="border-bottom:0.5px solid #e8f4fb;${i%2===1?'background:#f9fbfd;':''}">
+                  <td style="padding:4px 8px;font-weight:600;color:#141d22;">${r.deneme_adi||'—'}</td>
+                  <td style="padding:4px 8px;color:#707881;">${tarih}</td>
+                  <td style="padding:4px 5px;text-align:center;font-weight:700;color:#00661d;">${r.dogru}</td>
+                  <td style="padding:4px 5px;text-align:center;font-weight:700;color:#ba1a1a;">${r.yanlis}</td>
+                  <td style="padding:4px 5px;text-align:center;color:#888;">${r.bos}</td>
+                  <td style="padding:4px 5px;text-align:center;font-weight:700;color:#141d22;">${net}</td>
+                  <td style="padding:4px 8px;text-align:center;"><span style="background:${bbg};color:${bcl};font-size:7.5pt;font-weight:700;padding:2px 7px;border-radius:10px;">%${pct.toFixed(1)}</span></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>`}
+    </div>
+
+    <!-- BÖL 6: FOOTER -->
+    <div style="background:#f5faff;border-top:0.5px solid #b5d4f4;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+      <span style="font-size:8.5pt;color:#185fa5;font-family:Inter,sans-serif;">AdaptiX BTS · Tayfun Hoca · Dijital Eğitim Çözümleri</span>
+      <span style="font-size:8.5pt;color:#888;">1 / 1</span>
+      <span style="font-size:8.5pt;color:#aaa;">${raporAyYil}</span>
+    </div>
+  `;
+}
+
+// ── RAPOR ÖDEV ANALİZİ ────────────────────────────────────────
+function toggleRaporOdevFiltre(durum) {
+  const el = document.getElementById('rapor-odev-filtre');
+  if (!el) return;
+  const isOpen = el.dataset.durum === durum && el.style.display !== 'none';
+  if (isOpen) { el.style.display = 'none'; el.dataset.durum = ''; return; }
+  el.dataset.durum = durum;
+  el.style.display = '';
+
+  const rData = window._raporData;
+  if (!rData) return;
+  const liste = (rData.tumOdevler || []).filter(o => o.durum === durum);
+  window._raporOdevFiltreListesi = liste;
+  const isOgretmen = rData._rol === 'ogretmen';
+
+  const durumBadge = d => {
+    const map = {
+      TAMAMLANDI: ['#e8f5e9','#00661d'],
+      YAPILMADI:  ['#fce8e8','#ba1a1a'],
+      EKSİK:      ['#fff3e0','#805600'],
+      BEKLİYOR:   ['#e8f4fb','#005d8d'],
+    };
+    const [bg, col] = map[d] || ['#f0f0f0','#555'];
+    return `<span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:${bg};color:${col};">${d}</span>`;
+  };
+
+  if (!liste.length) {
+    el.innerHTML = `<div class="text-sm text-outline text-center py-6 bg-surface-container/40 rounded-2xl">${durum} ödev yok</div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="overflow-x-auto rounded-2xl border border-outline-variant/20">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="bg-surface-container text-xs font-bold text-outline uppercase tracking-wider border-b border-outline-variant/20">
+            <th class="px-3 py-2.5 text-left">Gün</th>
+            <th class="px-3 py-2.5 text-left">Kaynak</th>
+            <th class="px-3 py-2.5 text-left">Konu</th>
+            <th class="px-3 py-2.5 text-left">Durum</th>
+            ${isOgretmen ? '<th class="px-3 py-2.5"></th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${liste.map((o, i) => {
+            const bg = i%2===1 ? 'style="background:rgba(0,0,0,.02)"' : '';
+            const dybHtml = o.durum === 'TAMAMLANDI' && (o.dogru != null || o.yanlis != null || o.bos != null)
+              ? `<div class="flex gap-3 mt-1 text-xs font-semibold flex-wrap">
+                  ${o.dogru  != null ? `<span style="color:#00661d">D: ${o.dogru}</span>`  : ''}
+                  ${o.yanlis != null ? `<span style="color:#ba1a1a">Y: ${o.yanlis}</span>` : ''}
+                  ${o.bos    != null ? `<span style="color:#888">B: ${o.bos}</span>`       : ''}
+                  ${o.toplam != null ? `<span class="text-outline">Top: ${o.toplam}</span>` : ''}
+                </div>` : '';
+            const tekrarTd = isOgretmen
+              ? `<td class="px-3 py-2"><button onclick="raporTekrarVerByIdx(${i})"
+                  class="text-xs font-bold px-2.5 py-1 rounded-full bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors whitespace-nowrap">
+                  ↺ Tekrar Ver</button></td>` : '';
+            return `<tr class="border-b border-outline-variant/10 last:border-0" ${bg}>
+              <td class="px-3 py-2.5 text-xs font-medium text-on-surface">${o.gun||'—'}</td>
+              <td class="px-3 py-2.5 text-xs text-on-surface">
+                <div>${o.kaynak||'—'}</div>
+                ${o.odev_detay && o.odev_detay.trim() ? `<div class="mt-0.5" style="color:var(--outline);opacity:.7;font-size:10px;">${o.odev_detay.trim()}</div>` : ''}
+              </td>
+              <td class="px-3 py-2.5 text-xs text-on-surface">
+                <div>${(o.konu||'—').split(' — ')[0]}</div>${dybHtml}
+              </td>
+              <td class="px-3 py-2.5">${durumBadge(o.durum)}</td>
+              ${tekrarTd}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function raporTekrarVerByIdx(i) {
+  const o = window._raporOdevFiltreListesi?.[i];
+  if (!o) return;
+  raporTekrarVer(window._raporData.ogrenciId, o.kaynak||'', o.konu||'', o.kazanim||'');
+}
+
+async function raporTekrarVer(ogrenciId, kaynak, konu, kazanim) {
+  goPage('odev');
+  const sel = document.getElementById('odev-ogrenci');
+  sel.value = ogrenciId;
+  await odevOgrenciSecildi();
+  const fKaynak = document.getElementById('f-kaynak');
+  const fKonu   = document.getElementById('f-konu');
+  if (fKaynak && kaynak) fKaynak.value = kaynak;
+  if (fKonu && konu) { fKonu.value = konu; formKonuSecildi(); }
+  const fKazanim = document.getElementById('f-kazanim');
+  if (fKazanim && kazanim) fKazanim.value = kazanim;
+  showToast('📋 Ödev formu hazırlandı — gün seçin ve tabloya ekleyin');
 }
 
 // ── KONU ZAMAN SERİSİ YARDIMCI FONKSİYONLAR ──────────────────
@@ -2882,16 +3820,38 @@ function lgsGeriSayim() {
 
 // ── HEDEF ─────────────────────────────────────────────────────
 function hedefYukle() {
-  const key = 'hedef_' + state.user.ogrenci_id;
-  const hedef = localStorage.getItem(key) || '';
-  document.getElementById('ogr-hedef-input').value = hedef;
+  const hedef = state.user.hedef || '';
+  if (hedef) {
+    document.getElementById('ogr-hedef-label').textContent = hedef;
+    document.getElementById('hedef-edit-mode').style.display = 'none';
+    document.getElementById('hedef-view-mode').style.display = '';
+  } else {
+    document.getElementById('hedef-edit-mode').style.display = '';
+    document.getElementById('hedef-view-mode').style.display = 'none';
+  }
 }
 
-function hedefKaydet() {
-  const key = 'hedef_' + state.user.ogrenci_id;
+async function hedefKaydet() {
   const hedef = document.getElementById('ogr-hedef-input').value.trim();
-  localStorage.setItem(key, hedef);
+  const { error } = await sb.from('ogrenciler')
+    .update({ hedef })
+    .eq('ogrenci_id', state.user.ogrenci_id);
+  if (error) { showToast('❌ Hedef kaydedilemedi'); return; }
+  state.user.hedef = hedef;
+  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
   showToast('🎯 Hedef kaydedildi!');
+  if (hedef) {
+    document.getElementById('ogr-hedef-label').textContent = hedef;
+    document.getElementById('hedef-edit-mode').style.display = 'none';
+    document.getElementById('hedef-view-mode').style.display = '';
+  }
+}
+
+function hedefDuzenle() {
+  document.getElementById('ogr-hedef-input').value = state.user.hedef || '';
+  document.getElementById('hedef-view-mode').style.display = 'none';
+  document.getElementById('hedef-edit-mode').style.display = '';
+  document.getElementById('ogr-hedef-input').focus();
 }
 
 // ── ÖĞRENCİ PANELİ ───────────────────────────────────────────
@@ -3012,6 +3972,19 @@ async function loadOgrenciPanel() {
   const topToplam = tumOdevler.filter(o=>o.durum==='TAMAMLANDI').reduce((s,o)=>s+(Number(o.toplam)||0),0);
   document.getElementById('ogr-stat-basari').textContent = topToplam > 0 ? '%'+Math.round(topDogru/topToplam*100) : '—';
 
+  // Bekleyen toggle listesi (basit, formsuz)
+  const belEl = document.getElementById('bekleyen-toggle-liste');
+  belEl.innerHTML = bekleyen.length ? `
+    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+      ${bekleyen.map(o => `
+        <div class="px-4 py-3 border-b border-outline-variant/15 last:border-0">
+          <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+          <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
+          ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
+        </div>`).join('')}
+      <div class="px-4 py-2 text-xs italic" style="color:var(--outline);opacity:.7;">Tüm bekleyen ödevleriniz listelenmektedir.</div>
+    </div>` : '';
+
   // ── Bekleyenler sub-tab ──────────────────────────────────────
   const bekEl = document.getElementById('ogr-bekleyen-bolum');
   if (!bekleyen.length) {
@@ -3037,7 +4010,8 @@ async function loadOgrenciPanel() {
                 <div class="w-2.5 h-2.5 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
                 <div class="flex-1">
                   <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
-                  <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}${o.odev_detay?' &nbsp;•&nbsp; '+o.odev_detay:''}</div>
+                  <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
+                  ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
                 </div>
               </div>
               <div class="ml-5 bg-surface-container-low rounded-xl p-4">
@@ -3109,10 +4083,11 @@ async function loadOgrenciPanel() {
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
                   <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
+                  ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
                 </div>
                 <span class="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0" style="background:${durumBg};color:${durumRenk};">${o.durum}</span>
               </div>
-              ${o.durum==='TAMAMLANDI'&&top>0 ? `
+              ${o.durum==='TAMAMLANDI' && top>0 ? `
               <div class="flex gap-3 text-xs mb-2">
                 <span class="font-semibold" style="color:#00661d;">✅ ${d}</span>
                 <span class="font-semibold" style="color:#ba1a1a;">❌ ${y}</span>
@@ -3122,6 +4097,7 @@ async function loadOgrenciPanel() {
               <button onclick="ogrOdevDuzenleToggle('${oid}')"
                 class="text-xs font-semibold px-3 py-1.5 rounded-lg"
                 style="background:#e8f4fb;color:#005d8d;border:1px solid #b5d4f4;">✏️ Düzenle</button>
+              <!-- Düzenleme formu (gizli) -->
               <div id="ogr-duzenle-form-${oid}" class="hidden mt-3 bg-surface-container rounded-xl p-4">
                 <div class="mb-3">
                   <div class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Durum</div>
@@ -3199,9 +4175,8 @@ async function loadOgrenciPanel() {
       </div>`;
 }
 
-function toggleSonucForm(id) {
-  const el = document.getElementById('sonuc-' + id);
-  el.classList.toggle('hidden');
+function toggleBekleyenListe() {
+  document.getElementById('bekleyen-toggle-liste').classList.toggle('hidden');
 }
 
 function ogrOdevSubTab(tab) {
@@ -3238,6 +4213,22 @@ async function ogrOdevDuzenleKaydet(odevId) {
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Kaydedildi');
   loadOgrenciPanel();
+}
+
+async function ogrTekrarVer(odevId) {
+  if (!odevId) return;
+  showToast('Güncelleniyor...');
+  const { error } = await sb.from('odevler')
+    .update({ durum: 'BEKLİYOR', dogru: null, yanlis: null, bos: null, toplam: null })
+    .or(`odev_id.eq.${odevId},id.eq.${odevId}`);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Ödev tekrar bekleyene alındı');
+  loadOgrenciPanel();
+}
+
+function toggleSonucForm(id) {
+  const el = document.getElementById('sonuc-' + id);
+  el.classList.toggle('hidden');
 }
 
 function updatePreview(id) {
@@ -3773,7 +4764,7 @@ async function loadDersProgrami() {
   if (!ogrenciId) { bolum.classList.add('hidden'); return; }
 
   const { data } = await sb.from('ders_programi')
-    .select('*').eq('ogrenci_id', ogrenciId)
+    .select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
     .order('gun');
 
   const programlar = data || [];
@@ -3824,7 +4815,7 @@ function programTipSec(tip) {
 
 // ── ÇAKIŞMA KONTROLÜ ──────────────────────────────────────────
 async function checkCakisma(gun, baslangic, bitis, tip, tarih, excludeId = null) {
-  const { data } = await sb.from('ders_programi').select('*').eq('gun', gun);
+  const { data } = await sb.from('ders_programi').select('*').eq('gun', gun).eq('ogretmen_id', state.ogretmen_id);
   const toMin = t => { const [h, m] = t.substring(0,5).split(':').map(Number); return h*60+m; };
   const yB = toMin(baslangic), yE = toMin(bitis);
 
@@ -3875,7 +4866,7 @@ async function programEkle() {
   }
 
   showToast('Kaydediliyor...');
-  const kayit = { ogrenci_id: ogrenciId, gun, baslangic, bitis, tip: _programTip };
+  const kayit = { ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, gun, baslangic, bitis, tip: _programTip };
   if (_programTip === 'ek') kayit.tarih = tarih;
 
   const { error } = await sb.from('ders_programi').insert(kayit);
@@ -3902,7 +4893,7 @@ async function loadHaftalikProgram() {
   if (!el) return;
   el.innerHTML = '<div class="flex justify-center py-16"><div class="spinner"></div></div>';
 
-  const { data } = await sb.from('ders_programi').select('*');
+  const { data } = await sb.from('ders_programi').select('*').eq('ogretmen_id', state.ogretmen_id);
 
   const bugun = new Date();
   const haftaGunu = bugun.getDay();
@@ -4051,7 +5042,1187 @@ function programKartaTikla(ogrenciId) {
   setTimeout(() => ogrenciDuzenle(ogrenciId), 150);
 }
 
+// ── ADA AI KOÇU ───────────────────────────────────────────────
+
+const ADA_SYSTEM_PROMPT = `Sen AdaptiX BTS'in yapay zeka destekli öğrenci koçusun. Adın "Ada".
+
+Görevin: Matematik öğretmeninin öğrencilerini daha iyi tanımasına, derse hazırlanmasına
+ve doğru pedagojik kararlar almasına yardımcı olmak.
+
+---
+
+## KİMLİĞİN
+
+- Türkiye'deki ortaokul matematik eğitimi konusunda uzman bir öğrenci koçusun.
+- Matematik öğretmeniyle çalışıyorsun — kararları her zaman ona ait, sen aksiyon önerirsin.
+- Emin olmadığın bir konuda "bilmiyorum" veya "bu konuda verim yetersiz" diyebilirsin.
+- Asla tahmin yürüterek yanlış bilgi verme. Öğrenci verisi için her zaman
+  veritabanını sorgula, hafızana güvenme.
+
+---
+
+## BİLGİ TABANIN
+
+### Türkiye Eğitim Sistemi
+- MEB ortaokul matematik müfredatı: 5, 6, 7 ve 8. sınıf konu sıralaması ve yıllık planlar
+- Her sınıf düzeyindeki temel kazanımlar ve önkoşul ilişkileri
+- LGS formatı: 20 Matematik sorusu, puan hesaplama (ham puan → standart puan), sayısal puan türü
+- Geçmiş LGS sınavları (2018–2025) matematik soru dağılımı ve konu ağırlıkları
+
+### MEB 2024 Müfredat — Sınıf Bazlı Konu Yapısı
+
+5. SINIF: Geometrik Şekiller (38s) → Sayılar/Nicelikler-1 (28s) → Geometrik Nicelikler (20s) → Sayılar/Nicelikler-2 (33s) → İstatistik (24s) → Cebirsel Düşünme (20s) → Olasılık (9s)
+Konular: Doğal sayılar, Kesirler, Açı ölçme, Çokgenler, Dikdörtgen alan/çevre, İşlem önceliği, Örüntüler, Sütun grafiği
+
+6. SINIF: Sayılar-1 (15s) → İstatistik (24s) → Sayılar-2 (38s) → Olasılık (9s) → Geometri (20s) → Cebir (33s) → Geometrik Nicelikler (33s)
+Konular: OBEB-OKEK, Asal sayılar, Kesirlerle işlemler, Yüzde, Cebirsel ifadeler, Alan-çevre birimleri, Geometrik cisimler, Ortalama-Ortanca-Tepe değer
+
+7. SINIF: Sayılar-1 (35s) → Geometrik Nicelikler-1 (19s) → İstatistik (24s) → Dönüşüm (8s) → Geometri (6s) → Sayılar-2 (15s) → Olasılık (9s) → Cebir (38s) → Geometrik Nicelikler-2 (18s)
+Konular: Rasyonel sayılar, Oran-orantı, Üçgenler (kenarortay/açıortay), Yansıma, Denklem-eşitsizlikler, Teorik olasılık, Yayılım ölçüleri
+
+8. SINIF (LGS YILI): Sayılar (38s) → Geometrik Şekiller (39s) → Olasılık (9s) → Cebir (42s) → Geometrik Nicelikler (15s) → İstatistik (20s) → Dönüşüm (9s)
+Konular: Kareköklü-Üslü ifadeler, Çarpanlara ayırma, Pisagor, Üçgen eşitsizliği, Doğrusal fonksiyonlar, Geometrik cisimler hacim-yüzey
+
+### Kritik Önkoşul Zinciri
+5.sınıf Doğal Sayılar → 6.sınıf Çarpanlar/Kesirler → 7.sınıf Rasyonel Sayılar → 8.sınıf Kareköklü/Üslü İfadeler (LGS'de 5-6 soru!)
+5.sınıf Cebirsel Düşünme → 6.sınıf Cebirsel İfadeler → 7.sınıf Denklemler → 8.sınıf Doğrusal Fonksiyonlar (LGS'de 3 soru)
+
+### LGS Konu Ağırlıkları (2018-2025 ortalaması)
+Kareköklü İfadeler: 2-5 soru (EN İSTİKRARLI) | Üslü İfadeler: 2-4 | Doğrusal Denklemler: 2-4 | Cebirsel İfadeler: 2-4
+Bu 4 konu birlikte ~9-12 soru (~%50). Geometri: 4-8 soru arası değişken.
+
+### Yaygın Öğrenme Güçlükleri
+- Denklem kurma: sözel → sembol geçiş zorluğu
+- Kesir işlemleri: payda eşitleme kavram hatası
+- Üslü ifadeler: negatif üs ve sıfır üs karışıklığı
+- Geometri görselleştirme: 3D → 2D güçlüğü
+- Çarpanlara ayırma: ortak çarpan gözden kaçırma
+
+### Özel Ders Pedagojisi
+- Hata analizi: yanlış cevabın arkasındaki kavram hatasını bul
+- Scaffolding: biraz üstünde soru ver, çok üstünde değil
+- Immediate feedback: ödev sonuçlarını hızlı değerlendir
+
+---
+
+## DAVRANIŞ KURALLARI
+
+1. Her öğrenci sorusunda önce tool ile veritabanından güncel veriyi çek, sonra yorum yap.
+2. Aksiyon önerirken: "Önerim: [aksiyon]. Nedeni: [veri/gerekçe]. Karar senin."
+3. Emin olmadığında: "Bu konuda yeterli verim yok, öğretmenin değerlendirmesine bırakıyorum."
+4. Öğrenci hakkında konuşurken yapıcı ve çözüm odaklı ol.
+5. Cevaplar kısa ve aksiyonable olsun. Madde madde, net.
+6. Türkçe konuş. Eğitim jargonunu kullan ama anlaşılır tut.
+
+---
+
+## ÖRNEK KONUŞMALAR
+
+Öğretmen: "Ahmet'e 15'te ders var, ne bilmem lazım?"
+Ada: [get_ders_oncesi_brifing çağırır, sonra özetler]
+→ Son ders, bekleyen ödevler, konu uyarıları, son deneme performansını özetler, 3 madde önerir.
+
+Öğretmen: "Ahmet'in annesine mesaj yazar mısın?"
+Ada: Taslak mesaj yazar, düzenlemek ister misin diye sorar.
+
+Öğretmen: "7. sınıf rasyonel sayılarda önkoşullar neler?"
+Ada: [get_mufredat_detay çağırır] 6. sınıf kesir işlemleri, OBEB-OKEK, yüzde konularını özetler.`;
+
+const ADA_TOOLS = [
+  {
+    name: 'get_ogrenci_ozet',
+    description: 'Bir öğrencinin genel özet bilgilerini getirir. Ad, sınıf, okul, toplam ders/ödev/deneme sayıları.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_adi: { type: 'string', description: 'Öğrencinin adı veya adının bir kısmı' }
+      },
+      required: ['ogrenci_adi']
+    }
+  },
+  {
+    name: 'get_son_dersler',
+    description: 'Öğrencinin son N dersini getirir. Tarih, konu, kazanım, tamamlama durumu ve sorun alanı dahil.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' },
+        limit: { type: 'number', description: 'Kaç ders getirilsin, varsayılan 5' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_odev_analizi',
+    description: 'Öğrencinin ödev performansını konu bazında analiz eder. Tamamlama oranı, D/Y/B ortalamaları, yapılmayan ödevler.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' },
+        son_kac_gun: { type: 'number', description: 'Son kaç günün ödevi, varsayılan tümü' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_deneme_trendi',
+    description: 'Öğrencinin deneme sınavı sonuçlarını ve net trendini getirir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_konu_uyarilari',
+    description: 'Öğrencinin aktif konu uyarılarını getirir. Kronik, düşüş, dalgalanma tipleri dahil.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_ders_oncesi_brifing',
+    description: 'Derse girmeden önce öğrenci hakkında tam veri paketini tek sorguda getirir. Son dersler + ödev analizi + deneme trendi + uyarılar paralel çekilir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ogrenci_id: { type: 'string' }
+      },
+      required: ['ogrenci_id']
+    }
+  },
+  {
+    name: 'get_mufredat_detay',
+    description: 'MEB 2024 müfredatından belirli bir sınıf ve tema için konu içeriği ve önkoşul ilişkilerini getirir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sinif: { type: 'number', description: 'Sınıf düzeyi: 5, 6, 7 veya 8' },
+        tema: { type: 'string', description: 'Tema adı veya kodu. Örn: Sayılar, Geometri, Cebir, Rasyonel Sayılar' }
+      },
+      required: ['sinif']
+    }
+  }
+];
+
+// Ada conversation state (oturum bazlı, öğrenci başına)
+let adaConv = {};     // { ogrenci_id_or_genel: [{role, content}] }
+let adaLoading = false;
+
+async function adaSayfaAcildi() {
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  adaRenderMesajlar(selId);
+  // Önce localStorage yedeğini kontrol et (hızlı başlangıç)
+  if (!window._adaApiKey) {
+    window._adaApiKey = localStorage.getItem('adaptix_ada_key') || null;
+  }
+  // Supabase'den taze key çek
+  try {
+    const { data } = await sb.from('kullanicilar')
+      .select('deger')
+      .eq('rol', 'api_key')
+      .single();
+    window._adaApiKey = data?.deger || null;
+    if (window._adaApiKey) {
+      localStorage.setItem('adaptix_ada_key', window._adaApiKey);
+    }
+  } catch(e) {
+    // Supabase erişim hatası — yedek key varsa kullan, yoksa null kalır
+  }
+}
+
+function adaOgrenciSecildi() {
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  adaRenderMesajlar(selId);
+}
+
+function adaTemizle() {
+  if (state.rol !== 'ogretmen') return;
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  const key = 'ada_' + (selId || 'genel');
+  adaConv[key] = [];
+  try { localStorage.removeItem('adaptix_ada_ogretmen_' + (selId || 'genel')); } catch(e){}
+  adaRenderMesajlar(selId);
+  showToast('Sohbet temizlendi');
+}
+
+function adaGetConv(selId) {
+  if (state.rol !== 'ogretmen') return [];
+  const key = 'ada_' + (selId || 'genel');
+  if (!adaConv[key]) {
+    try {
+      const newStorageKey = 'adaptix_ada_ogretmen_' + (selId || 'genel');
+      const saved = localStorage.getItem(newStorageKey);
+      if (saved) {
+        adaConv[key] = JSON.parse(saved);
+      } else {
+        // Eski key'den göç: adaptix_ada_* → adaptix_ada_ogretmen_*
+        const oldSaved = localStorage.getItem('adaptix_' + key);
+        adaConv[key] = oldSaved ? JSON.parse(oldSaved) : [];
+        if (adaConv[key].length > 0) {
+          localStorage.setItem(newStorageKey, JSON.stringify(adaConv[key]));
+          try { localStorage.removeItem('adaptix_' + key); } catch(e) {}
+        }
+      }
+    } catch(e) { adaConv[key] = []; }
+  }
+  return adaConv[key];
+}
+
+function adaSaveConv(selId) {
+  if (state.rol !== 'ogretmen') return;
+  const key = 'ada_' + (selId || 'genel');
+  try { localStorage.setItem('adaptix_ada_ogretmen_' + (selId || 'genel'), JSON.stringify(adaConv[key] || [])); } catch(e){}
+}
+
+function adaRenderMesajlar(selId) {
+  const el = document.getElementById('ada-mesajlar');
+  if (!el) return;
+  const conv = adaGetConv(selId);
+  if (!conv.length) {
+    // Öğrenci seçildiyse karşılama mesajına öğrenci adı ekle
+    const ogrAdi = selId ? (state.ogrenciler.find(o => o.ogrenci_id === selId)?.ad_soyad || '') : '';
+    el.innerHTML = `<div style="text-align:center;padding:32px 20px;">
+      <div style="width:88px;height:88px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <img src="public/ai_simge.png" style="width:80px;height:80px;object-fit:contain;background:transparent;">
+      </div>
+      <div style="font-family:Manrope;font-weight:800;font-size:18px;color:var(--ink);margin-bottom:6px;">Merhaba, ben Ada!</div>
+      <div style="font-size:13.5px;color:var(--ink-soft);max-width:360px;margin:0 auto;line-height:1.6;">
+        ${ogrAdi ? `<strong>${ogrAdi}</strong> seçildi. Hakkında soru sorabilirsiniz.` : 'Öğrencileriniz hakkında sorularınızı yanıtlıyor, ders hazırlığınıza yardım ediyorum. Başlamak için bir öğrenci seçin veya doğrudan sorunuzu yazın.'}
+      </div>
+      ${ogrAdi ? `<button onclick="adaHizliSor('ders_oncesi')" class="btn btn-soft" style="margin-top:16px;font-size:13px;padding:8px 16px;">⚡ Ders öncesi brifing hazırla</button>` : ''}
+    </div>`;
+    return;
+  }
+  window._adaWaTexts = [];
+  el.innerHTML = conv.map(msg => adaMesajHTML(msg, selId)).join('');
+  setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+}
+
+function adaMesajHTML(msg, selId) {
+  if (!selId) selId = document.getElementById('ada-ogrenci')?.value || '';
+  if (msg.role === 'system_info') {
+    return `<div style="display:flex;justify-content:center;"><div class="ada-mesaj sistem">${msg.content}</div></div>`;
+  }
+  if (msg.role === 'user') {
+    const text = msg._d ||
+      (typeof msg.content === 'string' ? msg.content
+      : Array.isArray(msg.content) ? msg.content.filter(c => c.type === 'text').map(c => c.text).join(' ') : '');
+    if (!text) return '';
+    return `<div style="display:flex;justify-content:flex-end;"><div class="ada-mesaj ogretmen">${escHtml(text)}</div></div>`;
+  }
+  if (msg.role === 'assistant') {
+    const textParts = Array.isArray(msg.content)
+      ? msg.content.filter(c => c.type === 'text').map(c => c.text)
+      : (typeof msg.content === 'string' ? [msg.content] : []);
+    const text = textParts.join('\n').trim();
+    if (!text) return '';
+    // WhatsApp butonu: veli mesajı tespiti
+    let waBtn = '';
+    if (selId && adaVeliMesajiMi(text, msg._uTrigger)) {
+      if (!window._adaWaTexts) window._adaWaTexts = [];
+      const idx = window._adaWaTexts.length;
+      window._adaWaTexts.push(text);
+      waBtn = `<div style="margin-top:8px;">
+        <button onclick="adaWaClick(${idx},'${selId}')"
+          style="display:inline-flex;align-items:center;gap:7px;background:#25D366;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:Manrope,sans-serif;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WhatsApp'ta Gönder
+        </button>
+      </div>`;
+    }
+    return `<div style="display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;">
+      <div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
+        <img src="public/ai_simge.png" style="width:28px;height:28px;object-fit:contain;background:transparent;">
+      </div>
+      <div>
+        <div class="ada-mesaj ada">${adaFormatText(text)}</div>
+        ${waBtn}
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+function adaFormatText(text) {
+  const esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^[-•*] (.+)$/gm,'<div style="padding-left:14px;margin:2px 0;">• $1</div>')
+    .replace(/\n\n+/g,'<br><br>')
+    .replace(/\n/g,'<br>');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function adaYaziyorGoster() {
+  const el = document.getElementById('ada-mesajlar');
+  if (!el) return;
+  const div = document.createElement('div');
+  div.id = 'ada-typing';
+  div.style.cssText = 'display:flex;justify-content:flex-start;align-items:flex-end;gap:8px;';
+  div.innerHTML = `<div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:2px;">
+    <img src="public/ai_simge.png" style="width:28px;height:28px;object-fit:contain;background:transparent;">
+  </div>
+  <div class="ada-mesaj ada ada-yazıyor" style="padding:10px 14px;">
+    <span></span><span></span><span></span>
+  </div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function adaYaziyorGizle() {
+  document.getElementById('ada-typing')?.remove();
+}
+
+function adaKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); adaGonder(); }
+}
+
+function adaHizliSor(tip) {
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  const ogrAdi = selId ? (state.ogrenciler.find(o => o.ogrenci_id === selId)?.ad_soyad || '') : '';
+  if (!ogrAdi) return;
+  const mesajlar = {
+    ders_oncesi: `${ogrAdi} için ders öncesi brifing hazırla.`
+  };
+  const input = document.getElementById('ada-input');
+  if (input) input.value = mesajlar[tip] || '';
+  adaGonder();
+}
+
+async function adaGonder() {
+  if (adaLoading) return;
+  const input = document.getElementById('ada-input');
+  const btn   = document.getElementById('ada-gonder-btn');
+  const text  = input?.value.trim();
+  if (!text) return;
+
+  const selId = document.getElementById('ada-ogrenci')?.value || '';
+  const conv  = adaGetConv(selId);
+
+  // Öğrenci context'ini sistem mesajına ekle
+  let contextNote = '';
+  if (selId) {
+    const ogr = state.ogrenciler.find(o => o.ogrenci_id === selId);
+    if (ogr) contextNote = `\n\n[Aktif öğrenci: ${ogr.ad_soyad}, Sınıf: ${ogr.sinif || '—'}, ID: ${ogr.ogrenci_id}]`;
+  }
+
+  const waTriger = /veli\s*mesaj|mesaj\s*(oluştur|yaz|hazırla)|whatsapp\s*mesaj/i.test(text);
+  conv.push({ role: 'user', content: text + contextNote, _d: text, _uTrigger: waTriger || undefined });
+  input.value = '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;"></span>'; }
+  adaLoading = true;
+
+  adaRenderMesajlar(selId);
+  adaYaziyorGoster();
+
+  try {
+    const yanit = await adaAPICall(conv, selId);
+    adaYaziyorGizle();
+
+    if (yanit.stop_reason === 'tool_use') {
+      await adaToolLoop(conv, yanit, selId);
+    } else {
+      const lastUser = [...conv].reverse().find(m => m.role === 'user');
+      conv.push({ role: 'assistant', content: yanit.content, _uTrigger: lastUser?._uTrigger || undefined });
+      adaSaveConv(selId);
+      adaRenderMesajlar(selId);
+    }
+  } catch(err) {
+    adaYaziyorGizle();
+    conv.push({ role: 'system_info', content: '⚠️ ' + (err.message || 'Bağlantı hatası oluştu.') });
+    adaRenderMesajlar(selId);
+  } finally {
+    adaLoading = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">send</span>'; }
+    const msgEl = document.getElementById('ada-mesajlar');
+    if (msgEl) msgEl.scrollTop = msgEl.scrollHeight;
+  }
+}
+
+async function adaToolLoop(conv, response, selId) {
+  let current = response;
+  let iterations = 0;
+  const MAX_ITER = 6;
+
+  while (current.stop_reason === 'tool_use' && iterations < MAX_ITER) {
+    iterations++;
+    // Asistan mesajını conv'a ekle (tool_use blokları dahil)
+    conv.push({ role: 'assistant', content: current.content });
+
+    // Tool çağrılarını topla ve paralel çalıştır
+    const toolBlocks = current.content.filter(c => c.type === 'tool_use');
+    const toolResults = await Promise.all(toolBlocks.map(async tb => {
+      let result;
+      try {
+        result = await adaExecuteTool(tb.name, tb.input);
+      } catch(e) {
+        result = { error: 'Veri çekilemedi: ' + e.message };
+      }
+      return {
+        type: 'tool_result',
+        tool_use_id: tb.id,
+        content: JSON.stringify(result)
+      };
+    }));
+
+    conv.push({ role: 'user', content: toolResults });
+    adaYaziyorGoster();
+    current = await adaAPICall(conv, selId);
+    adaYaziyorGizle();
+  }
+
+  // Final cevap — ilk user mesajından trigger taşı
+  const firstUser = conv.find(m => m.role === 'user' && m._uTrigger);
+  conv.push({ role: 'assistant', content: current.content, _uTrigger: firstUser?._uTrigger || undefined });
+  adaSaveConv(selId);
+  adaRenderMesajlar(selId);
+}
+
+async function adaAPICall(conv, selId) {
+  const apiKey = window._adaApiKey;
+  if (!apiKey) {
+    throw new Error('Ada şu an kullanılamıyor. Lütfen sistem yöneticisiyle iletişime geçin.');
+  }
+
+  const apiMessages = conv
+    .filter(m => m.role !== 'system_info')
+    .map(({ _d, ...m }) => m);
+
+  const body = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1500,
+    system: ADA_SYSTEM_PROMPT,
+    tools: ADA_TOOLS,
+    messages: apiMessages
+  };
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.error?.message || `HTTP ${res.status}`;
+    throw new Error('Anthropic API hatası: ' + msg);
+  }
+  return data;
+}
+
+
+function adaVeliMesajiMi(text, uTrigger) {
+  if (uTrigger) return true;
+  return /sayın\s+\w/i.test(text);
+}
+
+function formatWhatsappNo(tel) {
+  let clean = String(tel).replace(/\D/g, '');
+  if (clean.startsWith('0')) clean = '9' + clean;
+  if (!clean.startsWith('90')) clean = '90' + clean;
+  return clean;
+}
+
+async function adaWaClick(idx, ogrenciId) {
+  const mesaj = (window._adaWaTexts || [])[idx];
+  if (!mesaj) { showToast('Mesaj bulunamadı'); return; }
+
+  // Önce veliler tablosunu dene
+  const { data: veliler } = await sb.from('veliler')
+    .select('veli_adi, telefon, yakinlik')
+    .eq('ogrenci_id', ogrenciId);
+
+  if (veliler && veliler.length > 1) {
+    adaVeliSecici(mesaj, veliler);
+    return;
+  }
+
+  if (veliler && veliler.length === 1) {
+    window.open(`https://wa.me/${formatWhatsappNo(veliler[0].telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    return;
+  }
+
+  // Fallback: state'deki eski veli_telefon
+  const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
+  if (ogr?.veli_telefon) {
+    window.open(`https://wa.me/${formatWhatsappNo(ogr.veli_telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    return;
+  }
+
+  showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı');
+}
+
+function adaVeliSecici(mesaj, veliler) {
+  const modal = document.getElementById('ada-wa-modal');
+  const liste = document.getElementById('ada-wa-veli-list');
+  if (!modal || !liste) return;
+  liste.innerHTML = veliler.map(v => `
+    <button onclick="adaVeliSecildi('${encodeURIComponent(mesaj)}','${v.telefon}')"
+      style="display:flex;align-items:center;gap:10px;background:#f5faff;border:1px solid #cce5ff;border-radius:10px;padding:10px 14px;cursor:pointer;width:100%;text-align:left;">
+      <span style="font-size:18px;">${v.yakinlik === 'Anne' ? '👩' : v.yakinlik === 'Baba' ? '👨' : '👤'}</span>
+      <div>
+        <div style="font-weight:700;font-size:14px;color:var(--ink);">${escHtml(v.veli_adi)}</div>
+        <div style="font-size:12px;color:var(--ink-soft);">${v.yakinlik || 'Veli'} · ${v.telefon}</div>
+      </div>
+    </button>`).join('');
+  modal.style.display = 'flex';
+}
+
+function adaVeliSecildi(mesajEncoded, telefon) {
+  document.getElementById('ada-wa-modal').style.display = 'none';
+  const mesaj = decodeURIComponent(mesajEncoded);
+  window.open(`https://wa.me/${formatWhatsappNo(telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+}
+
+async function adaExecuteTool(toolName, input) {
+  switch(toolName) {
+    case 'get_ogrenci_ozet': {
+      const { data } = await sb.from('ogrenciler')
+        .select('ogrenci_id, ad_soyad, sinif, okul, kayit_durumu')
+        .ilike('ad_soyad', `%${input.ogrenci_adi}%`)
+        .eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id);
+      if (!data?.length) return { bulunamadi: true, aranan: input.ogrenci_adi };
+      const ogr = data[0];
+      const [dRes, oRes, deRes] = await Promise.all([
+        sb.from('dersler').select('*', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
+        sb.from('odevler').select('*', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id),
+        sb.from('denemeler').select('deneme_id', { count: 'exact', head: true }).eq('ogrenci_id', ogr.ogrenci_id)
+      ]);
+      return { ...ogr, toplam_ders: dRes.count||0, toplam_odev: oRes.count||0, toplam_deneme: deRes.count||0 };
+    }
+    case 'get_son_dersler': {
+      const { data } = await sb.from('dersler')
+        .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
+        .eq('ogrenci_id', input.ogrenci_id)
+        .order('tarih', { ascending: false })
+        .limit(input.limit || 5);
+      return data || [];
+    }
+    case 'get_odev_analizi': {
+      let query = sb.from('odevler')
+        .select('gun, kaynak, konu, durum, dogru, yanlis, bos, toplam, verilis_tarihi')
+        .eq('ogrenci_id', input.ogrenci_id);
+      if (input.son_kac_gun) {
+        const sinir = new Date();
+        sinir.setDate(sinir.getDate() - input.son_kac_gun);
+        query = query.gte('verilis_tarihi', sinir.toISOString().split('T')[0]);
+      }
+      const { data } = await query;
+      if (!data?.length) return { odev_yok: true };
+      const toplam = data.length;
+      const tamamlanan = data.filter(o => o.durum === 'TAMAMLANDI').length;
+      const yapilmadi = data.filter(o => o.durum === 'YAPILMADI').length;
+      const eksik = data.filter(o => o.durum === 'EKSİK').length;
+      const bekleyen = data.filter(o => o.durum === 'BEKLİYOR').length;
+      const konuMap = {};
+      data.filter(o => o.konu).forEach(o => {
+        if (!konuMap[o.konu]) konuMap[o.konu] = { toplam:0, dogru:0, yanlis:0, bos:0, yapilan:0 };
+        konuMap[o.konu].toplam++;
+        if (o.durum === 'TAMAMLANDI') {
+          konuMap[o.konu].yapilan++;
+          konuMap[o.konu].dogru  += o.dogru  || 0;
+          konuMap[o.konu].yanlis += o.yanlis || 0;
+          konuMap[o.konu].bos    += o.bos    || 0;
+        }
+      });
+      return { toplam, tamamlanan, yapilmadi, eksik, bekleyen, konu_analizi: konuMap };
+    }
+    case 'get_deneme_trendi': {
+      const { data } = await sb.from('denemeler')
+        .select('tarih, deneme_adi, dogru, yanlis, bos, net, basari_yuzdesi, toplam_soru')
+        .eq('ogrenci_id', input.ogrenci_id)
+        .order('tarih', { ascending: true });
+      if (!data?.length) return { deneme_yok: true };
+      const netler = data.map(d => d.net || 0);
+      const son = netler[netler.length-1];
+      const onceki = netler.length > 1 ? netler[netler.length-2] : null;
+      return { denemeler: data, son_net: son, trend: onceki !== null ? (son - onceki).toFixed(1) : null };
+    }
+    case 'get_konu_uyarilari': {
+      const { data } = await sb.from('konu_uyarilari')
+        .select('konu, uyari_tipi, uyari_tarihi, tetikleyen_deger, ogretmen_notu, durum')
+        .eq('ogrenci_id', input.ogrenci_id)
+        .in('durum', ['acik','kronik_tekrar'])
+        .order('uyari_tarihi', { ascending: false });
+      return data || [];
+    }
+    case 'get_ders_oncesi_brifing': {
+      const [dersRes, odevRes, denemeRes, uyariRes] = await Promise.all([
+        sb.from('dersler').select('tarih,islenen_konu,tamamlama_durumu,ders_gorusu').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
+        sb.from('odevler').select('konu,durum,dogru,yanlis,toplam,verilis_tarihi').eq('ogrenci_id', input.ogrenci_id).limit(20),
+        sb.from('denemeler').select('tarih,deneme_adi,net,basari_yuzdesi').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
+        sb.from('konu_uyarilari').select('konu,uyari_tipi,durum').eq('ogrenci_id', input.ogrenci_id).in('durum',['acik','kronik_tekrar'])
+      ]);
+      return {
+        son_dersler:   dersRes.data  || [],
+        son_odevler:   odevRes.data  || [],
+        son_denemeler: denemeRes.data|| [],
+        uyarilar:      uyariRes.data || []
+      };
+    }
+    case 'get_mufredat_detay': {
+      const mufredat = {
+        5: {
+          'sayılar': '5.Sınıf Sayılar: Doğal sayılar ve işlemler, Çok basamaklı sayılar, Kesirler ve farklı gösterimler. Önkoşul: İlkokul 4.sınıf doğal sayı işlemleri.',
+          'geometri': '5.Sınıf Geometri: Temel geometrik çizimler, Açı ölçme, Çokgenler, Çember, Üçgen inşaları. Dikdörtgenin çevre ve alanı.',
+          'cebir': '5.Sınıf Cebir: İşlem önceliği, Sayı ve şekil örüntüleri, Algoritma yorumlama.',
+          'istatistik': '5.Sınıf İstatistik: Kategorik veri, Sıklık tablosu, Sütun grafiği. Öznel olasılık.',
+          'default': '5.Sınıf Temaları: Geometrik Şekiller(21%), Sayılar(34%), Geometrik Nicelikler(11%), İstatistik(13%), Cebir(11%), Olasılık(5%).'
+        },
+        6: {
+          'sayılar': '6.Sınıf Sayılar: Doğal sayıların çarpanları-katları, Asal sayılar, OBEB-OKEK, Kesirlerle işlemler, Ondalık gösterim, Yüzde. Önkoşul: 5.sınıf kesir ve doğal sayı anlayışı.',
+          'geometri': '6.Sınıf Geometri: İki paralel doğru ve kesen, Açı türleri. Uzunluk-alan birimleri, Geometrik cisimler görünümleri.',
+          'cebir': '6.Sınıf Cebir: Cebirsel ifadeler, Sayı örüntüleri. Önkoşul: 5.sınıf işlem önceliği ve örüntü kavramı.',
+          'istatistik': '6.Sınıf İstatistik: Kategorik ve kesikli veri, Kök-yaprak gösterimi, Aritmetik ortalama, Ortanca, Tepe değer. Deneysel olasılık.',
+          'default': '6.Sınıf Temaları: Sayılar(29%), Geometri+Nicelikler(29%), Cebir(18%), İstatistik(14%), Olasılık(5%).'
+        },
+        7: {
+          'sayılar': '7.Sınıf Sayılar: Rasyonel sayılar ve işlemler (tam, kesirli, ondalık formlar), Oran ve orantı (doğru-ters). Önkoşul: 6.sınıf kesir işlemleri KRİTİK — burada boşluk varsa 7.sınıf bloke olur.',
+          'geometri': '7.Sınıf Geometri: Cisimlerin görünümleri, Eşkenar dörtgen ve yamuk, Üçgenlerde kenarortay/açıortay/yükseklik. Yansıma dönüşümü.',
+          'cebir': '7.Sınıf Cebir: Cebirsel ifadelerle işlemler, Denklem ve eşitsizlikler, İspat yapma. Önkoşul: 6.sınıf cebirsel ifade kavramı.',
+          'istatistik': '7.Sınıf İstatistik: Sürekli veri, Çizgi grafiği, Yayılım ölçüleri (medyan, çeyrek açıklık). Teorik olasılık.',
+          'default': '7.Sınıf Temaları: Sayılar(27%), Cebir(21%), Geometrik Nicelikler(21%), İstatistik(13%), Olasılık(5%), Dönüşüm(5%).'
+        },
+        8: {
+          'sayılar': '8.Sınıf Sayılar (LGS KRİTİK): Gerçek sayılar, Kareköklü ifadeler (LGS\'de 2-5 soru), Üslü ifadeler (2-4 soru), Çarpanlara ayırma. Önkoşul: 7.sınıf rasyonel sayılar.',
+          'geometri': '8.Sınıf Geometri: Üçgende açı-kenar ilişkisi, Pisagor bağıntısı (LGS\'de 2-3 soru), Üçgen eşitsizliği. Dik prizmalar, silindir, koni hacim-yüzey.',
+          'cebir': '8.Sınıf Cebir (LGS KRİTİK): Doğrusal fonksiyonlar (3 soru), Doğrusal denklemler (2-4 soru), Eşitsizlikler (1-2 soru). Önkoşul: 7.sınıf denklem ve cebirsel ifadeler.',
+          'istatistik': '8.Sınıf İstatistik: Tüm veri türleri (kategorik, kesikli, sürekli). Olasılık: Öznel-deneysel-teorik ilişkisi.',
+          'default': '8.Sınıf (LGS Yılı) Temaları: Cebir(23%), Geometrik Şekiller(22%), Sayılar(21%), İstatistik(11%), Geometrik Nicelikler(8%), Olasılık+Dönüşüm(10%). LGS toplamı: 20 soru.'
+        }
+      };
+      const sinifData = mufredat[input.sinif];
+      if (!sinifData) return { hata: 'Desteklenen sınıflar: 5, 6, 7, 8' };
+      if (!input.tema) return { icerik: sinifData.default };
+      const temaKey = input.tema.toLowerCase()
+        .replace(/sayılar|nicelikler|rasyonel|kesir|doğal/,'sayılar')
+        .replace(/geometr|pisagor|üçgen|dönüşüm|cisim/,'geometri')
+        .replace(/cebir|denklem|fonksiyon|cebirsel|eşitsizlik/,'cebir')
+        .replace(/istatistik|olasılık|veri|grafik/,'istatistik');
+      return { icerik: sinifData[temaKey] || sinifData.default };
+    }
+    default:
+      return { hata: 'Bilinmeyen tool: ' + toolName };
+  }
+}
+
 // ── UTILS ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// ── AdaptiX PANEL ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+let _adaptixOgretmenler = [];
+let _adaptixFaturalar    = [];
+let _adaptixFaturaFiltre = 'tumsi';
+let _adaptixEditId       = null; // düzenlenen ogretmen_id
+let _adaptixNotFaturaId  = null; // not eklenen fatura_id
+
+// ── Sekme Geçişi ──────────────────────────────────────────────
+function adaptixTab(tab) {
+  ['dashboard','ogretmenler','faturalar','detay'].forEach(t => {
+    document.getElementById('adaptix-tab-' + t)?.classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById('atab-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'dashboard')   loadAdaptixDashboard();
+  if (tab === 'ogretmenler') loadAdaptixOgretmenler();
+  if (tab === 'faturalar')   loadAdaptixFaturalar();
+}
+
+// ── Genel Bakış ───────────────────────────────────────────────
+async function loadAdaptixDashboard() {
+  const statsEl = document.getElementById('adaptix-stats');
+  if (!statsEl) return;
+  statsEl.innerHTML = '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
+
+  const buAy = new Date();
+  const ayBas = new Date(buAy.getFullYear(), buAy.getMonth(), 1).toISOString().split('T')[0];
+
+  const [ogretmenRes, ogrenciRes, dersRes, faturaRes] = await Promise.all([
+    sb.from('ogretmenler').select('ogretmen_id, ad_soyad, durum'),
+    sb.from('ogrenciler').select('ogrenci_id'),
+    sb.from('dersler').select('ders_id').gte('tarih', ayBas),
+    sb.from('faturalar').select('fatura_id, tutar, durum'),
+  ]);
+
+  _adaptixOgretmenler = ogretmenRes.data || [];
+  const aktif       = _adaptixOgretmenler.filter(o => o.durum === 'aktif').length;
+  const toplamOgr   = (ogrenciRes.data || []).length;
+  const aylikDers   = (dersRes.data || []).length;
+  const faturalar   = faturaRes.data || [];
+  const bekleyenler = faturalar.filter(f => f.durum !== 'odendi');
+  const bekTutar    = bekleyenler.reduce((s, f) => s + (Number(f.tutar) || 0), 0);
+  const tahsilTutar = faturalar.filter(f => f.durum === 'odendi').reduce((s, f) => s + (Number(f.tutar) || 0), 0);
+
+  const stat = (icon, label, val, sub, color, bg) => `
+    <div class="card-2xl" style="padding:18px 20px;background:${bg};border:1px solid ${color}22;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:34px;height:34px;border-radius:10px;background:${color}22;display:flex;align-items:center;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:19px;color:${color};">${icon}</span>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.04em;">${label}</div>
+      </div>
+      <div style="font-family:Manrope;font-size:26px;font-weight:800;color:${color};line-height:1;">${val}</div>
+      <div style="font-size:11.5px;color:${color};opacity:.7;margin-top:4px;">${sub}</div>
+    </div>`;
+
+  statsEl.innerHTML =
+    stat('school',          'Aktif Öğretmen',   aktif,                  `${_adaptixOgretmenler.length} toplam`,          '#005d8d', '#e8f4fb') +
+    stat('group',           'Toplam Öğrenci',   toplamOgr,              'tüm öğretmenler',                               '#00661d', 'rgba(0,130,40,0.08)') +
+    stat('menu_book',       'Bu Ay Ders',        aylikDers,              'kayıtlı seans',                                 '#805600', 'rgba(254,178,35,0.15)') +
+    stat('pending_actions', 'Bekleyen Fatura',   bekleyenler.length + ' adet', '₺' + bekTutar.toLocaleString('tr-TR'), '#ba1a1a', 'rgba(186,26,26,0.08)') +
+    stat('payments',        'Tahsil Edilen',     '₺' + tahsilTutar.toLocaleString('tr-TR'), 'toplam',                  '#00661d', 'rgba(0,130,40,0.08)') +
+    stat('calendar_month',  'Bu Ay',             buAy.toLocaleDateString('tr-TR',{month:'long',year:'numeric'}), 'aktif dönem', '#005d8d', '#e8f4fb');
+
+  // Son aktif öğretmenler
+  const sonEl = document.getElementById('adaptix-son-ogretmenler');
+  if (sonEl && _adaptixOgretmenler.length) {
+    sonEl.innerHTML = `
+      <div class="card-2xl" style="padding:20px 22px;">
+        <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:14px;">Öğretmen Listesi</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${_adaptixOgretmenler.map(o => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container);border-radius:12px;">
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${o.ad_soyad}</div>
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${o.durum}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+}
+
+// ── Öğretmen Yönetimi ─────────────────────────────────────────
+async function loadAdaptixOgretmenler() {
+  const el = document.getElementById('adaptix-ogretmenler-tablo');
+  if (!el) return;
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
+
+  const [ogrRes, ogrenciRes, faturaRes] = await Promise.all([
+    sb.from('ogretmenler').select('*').order('ad_soyad'),
+    sb.from('ogrenciler').select('ogrenci_id, ogretmen_id'),
+    sb.from('faturalar').select('fatura_id, ogretmen_id, tutar, durum'),
+  ]);
+
+  _adaptixOgretmenler = ogrRes.data || [];
+  const ogrenciler = ogrenciRes.data || [];
+  const faturalar  = faturaRes.data || [];
+
+  if (!_adaptixOgretmenler.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-soft);">Henüz öğretmen kaydı yok.</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card-2xl" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--surface-container);border-bottom:1px solid var(--line);">
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Ad Soyad</th>
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Email / Telefon</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Öğrenci</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Durum</th>
+              <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${_adaptixOgretmenler.map(o => {
+              const ogrSayisi = ogrenciler.filter(og => og.ogretmen_id === o.ogretmen_id).length;
+              const bekFatura = faturalar.filter(f => f.ogretmen_id === o.ogretmen_id && f.durum !== 'odendi').length;
+              const aktif = o.durum === 'aktif';
+              return `
+              <tr style="border-bottom:1px solid var(--line);">
+                <td style="padding:14px 16px;">
+                  <div style="font-size:14px;font-weight:700;color:var(--ink);">${o.ad_soyad}</div>
+                  ${bekFatura ? `<div style="font-size:11px;color:#ba1a1a;margin-top:2px;">⚠ ${bekFatura} bekleyen fatura</div>` : ''}
+                </td>
+                <td style="padding:14px 16px;">
+                  <div style="font-size:12.5px;color:var(--ink-soft);">${o.email||'—'}</div>
+                  <div style="font-size:12px;color:var(--ink-soft);opacity:.8;">${o.telefon||'—'}</div>
+                </td>
+                <td style="padding:14px 16px;text-align:center;">
+                  <span style="font-size:18px;font-weight:800;color:#005d8d;">${ogrSayisi}</span>
+                </td>
+                <td style="padding:14px 16px;text-align:center;">
+                  <button onclick="adaptixToggleDurum('${o.ogretmen_id}','${o.durum}')"
+                    style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:none;cursor:pointer;${aktif?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
+                    ${aktif ? 'Aktif' : 'Pasif'}
+                  </button>
+                </td>
+                <td style="padding:14px 16px;text-align:right;">
+                  <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button onclick="adaptixOgretmenDetay('${o.ogretmen_id}')"
+                      style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:#e8f4fb;color:#005d8d;border:none;cursor:pointer;">👁 Görüntüle</button>
+                    <button onclick="adaptixOgretmenModalAc('${o.ogretmen_id}')"
+                      style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">✏️ Düzenle</button>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Öğretmen Toggle Durum ─────────────────────────────────────
+async function adaptixToggleDurum(ogretmenId, mevcutDurum) {
+  const yeni = mevcutDurum === 'aktif' ? 'pasif' : 'aktif';
+  showToast('Güncelleniyor...');
+  const { error } = await sb.from('ogretmenler').update({ durum: yeni }).eq('ogretmen_id', ogretmenId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(`✅ Durum ${yeni} yapıldı`);
+  loadAdaptixOgretmenler();
+}
+
+// ── Öğretmen Ekle/Düzenle Modal ───────────────────────────────
+function adaptixOgretmenModalAc(ogretmenId) {
+  _adaptixEditId = ogretmenId || null;
+  const modal    = document.getElementById('adaptix-ogr-modal');
+  const title    = document.getElementById('aom-title');
+  const sifGrup  = document.getElementById('aom-sifre-grup');
+  const errEl    = document.getElementById('aom-error');
+
+  errEl.style.display = 'none';
+
+  if (ogretmenId) {
+    const o = _adaptixOgretmenler.find(x => x.ogretmen_id === ogretmenId);
+    title.textContent = 'Öğretmeni Düzenle';
+    document.getElementById('aom-ad').value    = o?.ad_soyad  || '';
+    document.getElementById('aom-email').value = o?.email     || '';
+    document.getElementById('aom-tel').value   = o?.telefon   || '';
+    sifGrup.style.display = 'none'; // düzenlemede şifre değiştirilmez
+  } else {
+    title.textContent = 'Yeni Öğretmen Ekle';
+    document.getElementById('aom-ad').value    = '';
+    document.getElementById('aom-email').value = '';
+    document.getElementById('aom-tel').value   = '';
+    document.getElementById('aom-sifre').value = '';
+    sifGrup.style.display = '';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function adaptixOgretmenModalKapat() {
+  document.getElementById('adaptix-ogr-modal').style.display = 'none';
+  _adaptixEditId = null;
+}
+
+async function adaptixOgretmenKaydet() {
+  const adSoyad = document.getElementById('aom-ad').value.trim();
+  const email   = document.getElementById('aom-email').value.trim();
+  const telefon = document.getElementById('aom-tel').value.trim();
+  const sifre   = document.getElementById('aom-sifre').value;
+  const errEl   = document.getElementById('aom-error');
+
+  errEl.style.display = 'none';
+  if (!adSoyad) { errEl.textContent = 'Ad soyad zorunludur.'; errEl.style.display = 'block'; return; }
+  if (!_adaptixEditId && !sifre) { errEl.textContent = 'Şifre zorunludur.'; errEl.style.display = 'block'; return; }
+
+  showToast('Kaydediliyor...');
+
+  if (_adaptixEditId) {
+    // Güncelleme
+    const { error } = await sb.from('ogretmenler').update({ ad_soyad: adSoyad, email, telefon }).eq('ogretmen_id', _adaptixEditId);
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+    showToast('✅ Güncellendi');
+  } else {
+    // Yeni öğretmen ekle
+    const { data: ogretmen, error: oErr } = await sb.from('ogretmenler')
+      .insert({ ad_soyad: adSoyad, email, telefon, durum: 'aktif' })
+      .select().single();
+    if (oErr) { errEl.textContent = oErr.message; errEl.style.display = 'block'; return; }
+
+    // Kullanicilar tablosuna ekle
+    const hash = await hashSifre(sifre);
+    const { error: kErr } = await sb.from('kullanicilar').insert({
+      rol: 'ogretmen', sifre_hash: hash, deger: ogretmen.ogretmen_id
+    });
+    if (kErr) { errEl.textContent = 'Öğretmen eklendi ama giriş kaydı oluşturulamadı: ' + kErr.message; errEl.style.display = 'block'; return; }
+    showToast('✅ Öğretmen eklendi');
+  }
+
+  adaptixOgretmenModalKapat();
+  loadAdaptixOgretmenler();
+}
+
+// ── Öğretmen Detay Görünümü ───────────────────────────────────
+async function adaptixOgretmenDetay(ogretmenId) {
+  adaptixTab('detay');
+  const el = document.getElementById('adaptix-detay-content');
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const o = _adaptixOgretmenler.find(x => x.ogretmen_id === ogretmenId) || {};
+
+  const [ogrRes, dersRes, fatRes] = await Promise.all([
+    sb.from('ogrenciler').select('ogrenci_id, ad_soyad, sinif, created_at').eq('ogretmen_id', ogretmenId).order('ad_soyad'),
+    sb.from('dersler').select('tarih, islened_konu, ogrenci_id').eq('ogretmen_id', ogretmenId).order('tarih', { ascending: false }).limit(10),
+    sb.from('faturalar').select('*').eq('ogretmen_id', ogretmenId).order('donem', { ascending: false }),
+  ]);
+
+  const ogrenciler = ogrRes.data  || [];
+  const dersler    = dersRes.data || [];
+  const faturalar  = fatRes.data  || [];
+
+  const durumBadge = d => d==='odendi'
+    ? 'background:rgba(0,130,40,0.12);color:#00661d;'
+    : 'background:rgba(186,26,26,0.1);color:#ba1a1a;';
+
+  el.innerHTML = `
+    <!-- Öğretmen Bilgisi -->
+    <div class="card-2xl" style="padding:20px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+      <div style="width:48px;height:48px;border-radius:13px;background:#005d8d22;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:20px;color:#005d8d;flex-shrink:0;">
+        ${(o.ad_soyad||'?').charAt(0).toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">${o.ad_soyad||'—'}</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">${o.email||''} ${o.telefon?'· '+o.telefon:''}</div>
+      </div>
+      <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${o.durum||'—'}</span>
+    </div>
+
+    <!-- Öğrenci Listesi -->
+    <div class="card-2xl" style="padding:20px 22px;margin-bottom:16px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:12px;">👥 Öğrenciler (${ogrenciler.length})</div>
+      ${!ogrenciler.length ? '<div style="color:var(--ink-soft);font-size:13px;">Öğrenci kaydı yok.</div>' : `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${ogrenciler.map(og => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-container);border-radius:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${og.ad_soyad}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${og.sinif||'—'}</div>
+            </div>
+            <div style="font-size:11px;color:var(--ink-soft);">${og.created_at?new Date(og.created_at).toLocaleDateString('tr-TR'):''}</div>
+          </div>`).join('')}
+      </div>`}
+    </div>
+
+    <!-- Son Dersler -->
+    <div class="card-2xl" style="padding:20px 22px;margin-bottom:16px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:12px;">📚 Son 10 Ders</div>
+      ${!dersler.length ? '<div style="color:var(--ink-soft);font-size:13px;">Ders kaydı yok.</div>' : `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${dersler.map(d => {
+          const ogr = ogrenciler.find(og => og.ogrenci_id === d.ogrenci_id);
+          return `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-container);border-radius:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${d.islened_konu||'—'}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${ogr?.ad_soyad||d.ogrenci_id}</div>
+            </div>
+            <div style="font-size:11px;color:var(--ink-soft);">${d.tarih?new Date(d.tarih).toLocaleDateString('tr-TR'):''}</div>
+          </div>`;
+        }).join('')}
+      </div>`}
+    </div>
+
+    <!-- Fatura Geçmişi -->
+    <div class="card-2xl" style="padding:20px 22px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:12px;">🧾 Fatura Geçmişi</div>
+      ${!faturalar.length ? '<div style="color:var(--ink-soft);font-size:13px;">Fatura kaydı yok.</div>' : `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${faturalar.map(f => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container);border-radius:12px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${f.donem?new Date(f.donem).toLocaleDateString('tr-TR',{month:'long',year:'numeric'}):'-'}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${f.ogrenci_sayisi||0} öğrenci</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:800;color:var(--ink);">₺${Number(f.tutar||0).toLocaleString('tr-TR')}</div>
+              <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;${durumBadge(f.durum)}">${f.durum==='odendi'?'Ödendi':'Bekliyor'}</span>
+            </div>
+          </div>`).join('')}
+      </div>`}
+    </div>`;
+}
+
+// ── Fatura Yönetimi ───────────────────────────────────────────
+function adaptixFaturaFiltre(filtre) {
+  _adaptixFaturaFiltre = filtre;
+  ['tumsi','bekleyen','odendi'].forEach(f => {
+    const btn = document.getElementById('ffiltre-' + f);
+    if (btn) btn.className = f === filtre ? 'btn btn-primary' : 'btn btn-ghost';
+  });
+  renderAdaptixFaturalar();
+}
+
+async function loadAdaptixFaturalar() {
+  const el = document.getElementById('adaptix-faturalar-tablo');
+  if (!el) return;
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
+
+  const [ogretmenRes, faturaRes] = await Promise.all([
+    sb.from('ogretmenler').select('ogretmen_id, ad_soyad'),
+    sb.from('faturalar').select('*').order('donem', { ascending: false }),
+  ]);
+
+  _adaptixOgretmenler = ogretmenRes.data || [];
+  _adaptixFaturalar   = faturaRes.data   || [];
+  renderAdaptixFaturalar();
+}
+
+function renderAdaptixFaturalar() {
+  const el = document.getElementById('adaptix-faturalar-tablo');
+  if (!el) return;
+
+  const filtreli = _adaptixFaturalar.filter(f => {
+    if (_adaptixFaturaFiltre === 'bekleyen') return f.durum !== 'odendi';
+    if (_adaptixFaturaFiltre === 'odendi')   return f.durum === 'odendi';
+    return true;
+  });
+
+  if (!filtreli.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-soft);">Bu filtrede fatura yok.</div>';
+    return;
+  }
+
+  const ogrMap = {};
+  _adaptixOgretmenler.forEach(o => { ogrMap[o.ogretmen_id] = o.ad_soyad; });
+
+  el.innerHTML = `
+    <div class="card-2xl" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--surface-container);border-bottom:1px solid var(--line);">
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Öğretmen</th>
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Dönem</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Öğrenci</th>
+              <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Tutar</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Durum</th>
+              <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtreli.map(f => {
+              const ad = ogrMap[f.ogretmen_id] || f.ogretmen_id;
+              const donem = f.donem ? new Date(f.donem).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }) : '—';
+              const odendi = f.durum === 'odendi';
+              return `
+              <tr style="border-bottom:1px solid var(--line);">
+                <td style="padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink);">${ad}</td>
+                <td style="padding:13px 16px;font-size:13px;color:var(--ink-soft);">${donem}</td>
+                <td style="padding:13px 16px;text-align:center;font-size:14px;font-weight:700;color:#005d8d;">${f.ogrenci_sayisi||0}</td>
+                <td style="padding:13px 16px;text-align:right;font-size:14px;font-weight:800;color:var(--ink);">₺${Number(f.tutar||0).toLocaleString('tr-TR')}</td>
+                <td style="padding:13px 16px;text-align:center;">
+                  <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:16px;${odendi?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
+                    ${odendi?'Ödendi':'Bekliyor'}
+                  </span>
+                  ${f.odeme_tarihi?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;">${new Date(f.odeme_tarihi).toLocaleDateString('tr-TR')}</div>`:''}
+                  ${f.notlar?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${f.notlar}">📝 ${f.notlar}</div>`:''}
+                </td>
+                <td style="padding:13px 16px;text-align:right;">
+                  <div style="display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;">
+                    ${!odendi?`<button onclick="adaptixFaturaOdendi('${f.fatura_id}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(0,130,40,0.12);color:#00661d;border:none;cursor:pointer;">✓ Ödendi</button>`:''}
+                    <button onclick="adaptixNotModalAc('${f.fatura_id}','${(f.notlar||'').replace(/'/g,"&#39;")}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">📝 Not</button>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Fatura Oluştur
+async function adaptixFaturaOlustur() {
+  showToast('Faturalar kontrol ediliyor...');
+
+  const buAy = new Date();
+  const donem = new Date(buAy.getFullYear(), buAy.getMonth(), 1).toISOString().split('T')[0];
+
+  const [ogretmenRes, ogrenciRes, mevcutRes] = await Promise.all([
+    sb.from('ogretmenler').select('ogretmen_id, ad_soyad').eq('durum', 'aktif'),
+    sb.from('ogrenciler').select('ogrenci_id, ogretmen_id').eq('kayit_durumu', 'AKTİF'),
+    sb.from('faturalar').select('ogretmen_id').eq('donem', donem),
+  ]);
+
+  const ogretmenler = ogretmenRes.data || [];
+  const ogrenciler  = ogrenciRes.data  || [];
+  const mevcutIDs   = (mevcutRes.data  || []).map(f => f.ogretmen_id);
+
+  const yeniFaturalar = ogretmenler
+    .filter(o => !mevcutIDs.includes(o.ogretmen_id))
+    .map(o => ({
+      ogretmen_id:   o.ogretmen_id,
+      donem,
+      ogrenci_sayisi: ogrenciler.filter(og => og.ogretmen_id === o.ogretmen_id).length,
+      tutar:          0, // tutar 0 olarak başlar, sonradan düzenlenebilir
+      durum:          'bekleyen',
+    }));
+
+  if (!yeniFaturalar.length) {
+    showToast('⚠️ Bu dönem için fatura zaten oluşturulmuş');
+    return;
+  }
+
+  const { error } = await sb.from('faturalar').insert(yeniFaturalar);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(`✅ ${yeniFaturalar.length} öğretmen için fatura oluşturuldu`);
+  loadAdaptixFaturalar();
+}
+
+// Fatura Ödendi İşaretle
+async function adaptixFaturaOdendi(faturaId) {
+  showToast('Güncelleniyor...');
+  const { error } = await sb.from('faturalar').update({
+    durum: 'odendi',
+    odeme_tarihi: new Date().toISOString().split('T')[0]
+  }).eq('fatura_id', faturaId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Ödendi olarak işaretlendi');
+  const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === faturaId);
+  if (idx >= 0) {
+    _adaptixFaturalar[idx].durum = 'odendi';
+    _adaptixFaturalar[idx].odeme_tarihi = new Date().toISOString().split('T')[0];
+  }
+  renderAdaptixFaturalar();
+}
+
+// Not Modali
+function adaptixNotModalAc(faturaId, mevcutNot) {
+  _adaptixNotFaturaId = faturaId;
+  document.getElementById('anm-not').value = mevcutNot || '';
+  document.getElementById('adaptix-not-modal').style.display = 'flex';
+}
+
+function adaptixNotModalKapat() {
+  document.getElementById('adaptix-not-modal').style.display = 'none';
+  _adaptixNotFaturaId = null;
+}
+
+async function adaptixNotKaydet() {
+  if (!_adaptixNotFaturaId) return;
+  const not = document.getElementById('anm-not').value.trim();
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('faturalar').update({ notlar: not }).eq('fatura_id', _adaptixNotFaturaId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Not kaydedildi');
+  const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === _adaptixNotFaturaId);
+  if (idx >= 0) _adaptixFaturalar[idx].notlar = not;
+  adaptixNotModalKapat();
+  renderAdaptixFaturalar();
+}
+
+// ══════════════════════════════════════════════════════════════
+
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebar-overlay');
@@ -4063,7 +6234,9 @@ function toggleSidebar() {
 
 function logout() {
   localStorage.removeItem('adaptix_session');
-  state = { rol:null, user:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
+  localStorage.removeItem('adaptix_ogretmen_id');
+  localStorage.removeItem('adaptix_ogretmen_adi');
+  state = { rol:null, user:null, ogretmen_id:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';
   document.getElementById('ogr-sifre').value = '';
@@ -4076,10 +6249,11 @@ function logout() {
   try {
     const saved = localStorage.getItem('adaptix_session');
     if (!saved) return;
-    const { rol, user } = JSON.parse(saved);
+    const { rol, user, ogretmen_id } = JSON.parse(saved);
     if (!rol || !user) return;
-    state.rol  = rol;
-    state.user = user;
+    state.rol         = rol;
+    state.user        = user;
+    state.ogretmen_id = ogretmen_id || null;
     initApp();
   } catch(e) { localStorage.removeItem('adaptix_session'); }
 })();
@@ -4095,7 +6269,7 @@ function showToast(msg) {
 
 <!-- Öğrenci Düzenle Modal -->
 <div id="ogr-duzenle-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-  <div class="bg-surface rounded-2xl shadow-xl p-6 w-96 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+  <div class="bg-surface rounded-2xl shadow-xl p-6 w-full max-w-lg flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
     <div class="font-headline font-bold text-lg text-on-surface">✏️ Öğrenci Düzenle</div>
     <div class="flex flex-col gap-3">
       <div class="flex flex-col gap-1">
@@ -4129,12 +6303,11 @@ function showToast(msg) {
         </div>
       </div>
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veli Adı</label>
-        <input id="od-veli" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
-      </div>
-      <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veli Telefonu</label>
-        <input id="od-tel" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Veliler</label>
+          <button type="button" onclick="veliSatirEkle('od-veli-container')" class="text-xs font-bold text-primary hover:underline">+ Veli Ekle</button>
+        </div>
+        <div id="od-veli-container" style="min-height:40px;"></div>
       </div>
     </div>
     <div class="flex gap-2 justify-between mt-1">
@@ -4194,5 +6367,22 @@ function showToast(msg) {
     </div>
   </div>
 </div>
+
+<!-- Bekleyen Ödevler Modal -->
+<div id="bekleyen-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <div class="bg-surface rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined ico-fill text-primary" style="font-size:20px;">assignment_late</span>
+        <span class="font-headline font-bold text-base text-on-surface">Bekleyen Ödevler</span>
+        <span id="bm-sayac" class="text-xs font-bold px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container">0</span>
+      </div>
+      <button onclick="document.getElementById('bekleyen-modal').classList.add('hidden')"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors text-lg font-bold">✕</button>
+    </div>
+    <div id="bm-liste" class="overflow-y-auto flex-1"></div>
+  </div>
+</div>
+
 </body>
 </html>

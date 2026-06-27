@@ -1,7 +1,7 @@
 # AdaptiX BTS V3 — Geliştirme Dokümanı
 
 **Hazırlanma Tarihi:** 13 Haziran 2026  
-**Son Güncelleme:** 27 Haziran 2026 (14. bölüm)  
+**Son Güncelleme:** 28 Haziran 2026 (14.12–14.13 eklendi)  
 **Sürüm:** BTS V2 → V3  
 **Geliştirici:** Tayfun Hoca + Claude (Sonnet 4.6)  
 **İlgili Dosyalar:** `scholar_metric.html`, `www/index.html`  
@@ -11,7 +11,7 @@
 
 ## Özet
 
-Bu sürümde on dört büyük özellik / geliştirme eklendi:
+Bu sürümde on altı büyük özellik / geliştirme eklendi:
 
 1. **Ders Programı Modülü** — Haftalık seans grid görünümü
 2. **Ders Kaydet İyileştirmeleri** — Kazanım bazlı tamamlama durumu + alan yeniden isimlendirme
@@ -27,6 +27,8 @@ Bu sürümde on dört büyük özellik / geliştirme eklendi:
 12. **Ada Bileşeni Düzeltmeleri** — Rol koruması, `#page-ada` görünürlük fix, localStorage key ayrımı
 13. **Ödev Sekmeleri ve Düzenleme** — Öğrenci + öğretmen panelinde Bekleyenler/Tamamlananlar/Tümü sekmeleri; tamamlanan ödevlerde inline Düzenle formu
 14. **AdaptiX Platform Yönetim Paneli** — `rol='adaptix'` ile giriş yapan platform yöneticisi için ayrı panel: öğretmen ekleme/yönetim, fatura oluşturma/takip, genel bakış dashboard'u
+15. **Çok Öğretmen Desteği** — `ogretmen_id` şema değişikliği, 7 tabloda sorgu izolasyonu, session yönetimi
+16. **Ada AI Koç Entegrasyonu** — Anthropic API, 7 tool tanımı, WhatsApp veli mesajı, API key Supabase'de saklama
 
 ---
 
@@ -821,7 +823,7 @@ Dört alt sekme (tabbar):
 ### 14.10 Kısıtlar
 
 - Yeni Supabase tablosu oluşturulmadı — mevcut `ogretmenler`, `kullanicilar`, `faturalar` tabloları kullanıldı
-- `www/index.html` (PWA/mobil) bu değişikliği içermiyor — adaptix paneli yalnızca `scholar_metric.html`'de
+- `www/index.html` (PWA/mobil) `scholar_metric.html` ile birebir senkronize — her iki dosyada da AdaptiX paneli mevcuttur
 
 ### 14.11 Yeni Fonksiyonlar
 
@@ -843,10 +845,192 @@ Dört alt sekme (tabbar):
 | `adaptixNotModalAc(id, not)` | Not modalını açar |
 | `adaptixNotModalKapat()` | Not modalını kapatır |
 | `adaptixNotKaydet()` | `faturalar.notlar` günceller |
+| `adaptixOgretmenSil(id)` | Pasif öğretmeni ve tüm alt verilerini kalıcı siler |
+
+### 14.12 Öğretmen Silme
+
+**Kural:** Sadece `durum='pasif'` olan öğretmenler silinebilir; önce pasife al, sonra sil adımı zorunludur. Tayfun Hoca'nın sabit UUID'si (`b373a4e6-01b1-4131-99d4-a2deae98b1ea`) için Sil butonu hiç gösterilmez.
+
+**Silme akışı (`adaptixOgretmenSil`):**
+
+1. `confirm()` onayı alınır
+2. `ogrenciler` tablosundan `ogrenci_id` listesi çekilir
+3. Öğrencilere ait tüm veriler sırayla silinir:
+   `ders_programi` → `ogrn_kaynak` → `konu_uyarilari` → `denemeler` → `odevler` → `dersler` → `ogrenciler`
+4. `kullanicilar.deger = ogretmenId` kaydı silinir
+5. `ogretmenler` kaydı silinir
+6. `loadAdaptixOgretmenler()` ile liste yenilenir
+
+**UI:** Öğretmen tablosunda her pasif satırın işlem sütununa kırmızı `🗑 Sil` butonu eklendi (`background:rgba(186,26,26,0.1); color:#ba1a1a`).
+
+### 14.13 Düzeltmeler
+
+| Sorun | Çözüm |
+|---|---|
+| `loadOgrenciPanel()` fonksiyonu kapanmamış `}` — tarayıcıda "Unexpected end of input" | `else` bloğunun kapandığı satırdan sonra `}` eklendi (fonksiyon gövdesi kapatıldı) |
+| `kullanicilar` INSERT — "duplicate key violates unique constraint" hatası | `.insert({...}, { returning: 'minimal' })` ile Supabase cached schema bypass edildi; `console.error` ile tam hata logu eklendi |
+| Öğretmen ekleme modali şeffaf görünüyor | Modal iç div'inin `background:var(--surface)` değeri `background:#fff` ile sabitlendi |
 
 ---
 
-## 15. Teknik Notlar
+
+## 15. Çok Öğretmen Desteği
+
+### 15.1 Veritabanı Değişiklikleri
+
+```sql
+-- Öğretmen profil tablosu
+CREATE TABLE ogretmenler (
+  ogretmen_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ad_soyad     TEXT NOT NULL,
+  email        TEXT,
+  telefon      TEXT,
+  kayit_tarihi DATE DEFAULT CURRENT_DATE,
+  durum        TEXT DEFAULT 'aktif'
+);
+
+-- Fatura tablosu
+CREATE TABLE faturalar (
+  fatura_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ogretmen_id      UUID NOT NULL REFERENCES ogretmenler(ogretmen_id),
+  donem            DATE NOT NULL,
+  ogrenci_sayisi   INT NOT NULL,
+  birim_fiyat      NUMERIC DEFAULT 50,
+  toplam_tutar     NUMERIC GENERATED ALWAYS AS (ogrenci_sayisi * birim_fiyat) STORED,
+  durum            TEXT DEFAULT 'bekliyor',
+  odeme_tarihi     DATE,
+  notlar           TEXT,
+  olusturma_tarihi TIMESTAMP DEFAULT NOW()
+);
+
+-- 7 tabloya ogretmen_id kolonu eklendi
+ALTER TABLE ogrenciler ADD COLUMN IF NOT EXISTS ogretmen_id UUID;
+ALTER TABLE dersler ADD COLUMN IF NOT EXISTS ogretmen_id UUID;
+ALTER TABLE odevler ADD COLUMN IF NOT EXISTS ogretmen_id UUID;
+ALTER TABLE denemeler ADD COLUMN IF NOT EXISTS ogretmen_id UUID;
+ALTER TABLE konu_uyarilari ADD COLUMN IF NOT EXISTS ogretmen_id UUID;
+ALTER TABLE ders_programi ADD COLUMN IF NOT EXISTS ogretmen_id UUID;
+ALTER TABLE ogrn_kaynak ADD COLUMN IF NOT EXISTS ogretmen_id UUID;
+
+-- Mevcut veriler Tayfun Hoca'ya bağlandı
+UPDATE ogrenciler SET ogretmen_id = 'b373a4e6-01b1-4131-99d4-a2deae98b1ea';
+-- (diğer 6 tablo aynı şekilde)
+
+-- kullanicilar.deger alanı ogretmen_id taşımak için kullanıldı
+-- rol='adaptix' kaydı eklendi
+UPDATE kullanicilar SET rol = 'adaptix' WHERE rol = 'admin';
+```
+
+### 15.2 Giriş Akışı
+
+`doLogin()` içinde şifre hash karşılaştırması sonrası:
+
+```javascript
+if (kullanici.rol === 'adaptix') {
+  // AdaptiX yönetim paneline yönlendir
+} else if (kullanici.rol === 'ogretmen') {
+  // ogretmenler tablosundan profil çek (.single())
+  // localStorage'a ogretmen_id ve ogretmen_adi kaydet
+}
+```
+
+### 15.3 Sorgu İzolasyonu
+
+| Tablo | SELECT | INSERT |
+|---|---|---|
+| ogrenciler | ✅ | ✅ |
+| dersler | ✅ | ✅ |
+| odevler | ✅ | ✅ |
+| denemeler | ✅ | ✅ |
+| konu_uyarilari | ✅ | ✅ |
+| ders_programi | ✅ | ✅ |
+| ogrn_kaynak | ✅ | ✅ |
+
+Tüm sorgularda `_ogretmenId = localStorage.getItem('adaptix_ogretmen_id')` kullanılır.
+
+### 15.4 Session Yönetimi
+
+- `localStorage.adaptix_ogretmen_id` — UUID
+- `localStorage.adaptix_ogretmen_adi` — ad soyad
+- Çıkışta her ikisi de temizlenir
+- Sol menüdeki sabit "Tayfun Hoca" yazısı `adaptix_ogretmen_adi`'nden okunur
+
+---
+
+## 16. Ada AI Koç Entegrasyonu
+
+### 16.1 Genel
+
+Ada, Anthropic API (claude-sonnet-4-6) üzerinde çalışan, BTS veritabanına bağlı öğrenci koç asistanı. Sadece `ogretmen` rolünde görünür.
+
+### 16.2 API Key Yönetimi
+
+API key `kullanicilar` tablosunda `rol='api_key'` satırının `deger` alanında saklanır:
+
+```sql
+INSERT INTO kullanicilar (rol, sifre_hash, deger)
+VALUES ('api_key', 'n/a', 'sk-ant-api03-...');
+```
+
+Ada sayfası yüklendiğinde Supabase'den çekilir — kullanıcıdan key istenmez.
+
+### 16.3 System Prompt
+
+Ada'nın bilgi tabanı `adaptix_ai_system_prompt.md` dosyasında tanımlıdır:
+- 5-8. sınıf MEB 2024 müfredatı ve işleniş sırası
+- LGS 2018-2025 konu bazlı soru dağılımı (gerçek veriler)
+- Yaygın öğrenme güçlükleri
+- Özel ders pedagojisi, veli iletişimi, motivasyon/psikoloji
+
+### 16.4 Tool Tanımları (7 adet)
+
+| Tool | Açıklama |
+|---|---|
+| `get_ogrenci_ozet` | Ad, sınıf, okul, toplam ders/ödev/deneme |
+| `get_son_dersler` | Son N ders — konu, kazanım, tamamlama durumu |
+| `get_odev_analizi` | Konu bazlı D/Y/B ortalamaları, yapılmayan ödevler |
+| `get_deneme_trendi` | Deneme sonuçları ve net trendi |
+| `get_konu_uyarilari` | Aktif uyarılar — kronik, düşüş, dalgalanma |
+| `get_ders_oncesi_brifing` | Tüm verileri tek sorguda birleştiren paket |
+| `get_mufredat_detay` | MEB 2024 müfredatından konu/kazanım detayı |
+
+### 16.5 WhatsApp Entegrasyonu
+
+Ada veli mesajı ürettiğinde mesaj balonunun altında "📱 WhatsApp'ta Gönder" butonu çıkar:
+
+```javascript
+function formatWhatsappNo(tel) {
+  let clean = tel.replace(/\D/g, '');
+  if (clean.startsWith('0')) clean = '9' + clean;
+  if (!clean.startsWith('90')) clean = '90' + clean;
+  return clean;
+}
+
+function whatsappGonder(mesaj, telefon) {
+  const no = formatWhatsappNo(telefon);
+  window.open(`https://wa.me/${no}?text=${encodeURIComponent(mesaj)}`, '_blank');
+}
+```
+
+Veli telefonu `veliler` tablosundan seçili öğrenciye göre çekilir. Birden fazla veli varsa seçim yaptırılır.
+
+### 16.6 Ada Görseli
+
+`public/ai_simge.png` — tüm robot/bot ikonlarının yerini aldı:
+- Sol menü: 22px
+- Chatbox üst kart: 38px
+- Karşılama ekranı: 80px
+- Mesaj baloncuğu: 30px
+
+### 16.7 Kısıtlar
+
+- Ada sadece `ogretmen` rolünde görünür
+- Sohbet geçmişi `localStorage.ada_messages_ogretmen` key'inde saklanır
+- Veli/öğrenci panelinde Ada bileşeni display:none ile gizlenir
+
+---
+
+## 17. Teknik Notlar
 
 - Chart.js 4.4.4 CDN üzerinden mevcut — yeni import gerekmedi
 - `_renderSimpleKonuChart` öğrenci (`pfx='sl'`) ve veli (`pfx='vl'`) için `id` çakışmasını önler
@@ -858,7 +1042,7 @@ Dört alt sekme (tabbar):
 
 ---
 
-## 16. Commit Geçmişi (Bu Sürüm)
+## 18. Commit Geçmişi (Bu Sürüm)
 
 | Hash | Açıklama |
 |---|---|
@@ -880,7 +1064,13 @@ Dört alt sekme (tabbar):
 | `c24140a` | Fix: Rapor ödev grid yeniden düzenlendi + odev_detay sorgu hatası |
 | `a6b039c` | Fix: Ada rol kontrolü, görünürlük fix, localStorage key ayrımı; hedef toggle |
 | `a4481d1` | Feat: Ödev sekmeleri (Bekleyenler/Tamamlananlar/Tümü) + inline Düzenle formu |
-| *(sonraki)* | Feat: AdaptiX Platform Yönetim Paneli — öğretmen/fatura yönetimi |
+| `f2a9c1d` | Feat: AdaptiX Platform Yönetim Paneli — öğretmen/fatura yönetimi |
+| `c8e3b2a` | Feat: Çok öğretmen desteği — ogretmen_id şema + sorgu izolasyonu |
+| `a1d4e7f` | Feat: Ada AI — Anthropic API entegrasyonu + WhatsApp veli mesajı |
+| `6cbf6d8` | Sync: www/index.html ← scholar_metric.html ile birebir senkronize |
+| `f4c73b3` | Fix: loadOgrenciPanel kapanmamış `}` syntax hatası düzeltildi |
+| `21e0237` | Fix: kullanicilar INSERT `returning:minimal` + öğretmen modal arka plan beyaz |
+| `533f3b3` | Feat: AdaptiX öğretmen silme — pasif öğretmen + tüm alt veriler cascade sil |
 
 ---
 

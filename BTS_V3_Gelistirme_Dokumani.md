@@ -1,7 +1,7 @@
 # AdaptiX BTS V3 — Geliştirme Dokümanı
 
 **Hazırlanma Tarihi:** 13 Haziran 2026  
-**Son Güncelleme:** 27 Haziran 2026  
+**Son Güncelleme:** 27 Haziran 2026 (14. bölüm)  
 **Sürüm:** BTS V2 → V3  
 **Geliştirici:** Tayfun Hoca + Claude (Sonnet 4.6)  
 **İlgili Dosyalar:** `scholar_metric.html`, `www/index.html`  
@@ -11,7 +11,7 @@
 
 ## Özet
 
-Bu sürümde on üç büyük özellik / geliştirme eklendi:
+Bu sürümde on dört büyük özellik / geliştirme eklendi:
 
 1. **Ders Programı Modülü** — Haftalık seans grid görünümü
 2. **Ders Kaydet İyileştirmeleri** — Kazanım bazlı tamamlama durumu + alan yeniden isimlendirme
@@ -26,6 +26,7 @@ Bu sürümde on üç büyük özellik / geliştirme eklendi:
 11. **Öğrenci Paneli Hedef Toggle** — Kaydet sonrası label görünümü, Düzenle ile geri dönüş
 12. **Ada Bileşeni Düzeltmeleri** — Rol koruması, `#page-ada` görünürlük fix, localStorage key ayrımı
 13. **Ödev Sekmeleri ve Düzenleme** — Öğrenci + öğretmen panelinde Bekleyenler/Tamamlananlar/Tümü sekmeleri; tamamlanan ödevlerde inline Düzenle formu
+14. **AdaptiX Platform Yönetim Paneli** — `rol='adaptix'` ile giriş yapan platform yöneticisi için ayrı panel: öğretmen ekleme/yönetim, fatura oluşturma/takip, genel bakış dashboard'u
 
 ---
 
@@ -710,7 +711,142 @@ Yeni: Filtre ve limit kaldırıldı — tüm ödevler çekilir.
 
 ---
 
-## 14. Teknik Notlar
+## 14. AdaptiX Platform Yönetim Paneli
+
+### 14.1 Genel
+
+`kullanicilar` tablosunda `rol='adaptix'` olan kullanıcı giriş yaptığında öğretmen paneli yerine ayrı bir yönetim paneline (`page-adaptix`) yönlendirilir. Bu panel hiçbir `ogretmen_id` filtresi uygulamaz; tüm öğretmen, öğrenci ve fatura verilerini görür.
+
+### 14.2 Giriş Akışı
+
+`doLogin()` içinde `kullanicilar.rol` kontrolü:
+
+```javascript
+if (kullanici.rol === 'adaptix') {
+  state.rol  = 'adaptix';
+  state.user = { ad: 'AdaptiX', rol: 'adaptix' };
+  initApp();   // → goPage('adaptix') + loadAdaptixDashboard()
+  return;
+}
+```
+
+`goPage()` güvenlik guard'ı — adaptix rolü yalnızca kendi sayfasına erişebilir:
+
+```javascript
+if (state.rol === 'adaptix' && id !== 'adaptix') return;
+```
+
+### 14.3 Panel Yapısı
+
+Dört alt sekme (tabbar):
+
+| Sekme | İçerik |
+|---|---|
+| **Genel Bakış** | 6 istatistik kartı + öğretmen özet listesi |
+| **Öğretmenler** | Tablo: ad, email, öğrenci sayısı, durum, işlemler |
+| **Faturalar** | Tablo + filtre (Tümü / Bekleyen / Ödenen) + fatura oluştur |
+| **Öğretmen Detay** | Tıklanan öğretmenin öğrencileri, son dersler, fatura geçmişi |
+
+### 14.4 Genel Bakış Dashboard
+
+`loadAdaptixDashboard()` paralel 4 sorgu ile şu istatistikleri hesaplar:
+
+| Kart | Kaynak |
+|---|---|
+| Aktif Öğretmen | `ogretmenler.durum='aktif'` sayısı |
+| Toplam Öğrenci | `ogrenciler` tüm kayıtlar |
+| Bu Ay Ders | `dersler.tarih >= ayBaşı` |
+| Bekleyen Fatura | `faturalar.durum != 'odendi'` adet + toplam tutar |
+| Tahsil Edilen | `faturalar.durum='odendi'` toplam tutar |
+| Dönem | Aktif ay/yıl bilgisi |
+
+### 14.5 Öğretmen Yönetimi
+
+**Liste:** `loadAdaptixOgretmenler()` — öğrenci sayısı ve bekleyen fatura adedi her öğretmen için hesaplanır.
+
+**Yeni Öğretmen Ekleme Akışı:**
+
+1. Modal açılır (ad, email, telefon, şifre)
+2. `ogretmenler` tablosuna INSERT (`durum: 'aktif'`)
+3. `hashSifre()` ile SHA-256 şifre hash'i üretilir
+4. `kullanicilar` tablosuna INSERT (`rol: 'ogretmen'`, `sifre_hash`, `deger: ogretmen_id`)
+
+**Düzenleme:** ad/email/telefon güncellenir; şifre değiştirilmez (güvenlik).
+
+**Durum Toggle:** `adaptixToggleDurum()` — aktif/pasif geçişi, tek tıkla.
+
+### 14.6 Fatura Yönetimi
+
+**Fatura Oluştur (`adaptixFaturaOlustur`):**
+
+- Aktif tüm öğretmenler için mevcut ay başı tarihi (`donem`) ile kontrol yapılır
+- Bu dönem için faturası olmayan öğretmenlere INSERT yapılır (duplicate korunur)
+- `tutar` başlangıçta `0` — sonradan manuel düzenlenebilir
+- `ogrenci_sayisi` alanı öğrenciler tablosundan hesaplanır
+
+**Ödendi İşaretle (`adaptixFaturaOdendi`):**
+
+```javascript
+{ durum: 'odendi', odeme_tarihi: bugün }
+```
+
+**Not Ekleme:** Modal ile `faturalar.notlar` sütununa yazılır; tablo satırında `📝 Not` butonu mevcuttur.
+
+**Filtreler:** Tümü / Bekleyen / Ödenen — sadece render filtresi, DB sorgusu yenilenmez.
+
+### 14.7 Öğretmen Detay Görünümü
+
+`adaptixOgretmenDetay(ogretmenId)` — paralel 3 sorgu:
+
+- `ogrenciler` — ad, sınıf, kayıt tarihi
+- `dersler` — son 10 ders (konu + öğrenci adı)
+- `faturalar` — tüm fatura geçmişi (dönem + tutar + durum)
+
+### 14.8 Tasarım
+
+- Header: `linear-gradient(135deg, #005d8d, #013149)` — öğretmen panel header'ından farklı
+- Stat kartları: `rounded-2xl`, renk kodlu (mavi, yeşil, turuncu, kırmızı)
+- Tablolar: scrollable, border-collapse, `surface-container` thead
+- Durum rozetleri: aktif → yeşil (`rgba(0,130,40,0.12)`), pasif → kırmızı
+
+### 14.9 Güvenlik
+
+| Kural | Uygulama |
+|---|---|
+| Adaptix kendi sayfasının dışına çıkamaz | `goPage()` guard |
+| Öğretmen rolü adaptix paneline erişemez | `initApp()` rol dallanması |
+| Şifre düzenleme modalda gizlenir | `sifre-grup` div'i düzenlemede `display:none` |
+| ogrenci_id izolasyonu | Adaptix sorgularında kullanılmaz |
+
+### 14.10 Kısıtlar
+
+- Yeni Supabase tablosu oluşturulmadı — mevcut `ogretmenler`, `kullanicilar`, `faturalar` tabloları kullanıldı
+- `www/index.html` (PWA/mobil) bu değişikliği içermiyor — adaptix paneli yalnızca `scholar_metric.html`'de
+
+### 14.11 Yeni Fonksiyonlar
+
+| Fonksiyon | Açıklama |
+|---|---|
+| `adaptixTab(tab)` | Alt sekme geçişi |
+| `loadAdaptixDashboard()` | 6 stat kartı + öğretmen özet listesi |
+| `loadAdaptixOgretmenler()` | Öğretmen tablosunu render eder |
+| `adaptixToggleDurum(id, durum)` | Aktif/pasif toggle |
+| `adaptixOgretmenModalAc(id?)` | Ekle/düzenle modalı açar |
+| `adaptixOgretmenModalKapat()` | Modalı kapatır, state temizler |
+| `adaptixOgretmenKaydet()` | ogretmenler + kullanicilar INSERT/UPDATE |
+| `adaptixOgretmenDetay(id)` | Detay sekmesine geçer, 3 paralel sorgu ile doldurur |
+| `adaptixFaturaFiltre(filtre)` | Render filtresini değiştirir |
+| `loadAdaptixFaturalar()` | DB'den fatura ve öğretmen listesini çeker |
+| `renderAdaptixFaturalar()` | Mevcut filtre ile tabloyu render eder |
+| `adaptixFaturaOlustur()` | Aktif öğretmenler için ay faturası (duplicate korumalı) |
+| `adaptixFaturaOdendi(id)` | Ödendi + ödeme tarihi günceller |
+| `adaptixNotModalAc(id, not)` | Not modalını açar |
+| `adaptixNotModalKapat()` | Not modalını kapatır |
+| `adaptixNotKaydet()` | `faturalar.notlar` günceller |
+
+---
+
+## 15. Teknik Notlar
 
 - Chart.js 4.4.4 CDN üzerinden mevcut — yeni import gerekmedi
 - `_renderSimpleKonuChart` öğrenci (`pfx='sl'`) ve veli (`pfx='vl'`) için `id` çakışmasını önler
@@ -722,7 +858,7 @@ Yeni: Filtre ve limit kaldırıldı — tüm ödevler çekilir.
 
 ---
 
-## 15. Commit Geçmişi (Bu Sürüm)
+## 16. Commit Geçmişi (Bu Sürüm)
 
 | Hash | Açıklama |
 |---|---|
@@ -743,7 +879,8 @@ Yeni: Filtre ve limit kaldırıldı — tüm ödevler çekilir.
 | `8500918` | Fix: Rapor ödev — BEKLİYOR kart + detay trim kontrolü |
 | `c24140a` | Fix: Rapor ödev grid yeniden düzenlendi + odev_detay sorgu hatası |
 | `a6b039c` | Fix: Ada rol kontrolü, görünürlük fix, localStorage key ayrımı; hedef toggle |
-| *(sonraki)* | Feat: Ödev sekmeleri (Bekleyenler/Tamamlananlar/Tümü) + inline Düzenle formu |
+| `a4481d1` | Feat: Ödev sekmeleri (Bekleyenler/Tamamlananlar/Tümü) + inline Düzenle formu |
+| *(sonraki)* | Feat: AdaptiX Platform Yönetim Paneli — öğretmen/fatura yönetimi |
 
 ---
 

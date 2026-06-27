@@ -1037,11 +1037,119 @@ tailwind.config = {
       </div>
     </div>
 
+    <!-- ── AdaptiX PANELİ ─────────────────────────────────────── -->
+    <div id="page-adaptix" class="page">
+
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg,#005d8d,#013149);color:#fff;border-radius:20px;padding:22px 26px;margin-bottom:20px;display:flex;align-items:center;gap:16px;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(245,124,0,.25),transparent 65%);pointer-events:none;"></div>
+        <div style="width:46px;height:46px;background:rgba(255,255,255,.15);border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span class="material-symbols-outlined" style="font-size:24px;color:#fff;">admin_panel_settings</span>
+        </div>
+        <div style="position:relative;">
+          <div style="font-size:10.5px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.07em;">AdaptiX</div>
+          <div style="font-family:Manrope;font-size:20px;font-weight:800;margin-top:2px;">Platform Yönetimi</div>
+        </div>
+      </div>
+
+      <!-- Alt Sekmeler -->
+      <div class="tabbar" style="margin-bottom:20px;">
+        <button onclick="adaptixTab('dashboard')" id="atab-dashboard" class="tab active">
+          <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">home</span> Genel Bakış
+        </button>
+        <button onclick="adaptixTab('ogretmenler')" id="atab-ogretmenler" class="tab">
+          <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">school</span> Öğretmenler
+        </button>
+        <button onclick="adaptixTab('faturalar')" id="atab-faturalar" class="tab">
+          <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">receipt_long</span> Faturalar
+        </button>
+      </div>
+
+      <!-- ── Genel Bakış ─────────────────────────────────────── -->
+      <div id="adaptix-tab-dashboard">
+        <div id="adaptix-stats" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px;"></div>
+        <div id="adaptix-son-ogretmenler"></div>
+      </div>
+
+      <!-- ── Öğretmenler ────────────────────────────────────── -->
+      <div id="adaptix-tab-ogretmenler" class="hidden">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+          <button onclick="adaptixOgretmenModalAc()" class="btn btn-primary">
+            <span class="material-symbols-outlined" style="font-size:18px;">person_add</span> Yeni Öğretmen
+          </button>
+        </div>
+        <div id="adaptix-ogretmenler-tablo"></div>
+      </div>
+
+      <!-- ── Faturalar ──────────────────────────────────────── -->
+      <div id="adaptix-tab-faturalar" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="adaptixFaturaFiltre('tumsi')"   id="ffiltre-tumsi"    class="btn btn-ghost"   style="font-size:12px;padding:6px 14px;">Tümü</button>
+            <button onclick="adaptixFaturaFiltre('bekleyen')" id="ffiltre-bekleyen" class="btn btn-outline" style="font-size:12px;padding:6px 14px;">Bekleyen</button>
+            <button onclick="adaptixFaturaFiltre('odendi')"   id="ffiltre-odendi"   class="btn btn-outline" style="font-size:12px;padding:6px 14px;">Ödenen</button>
+          </div>
+          <button onclick="adaptixFaturaOlustur()" class="btn btn-primary" style="font-size:13px;">
+            <span class="material-symbols-outlined" style="font-size:18px;">receipt</span> Bu Ay Fatura Oluştur
+          </button>
+        </div>
+        <div id="adaptix-faturalar-tablo"></div>
+      </div>
+
+      <!-- ── Öğretmen Detayı ────────────────────────────────── -->
+      <div id="adaptix-tab-detay" class="hidden">
+        <button onclick="adaptixTab('ogretmenler')" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#005d8d;background:none;border:none;cursor:pointer;margin-bottom:16px;padding:0;">
+          <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span> Öğretmenler'e Dön
+        </button>
+        <div id="adaptix-detay-content"></div>
+      </div>
+
+    </div><!-- /page-adaptix -->
+
     </main>
   </div><!-- /sağ taraf -->
 
   <!-- Bottom Nav (Mobile) -->
   <nav style="display:none;" id="bottomNav" class="no-print"></nav>
+</div>
+
+<!-- ── AdaptiX: Öğretmen Ekle/Düzenle Modali ──────────────── -->
+<div id="adaptix-ogr-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:20px;padding:26px 24px;max-width:420px;width:92%;box-shadow:0 8px 40px rgba(1,49,73,.25);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);" id="aom-title">Yeni Öğretmen Ekle</div>
+      <button onclick="adaptixOgretmenModalKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div><label class="lbl">Ad Soyad *</label><input type="text" id="aom-ad" class="field" placeholder="Ahmet Yılmaz"/></div>
+      <div><label class="lbl">Email</label><input type="email" id="aom-email" class="field" placeholder="ogretmen@email.com"/></div>
+      <div><label class="lbl">Telefon</label><input type="text" id="aom-tel" class="field" placeholder="05xxxxxxxxx"/></div>
+      <div id="aom-sifre-grup">
+        <label class="lbl">Şifre *</label>
+        <input type="password" id="aom-sifre" class="field" placeholder="••••••••"/>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">Öğretmen bu şifreyle sisteme giriş yapar.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px;">
+      <button onclick="adaptixOgretmenModalKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">İptal</button>
+      <button onclick="adaptixOgretmenKaydet()" class="btn btn-primary" style="flex:1;justify-content:center;">Kaydet</button>
+    </div>
+    <div id="aom-error" style="display:none;margin-top:12px;padding:10px 14px;background:#ffdad6;color:#ba1a1a;border-radius:10px;font-size:13px;font-weight:600;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ── AdaptiX: Fatura Not Modali ──────────────────────────── -->
+<div id="adaptix-not-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:380px;width:92%;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);margin-bottom:14px;">Fatura Notu</div>
+    <textarea id="anm-not" class="field" rows="4" placeholder="Not girin..." style="resize:vertical;"></textarea>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="adaptixNotModalKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">İptal</button>
+      <button onclick="adaptixNotKaydet()" class="btn btn-primary" style="flex:1;justify-content:center;">Kaydet</button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -1099,11 +1207,27 @@ async function doLogin() {
     if (activeRole === 'ogretmen') {
       const sifre = document.getElementById('ogr-sifre').value;
       const hash = await hashSifre(sifre);
-      const { data: kullanici, error: kulErr } = await sb.from('kullanicilar')
-        .select('id, rol').eq('sifre_hash', hash).limit(1);
-      if (kulErr || !kullanici || kullanici.length === 0) { showError('Şifre hatalı'); return; }
-      // Şimdilik tek öğretmen — .single() yeterli. Çok öğretmende kullanicilar.ogretmen_id ile eşlenir.
-      const { data: ogretmen } = await sb.from('ogretmenler').select('*').eq('durum', 'aktif').single();
+      const { data: kullanicilar, error: kulErr } = await sb.from('kullanicilar')
+        .select('id, rol, deger').eq('sifre_hash', hash).limit(1);
+      if (kulErr || !kullanicilar || kullanicilar.length === 0) { showError('Şifre hatalı'); return; }
+      const kullanici = kullanicilar[0];
+
+      if (kullanici.rol === 'adaptix') {
+        state.rol  = 'adaptix';
+        state.user = { ad: 'AdaptiX', rol: 'adaptix' };
+        initApp();
+        return;
+      }
+
+      // ogretmen rolü — deger alanı ogretmen_id taşır
+      const ogretmenId = kullanici.deger;
+      let ogretmenQuery = sb.from('ogretmenler').select('*');
+      if (ogretmenId) {
+        ogretmenQuery = ogretmenQuery.eq('ogretmen_id', ogretmenId);
+      } else {
+        ogretmenQuery = ogretmenQuery.eq('durum', 'aktif');
+      }
+      const { data: ogretmen } = await ogretmenQuery.single();
       state.rol = 'ogretmen';
       state.ogretmen_id = ogretmen?.ogretmen_id || '';
       state.user = { ad: ogretmen?.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
@@ -1162,6 +1286,9 @@ async function initApp() {
     fillSelects();
     loadDashboard();
     goPage('dashboard');
+  } else if (state.rol === 'adaptix') {
+    goPage('adaptix');
+    loadAdaptixDashboard();
   } else if (state.rol === 'ogrenci') {
     goPage('ogrenci-panel');
     loadOgrenciPanel();
@@ -1173,14 +1300,18 @@ async function initApp() {
 
 function updateUserInfo() {
   const ad = state.rol === 'ogretmen' ? (state.user.ad || 'Öğretmen') :
+             state.rol === 'adaptix'  ? 'AdaptiX Admin' :
              state.rol === 'ogrenci'  ? (state.user.ad_soyad || state.user.ogrenci_id) :
              (state.user.ad_soyad || '') + ' — Veli';
   const sinif = state.user.sinif || '';
   const rolLabel = state.rol === 'ogretmen' ? 'Matematik Öğretmeni' :
+                   state.rol === 'adaptix'  ? 'Platform Yöneticisi' :
                    state.rol === 'ogrenci'  ? 'Öğrenci' : 'Veli';
   const rolBadge = state.rol === 'ogretmen' ? 'Öğretmen' :
+                   state.rol === 'adaptix'  ? 'AdaptiX' :
                    state.rol === 'ogrenci'  ? 'Öğrenci'  : 'Veli';
   const badgeClass = state.rol === 'ogretmen' ? 'badge badge-blue' :
+                     state.rol === 'adaptix'  ? 'badge badge-blue' :
                      state.rol === 'ogrenci'  ? 'badge badge-green' : 'badge badge-amber';
 
   const sName = document.getElementById('sidebar-name');
@@ -1211,6 +1342,8 @@ function buildNav() {
     { id: 'ders-programi', icon: 'calendar_month', label: 'Ders Programı' },
     { id: 'rapor',        icon: 'analytics',      label: 'Rapor' },
     { id: 'ada',          icon: 'smart_toy',      label: 'Ada' },
+  ] : state.rol === 'adaptix' ? [
+    { id: 'adaptix', icon: 'admin_panel_settings', label: 'Platform Yönetimi' },
   ] : state.rol === 'ogrenci' ? [
     { id: 'ogrenci-panel', icon: 'dashboard', label: 'Panel' },
   ] : [
@@ -1248,9 +1381,11 @@ const PAGE_TITLES = {
   'ada':          ['Ada',           'Yapay zeka destekli öğrenci koçu'],
   'ogrenci-panel':['Öğrenci Paneli','Ödevler, dersler ve başarı'],
   'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
+  'adaptix':      ['Platform Yönetimi', 'Öğretmenler, faturalar ve genel bakış'],
 };
 function goPage(id) {
   if (id === 'ada' && state.rol !== 'ogretmen') return;
+  if (state.rol === 'adaptix' && id !== 'adaptix') return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === id);
@@ -5587,6 +5722,507 @@ async function adaExecuteTool(toolName, input) {
 }
 
 // ── UTILS ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// ── AdaptiX PANEL ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+let _adaptixOgretmenler = [];
+let _adaptixFaturalar    = [];
+let _adaptixFaturaFiltre = 'tumsi';
+let _adaptixEditId       = null; // düzenlenen ogretmen_id
+let _adaptixNotFaturaId  = null; // not eklenen fatura_id
+
+// ── Sekme Geçişi ──────────────────────────────────────────────
+function adaptixTab(tab) {
+  ['dashboard','ogretmenler','faturalar','detay'].forEach(t => {
+    document.getElementById('adaptix-tab-' + t)?.classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById('atab-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'dashboard')   loadAdaptixDashboard();
+  if (tab === 'ogretmenler') loadAdaptixOgretmenler();
+  if (tab === 'faturalar')   loadAdaptixFaturalar();
+}
+
+// ── Genel Bakış ───────────────────────────────────────────────
+async function loadAdaptixDashboard() {
+  const statsEl = document.getElementById('adaptix-stats');
+  if (!statsEl) return;
+  statsEl.innerHTML = '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
+
+  const buAy = new Date();
+  const ayBas = new Date(buAy.getFullYear(), buAy.getMonth(), 1).toISOString().split('T')[0];
+
+  const [ogretmenRes, ogrenciRes, dersRes, faturaRes] = await Promise.all([
+    sb.from('ogretmenler').select('ogretmen_id, ad_soyad, durum'),
+    sb.from('ogrenciler').select('ogrenci_id'),
+    sb.from('dersler').select('ders_id').gte('tarih', ayBas),
+    sb.from('faturalar').select('fatura_id, tutar, durum'),
+  ]);
+
+  _adaptixOgretmenler = ogretmenRes.data || [];
+  const aktif       = _adaptixOgretmenler.filter(o => o.durum === 'aktif').length;
+  const toplamOgr   = (ogrenciRes.data || []).length;
+  const aylikDers   = (dersRes.data || []).length;
+  const faturalar   = faturaRes.data || [];
+  const bekleyenler = faturalar.filter(f => f.durum !== 'odendi');
+  const bekTutar    = bekleyenler.reduce((s, f) => s + (Number(f.tutar) || 0), 0);
+  const tahsilTutar = faturalar.filter(f => f.durum === 'odendi').reduce((s, f) => s + (Number(f.tutar) || 0), 0);
+
+  const stat = (icon, label, val, sub, color, bg) => `
+    <div class="card-2xl" style="padding:18px 20px;background:${bg};border:1px solid ${color}22;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:34px;height:34px;border-radius:10px;background:${color}22;display:flex;align-items:center;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:19px;color:${color};">${icon}</span>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.04em;">${label}</div>
+      </div>
+      <div style="font-family:Manrope;font-size:26px;font-weight:800;color:${color};line-height:1;">${val}</div>
+      <div style="font-size:11.5px;color:${color};opacity:.7;margin-top:4px;">${sub}</div>
+    </div>`;
+
+  statsEl.innerHTML =
+    stat('school',          'Aktif Öğretmen',   aktif,                  `${_adaptixOgretmenler.length} toplam`,          '#005d8d', '#e8f4fb') +
+    stat('group',           'Toplam Öğrenci',   toplamOgr,              'tüm öğretmenler',                               '#00661d', 'rgba(0,130,40,0.08)') +
+    stat('menu_book',       'Bu Ay Ders',        aylikDers,              'kayıtlı seans',                                 '#805600', 'rgba(254,178,35,0.15)') +
+    stat('pending_actions', 'Bekleyen Fatura',   bekleyenler.length + ' adet', '₺' + bekTutar.toLocaleString('tr-TR'), '#ba1a1a', 'rgba(186,26,26,0.08)') +
+    stat('payments',        'Tahsil Edilen',     '₺' + tahsilTutar.toLocaleString('tr-TR'), 'toplam',                  '#00661d', 'rgba(0,130,40,0.08)') +
+    stat('calendar_month',  'Bu Ay',             buAy.toLocaleDateString('tr-TR',{month:'long',year:'numeric'}), 'aktif dönem', '#005d8d', '#e8f4fb');
+
+  // Son aktif öğretmenler
+  const sonEl = document.getElementById('adaptix-son-ogretmenler');
+  if (sonEl && _adaptixOgretmenler.length) {
+    sonEl.innerHTML = `
+      <div class="card-2xl" style="padding:20px 22px;">
+        <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:14px;">Öğretmen Listesi</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${_adaptixOgretmenler.map(o => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container);border-radius:12px;">
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${o.ad_soyad}</div>
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${o.durum}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+}
+
+// ── Öğretmen Yönetimi ─────────────────────────────────────────
+async function loadAdaptixOgretmenler() {
+  const el = document.getElementById('adaptix-ogretmenler-tablo');
+  if (!el) return;
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
+
+  const [ogrRes, ogrenciRes, faturaRes] = await Promise.all([
+    sb.from('ogretmenler').select('*').order('ad_soyad'),
+    sb.from('ogrenciler').select('ogrenci_id, ogretmen_id'),
+    sb.from('faturalar').select('fatura_id, ogretmen_id, tutar, durum'),
+  ]);
+
+  _adaptixOgretmenler = ogrRes.data || [];
+  const ogrenciler = ogrenciRes.data || [];
+  const faturalar  = faturaRes.data || [];
+
+  if (!_adaptixOgretmenler.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-soft);">Henüz öğretmen kaydı yok.</div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card-2xl" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--surface-container);border-bottom:1px solid var(--line);">
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Ad Soyad</th>
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Email / Telefon</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Öğrenci</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Durum</th>
+              <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${_adaptixOgretmenler.map(o => {
+              const ogrSayisi = ogrenciler.filter(og => og.ogretmen_id === o.ogretmen_id).length;
+              const bekFatura = faturalar.filter(f => f.ogretmen_id === o.ogretmen_id && f.durum !== 'odendi').length;
+              const aktif = o.durum === 'aktif';
+              return `
+              <tr style="border-bottom:1px solid var(--line);">
+                <td style="padding:14px 16px;">
+                  <div style="font-size:14px;font-weight:700;color:var(--ink);">${o.ad_soyad}</div>
+                  ${bekFatura ? `<div style="font-size:11px;color:#ba1a1a;margin-top:2px;">⚠ ${bekFatura} bekleyen fatura</div>` : ''}
+                </td>
+                <td style="padding:14px 16px;">
+                  <div style="font-size:12.5px;color:var(--ink-soft);">${o.email||'—'}</div>
+                  <div style="font-size:12px;color:var(--ink-soft);opacity:.8;">${o.telefon||'—'}</div>
+                </td>
+                <td style="padding:14px 16px;text-align:center;">
+                  <span style="font-size:18px;font-weight:800;color:#005d8d;">${ogrSayisi}</span>
+                </td>
+                <td style="padding:14px 16px;text-align:center;">
+                  <button onclick="adaptixToggleDurum('${o.ogretmen_id}','${o.durum}')"
+                    style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:none;cursor:pointer;${aktif?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
+                    ${aktif ? 'Aktif' : 'Pasif'}
+                  </button>
+                </td>
+                <td style="padding:14px 16px;text-align:right;">
+                  <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+                    <button onclick="adaptixOgretmenDetay('${o.ogretmen_id}')"
+                      style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:#e8f4fb;color:#005d8d;border:none;cursor:pointer;">👁 Görüntüle</button>
+                    <button onclick="adaptixOgretmenModalAc('${o.ogretmen_id}')"
+                      style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">✏️ Düzenle</button>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Öğretmen Toggle Durum ─────────────────────────────────────
+async function adaptixToggleDurum(ogretmenId, mevcutDurum) {
+  const yeni = mevcutDurum === 'aktif' ? 'pasif' : 'aktif';
+  showToast('Güncelleniyor...');
+  const { error } = await sb.from('ogretmenler').update({ durum: yeni }).eq('ogretmen_id', ogretmenId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(`✅ Durum ${yeni} yapıldı`);
+  loadAdaptixOgretmenler();
+}
+
+// ── Öğretmen Ekle/Düzenle Modal ───────────────────────────────
+function adaptixOgretmenModalAc(ogretmenId) {
+  _adaptixEditId = ogretmenId || null;
+  const modal    = document.getElementById('adaptix-ogr-modal');
+  const title    = document.getElementById('aom-title');
+  const sifGrup  = document.getElementById('aom-sifre-grup');
+  const errEl    = document.getElementById('aom-error');
+
+  errEl.style.display = 'none';
+
+  if (ogretmenId) {
+    const o = _adaptixOgretmenler.find(x => x.ogretmen_id === ogretmenId);
+    title.textContent = 'Öğretmeni Düzenle';
+    document.getElementById('aom-ad').value    = o?.ad_soyad  || '';
+    document.getElementById('aom-email').value = o?.email     || '';
+    document.getElementById('aom-tel').value   = o?.telefon   || '';
+    sifGrup.style.display = 'none'; // düzenlemede şifre değiştirilmez
+  } else {
+    title.textContent = 'Yeni Öğretmen Ekle';
+    document.getElementById('aom-ad').value    = '';
+    document.getElementById('aom-email').value = '';
+    document.getElementById('aom-tel').value   = '';
+    document.getElementById('aom-sifre').value = '';
+    sifGrup.style.display = '';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function adaptixOgretmenModalKapat() {
+  document.getElementById('adaptix-ogr-modal').style.display = 'none';
+  _adaptixEditId = null;
+}
+
+async function adaptixOgretmenKaydet() {
+  const adSoyad = document.getElementById('aom-ad').value.trim();
+  const email   = document.getElementById('aom-email').value.trim();
+  const telefon = document.getElementById('aom-tel').value.trim();
+  const sifre   = document.getElementById('aom-sifre').value;
+  const errEl   = document.getElementById('aom-error');
+
+  errEl.style.display = 'none';
+  if (!adSoyad) { errEl.textContent = 'Ad soyad zorunludur.'; errEl.style.display = 'block'; return; }
+  if (!_adaptixEditId && !sifre) { errEl.textContent = 'Şifre zorunludur.'; errEl.style.display = 'block'; return; }
+
+  showToast('Kaydediliyor...');
+
+  if (_adaptixEditId) {
+    // Güncelleme
+    const { error } = await sb.from('ogretmenler').update({ ad_soyad: adSoyad, email, telefon }).eq('ogretmen_id', _adaptixEditId);
+    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+    showToast('✅ Güncellendi');
+  } else {
+    // Yeni öğretmen ekle
+    const { data: ogretmen, error: oErr } = await sb.from('ogretmenler')
+      .insert({ ad_soyad: adSoyad, email, telefon, durum: 'aktif' })
+      .select().single();
+    if (oErr) { errEl.textContent = oErr.message; errEl.style.display = 'block'; return; }
+
+    // Kullanicilar tablosuna ekle
+    const hash = await hashSifre(sifre);
+    const { error: kErr } = await sb.from('kullanicilar').insert({
+      rol: 'ogretmen', sifre_hash: hash, deger: ogretmen.ogretmen_id
+    });
+    if (kErr) { errEl.textContent = 'Öğretmen eklendi ama giriş kaydı oluşturulamadı: ' + kErr.message; errEl.style.display = 'block'; return; }
+    showToast('✅ Öğretmen eklendi');
+  }
+
+  adaptixOgretmenModalKapat();
+  loadAdaptixOgretmenler();
+}
+
+// ── Öğretmen Detay Görünümü ───────────────────────────────────
+async function adaptixOgretmenDetay(ogretmenId) {
+  adaptixTab('detay');
+  const el = document.getElementById('adaptix-detay-content');
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const o = _adaptixOgretmenler.find(x => x.ogretmen_id === ogretmenId) || {};
+
+  const [ogrRes, dersRes, fatRes] = await Promise.all([
+    sb.from('ogrenciler').select('ogrenci_id, ad_soyad, sinif, created_at').eq('ogretmen_id', ogretmenId).order('ad_soyad'),
+    sb.from('dersler').select('tarih, islened_konu, ogrenci_id').eq('ogretmen_id', ogretmenId).order('tarih', { ascending: false }).limit(10),
+    sb.from('faturalar').select('*').eq('ogretmen_id', ogretmenId).order('donem', { ascending: false }),
+  ]);
+
+  const ogrenciler = ogrRes.data  || [];
+  const dersler    = dersRes.data || [];
+  const faturalar  = fatRes.data  || [];
+
+  const durumBadge = d => d==='odendi'
+    ? 'background:rgba(0,130,40,0.12);color:#00661d;'
+    : 'background:rgba(186,26,26,0.1);color:#ba1a1a;';
+
+  el.innerHTML = `
+    <!-- Öğretmen Bilgisi -->
+    <div class="card-2xl" style="padding:20px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+      <div style="width:48px;height:48px;border-radius:13px;background:#005d8d22;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:20px;color:#005d8d;flex-shrink:0;">
+        ${(o.ad_soyad||'?').charAt(0).toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">${o.ad_soyad||'—'}</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">${o.email||''} ${o.telefon?'· '+o.telefon:''}</div>
+      </div>
+      <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${o.durum||'—'}</span>
+    </div>
+
+    <!-- Öğrenci Listesi -->
+    <div class="card-2xl" style="padding:20px 22px;margin-bottom:16px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:12px;">👥 Öğrenciler (${ogrenciler.length})</div>
+      ${!ogrenciler.length ? '<div style="color:var(--ink-soft);font-size:13px;">Öğrenci kaydı yok.</div>' : `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${ogrenciler.map(og => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-container);border-radius:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${og.ad_soyad}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${og.sinif||'—'}</div>
+            </div>
+            <div style="font-size:11px;color:var(--ink-soft);">${og.created_at?new Date(og.created_at).toLocaleDateString('tr-TR'):''}</div>
+          </div>`).join('')}
+      </div>`}
+    </div>
+
+    <!-- Son Dersler -->
+    <div class="card-2xl" style="padding:20px 22px;margin-bottom:16px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:12px;">📚 Son 10 Ders</div>
+      ${!dersler.length ? '<div style="color:var(--ink-soft);font-size:13px;">Ders kaydı yok.</div>' : `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${dersler.map(d => {
+          const ogr = ogrenciler.find(og => og.ogrenci_id === d.ogrenci_id);
+          return `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-container);border-radius:10px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${d.islened_konu||'—'}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${ogr?.ad_soyad||d.ogrenci_id}</div>
+            </div>
+            <div style="font-size:11px;color:var(--ink-soft);">${d.tarih?new Date(d.tarih).toLocaleDateString('tr-TR'):''}</div>
+          </div>`;
+        }).join('')}
+      </div>`}
+    </div>
+
+    <!-- Fatura Geçmişi -->
+    <div class="card-2xl" style="padding:20px 22px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);margin-bottom:12px;">🧾 Fatura Geçmişi</div>
+      ${!faturalar.length ? '<div style="color:var(--ink-soft);font-size:13px;">Fatura kaydı yok.</div>' : `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${faturalar.map(f => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container);border-radius:12px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${f.donem?new Date(f.donem).toLocaleDateString('tr-TR',{month:'long',year:'numeric'}):'-'}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${f.ogrenci_sayisi||0} öğrenci</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:15px;font-weight:800;color:var(--ink);">₺${Number(f.tutar||0).toLocaleString('tr-TR')}</div>
+              <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;${durumBadge(f.durum)}">${f.durum==='odendi'?'Ödendi':'Bekliyor'}</span>
+            </div>
+          </div>`).join('')}
+      </div>`}
+    </div>`;
+}
+
+// ── Fatura Yönetimi ───────────────────────────────────────────
+function adaptixFaturaFiltre(filtre) {
+  _adaptixFaturaFiltre = filtre;
+  ['tumsi','bekleyen','odendi'].forEach(f => {
+    const btn = document.getElementById('ffiltre-' + f);
+    if (btn) btn.className = f === filtre ? 'btn btn-primary' : 'btn btn-ghost';
+  });
+  renderAdaptixFaturalar();
+}
+
+async function loadAdaptixFaturalar() {
+  const el = document.getElementById('adaptix-faturalar-tablo');
+  if (!el) return;
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
+
+  const [ogretmenRes, faturaRes] = await Promise.all([
+    sb.from('ogretmenler').select('ogretmen_id, ad_soyad'),
+    sb.from('faturalar').select('*').order('donem', { ascending: false }),
+  ]);
+
+  _adaptixOgretmenler = ogretmenRes.data || [];
+  _adaptixFaturalar   = faturaRes.data   || [];
+  renderAdaptixFaturalar();
+}
+
+function renderAdaptixFaturalar() {
+  const el = document.getElementById('adaptix-faturalar-tablo');
+  if (!el) return;
+
+  const filtreli = _adaptixFaturalar.filter(f => {
+    if (_adaptixFaturaFiltre === 'bekleyen') return f.durum !== 'odendi';
+    if (_adaptixFaturaFiltre === 'odendi')   return f.durum === 'odendi';
+    return true;
+  });
+
+  if (!filtreli.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-soft);">Bu filtrede fatura yok.</div>';
+    return;
+  }
+
+  const ogrMap = {};
+  _adaptixOgretmenler.forEach(o => { ogrMap[o.ogretmen_id] = o.ad_soyad; });
+
+  el.innerHTML = `
+    <div class="card-2xl" style="padding:0;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--surface-container);border-bottom:1px solid var(--line);">
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Öğretmen</th>
+              <th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Dönem</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Öğrenci</th>
+              <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Tutar</th>
+              <th style="padding:12px 16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Durum</th>
+              <th style="padding:12px 16px;text-align:right;font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtreli.map(f => {
+              const ad = ogrMap[f.ogretmen_id] || f.ogretmen_id;
+              const donem = f.donem ? new Date(f.donem).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }) : '—';
+              const odendi = f.durum === 'odendi';
+              return `
+              <tr style="border-bottom:1px solid var(--line);">
+                <td style="padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink);">${ad}</td>
+                <td style="padding:13px 16px;font-size:13px;color:var(--ink-soft);">${donem}</td>
+                <td style="padding:13px 16px;text-align:center;font-size:14px;font-weight:700;color:#005d8d;">${f.ogrenci_sayisi||0}</td>
+                <td style="padding:13px 16px;text-align:right;font-size:14px;font-weight:800;color:var(--ink);">₺${Number(f.tutar||0).toLocaleString('tr-TR')}</td>
+                <td style="padding:13px 16px;text-align:center;">
+                  <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:16px;${odendi?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
+                    ${odendi?'Ödendi':'Bekliyor'}
+                  </span>
+                  ${f.odeme_tarihi?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;">${new Date(f.odeme_tarihi).toLocaleDateString('tr-TR')}</div>`:''}
+                  ${f.notlar?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${f.notlar}">📝 ${f.notlar}</div>`:''}
+                </td>
+                <td style="padding:13px 16px;text-align:right;">
+                  <div style="display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;">
+                    ${!odendi?`<button onclick="adaptixFaturaOdendi('${f.fatura_id}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(0,130,40,0.12);color:#00661d;border:none;cursor:pointer;">✓ Ödendi</button>`:''}
+                    <button onclick="adaptixNotModalAc('${f.fatura_id}','${(f.notlar||'').replace(/'/g,"&#39;")}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">📝 Not</button>
+                  </div>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Fatura Oluştur
+async function adaptixFaturaOlustur() {
+  showToast('Faturalar kontrol ediliyor...');
+
+  const buAy = new Date();
+  const donem = new Date(buAy.getFullYear(), buAy.getMonth(), 1).toISOString().split('T')[0];
+
+  const [ogretmenRes, ogrenciRes, mevcutRes] = await Promise.all([
+    sb.from('ogretmenler').select('ogretmen_id, ad_soyad').eq('durum', 'aktif'),
+    sb.from('ogrenciler').select('ogrenci_id, ogretmen_id').eq('kayit_durumu', 'AKTİF'),
+    sb.from('faturalar').select('ogretmen_id').eq('donem', donem),
+  ]);
+
+  const ogretmenler = ogretmenRes.data || [];
+  const ogrenciler  = ogrenciRes.data  || [];
+  const mevcutIDs   = (mevcutRes.data  || []).map(f => f.ogretmen_id);
+
+  const yeniFaturalar = ogretmenler
+    .filter(o => !mevcutIDs.includes(o.ogretmen_id))
+    .map(o => ({
+      ogretmen_id:   o.ogretmen_id,
+      donem,
+      ogrenci_sayisi: ogrenciler.filter(og => og.ogretmen_id === o.ogretmen_id).length,
+      tutar:          0, // tutar 0 olarak başlar, sonradan düzenlenebilir
+      durum:          'bekleyen',
+    }));
+
+  if (!yeniFaturalar.length) {
+    showToast('⚠️ Bu dönem için fatura zaten oluşturulmuş');
+    return;
+  }
+
+  const { error } = await sb.from('faturalar').insert(yeniFaturalar);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(`✅ ${yeniFaturalar.length} öğretmen için fatura oluşturuldu`);
+  loadAdaptixFaturalar();
+}
+
+// Fatura Ödendi İşaretle
+async function adaptixFaturaOdendi(faturaId) {
+  showToast('Güncelleniyor...');
+  const { error } = await sb.from('faturalar').update({
+    durum: 'odendi',
+    odeme_tarihi: new Date().toISOString().split('T')[0]
+  }).eq('fatura_id', faturaId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Ödendi olarak işaretlendi');
+  const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === faturaId);
+  if (idx >= 0) {
+    _adaptixFaturalar[idx].durum = 'odendi';
+    _adaptixFaturalar[idx].odeme_tarihi = new Date().toISOString().split('T')[0];
+  }
+  renderAdaptixFaturalar();
+}
+
+// Not Modali
+function adaptixNotModalAc(faturaId, mevcutNot) {
+  _adaptixNotFaturaId = faturaId;
+  document.getElementById('anm-not').value = mevcutNot || '';
+  document.getElementById('adaptix-not-modal').style.display = 'flex';
+}
+
+function adaptixNotModalKapat() {
+  document.getElementById('adaptix-not-modal').style.display = 'none';
+  _adaptixNotFaturaId = null;
+}
+
+async function adaptixNotKaydet() {
+  if (!_adaptixNotFaturaId) return;
+  const not = document.getElementById('anm-not').value.trim();
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('faturalar').update({ notlar: not }).eq('fatura_id', _adaptixNotFaturaId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Not kaydedildi');
+  const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === _adaptixNotFaturaId);
+  if (idx >= 0) _adaptixFaturalar[idx].notlar = not;
+  adaptixNotModalKapat();
+  renderAdaptixFaturalar();
+}
+
+// ══════════════════════════════════════════════════════════════
+
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebar-overlay');

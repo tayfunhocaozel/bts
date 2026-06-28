@@ -1126,6 +1126,12 @@ tailwind.config = {
       <div><label class="lbl">Ad Soyad *</label><input type="text" id="aom-ad" class="field" placeholder="Ahmet Yılmaz"/></div>
       <div><label class="lbl">Email</label><input type="email" id="aom-email" class="field" placeholder="ogretmen@email.com"/></div>
       <div><label class="lbl">Telefon</label><input type="text" id="aom-tel" class="field" placeholder="05xxxxxxxxx"/></div>
+      <div>
+        <label class="lbl">Branş *</label>
+        <select id="aom-brans" class="field">
+          <option value="">— Branş seçin —</option>
+        </select>
+      </div>
       <div id="aom-sifre-grup">
         <label class="lbl">Şifre *</label>
         <input type="password" id="aom-sifre" class="field" placeholder="••••••••"/>
@@ -1197,6 +1203,23 @@ let state = {
 
 const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 
+const BRANSLAR = [
+  'Türkçe',
+  'İlköğretim Matematik',
+  'Fen Bilimleri',
+  'Sosyal Bilgiler',
+  'İngilizce',
+  'Din Kültürü ve Ahlak Bilgisi',
+  'Türk Dili ve Edebiyatı',
+  'Matematik',
+  'Fizik',
+  'Kimya',
+  'Biyoloji',
+  'Tarih',
+  'Coğrafya',
+  'Felsefe',
+];
+
 async function hashSifre(sifre) {
   const data = new TextEncoder().encode(sifre);
   const buf = await crypto.subtle.digest('SHA-256', data);
@@ -1252,6 +1275,7 @@ async function doLogin() {
       const { data: ogretmen } = await ogretmenQuery.single();
       state.rol = 'ogretmen';
       state.ogretmen_id = ogretmen?.ogretmen_id || '';
+      state.ogretmen = { ...ogretmen };
       state.user = { ad: ogretmen?.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
       localStorage.setItem('adaptix_ogretmen_id', state.ogretmen_id);
       localStorage.setItem('adaptix_ogretmen_adi', ogretmen?.ad_soyad || '');
@@ -1326,7 +1350,7 @@ function updateUserInfo() {
              state.rol === 'ogrenci'  ? (state.user.ad_soyad || state.user.ogrenci_id) :
              (state.user.ad_soyad || '') + ' — Veli';
   const sinif = state.user.sinif || '';
-  const rolLabel = state.rol === 'ogretmen' ? 'Matematik Öğretmeni' :
+  const rolLabel = state.rol === 'ogretmen' ? (state.ogretmen?.brans || 'Öğretmen') :
                    state.rol === 'adaptix'  ? 'Platform Yöneticisi' :
                    state.rol === 'ogrenci'  ? 'Öğrenci' : 'Veli';
   const rolBadge = state.rol === 'ogretmen' ? 'Öğretmen' :
@@ -1437,7 +1461,7 @@ function goPage(id) {
 async function loadMasterData() {
   const [o, k, ky] = await Promise.all([
     sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad'),
-    sb.from('kazanimlar').select('*').order('sinif').order('konu'),
+    sb.from('kazanimlar').select('*').eq('ders', state.ogretmen?.brans || 'İlköğretim Matematik').order('sinif').order('konu'),
     sb.from('kaynaklar').select('*').order('kaynak_adi'),
   ]);
   state.ogrenciler = o.data || [];
@@ -2794,7 +2818,7 @@ async function loadRapor() {
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
     sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId),
-    sb.from('kazanimlar').select('*').ilike('sinif', ogr?.sinif||''),
+    sb.from('kazanimlar').select('*').eq('ders', state.ogretmen?.brans || 'İlköğretim Matematik').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
@@ -3813,8 +3837,10 @@ const MOTIVASYON_DEFAULT = [
   ['Öğrenmek için asla geç değildir. Bugün başla! 📚', 'AdaptiX'],
 ];
 
-function gunlukMotivasyon(sinif) {
-  const liste = MOTIVASYON[sinif] || MOTIVASYON_DEFAULT;
+function gunlukMotivasyon(sinif, brans) {
+  const matBranslar = ['İlköğretim Matematik', 'Matematik'];
+  const isMath = !brans || matBranslar.includes(brans);
+  const liste = isMath ? (MOTIVASYON[sinif] || MOTIVASYON_DEFAULT) : MOTIVASYON_DEFAULT;
   const idx = Math.floor(Date.now() / 86400000) % liste.length;
   return liste[idx];
 }
@@ -3971,7 +3997,7 @@ async function loadOgrenciPanel() {
   document.getElementById('ogr-welcome-sinif').textContent = state.user.sinif || '—';
 
   // Motivasyon
-  const [msg, kaynak] = gunlukMotivasyon(state.user.sinif);
+  const [msg, kaynak] = gunlukMotivasyon(state.user.sinif, state.ogretmen?.brans);
   document.getElementById('motivasyon-mesaj').textContent  = msg;
   document.getElementById('motivasyon-kaynak').textContent = kaynak !== 'AdaptiX' ? '— ' + kaynak : '';
 
@@ -5873,6 +5899,7 @@ async function loadAdaptixOgretmenler() {
               <tr style="border-bottom:1px solid var(--line);">
                 <td style="padding:14px 16px;">
                   <div style="font-size:14px;font-weight:700;color:var(--ink);">${o.ad_soyad}</div>
+                  <div style="font-size:11px;color:#666;margin-top:2px;">${o.brans||'—'}</div>
                   ${bekFatura ? `<div style="font-size:11px;color:#ba1a1a;margin-top:2px;">⚠ ${bekFatura} bekleyen fatura</div>` : ''}
                 </td>
                 <td style="padding:14px 16px;">
@@ -5951,8 +5978,13 @@ function adaptixOgretmenModalAc(ogretmenId) {
   const title    = document.getElementById('aom-title');
   const sifGrup  = document.getElementById('aom-sifre-grup');
   const errEl    = document.getElementById('aom-error');
+  const bransEl  = document.getElementById('aom-brans');
 
   errEl.style.display = 'none';
+
+  // Branş seçeneklerini doldur (her açılışta taze yenile)
+  bransEl.innerHTML = '<option value="">— Branş seçin —</option>' +
+    BRANSLAR.map(b => `<option value="${b}">${b}</option>`).join('');
 
   if (ogretmenId) {
     const o = _adaptixOgretmenler.find(x => x.ogretmen_id === ogretmenId);
@@ -5960,6 +5992,7 @@ function adaptixOgretmenModalAc(ogretmenId) {
     document.getElementById('aom-ad').value    = o?.ad_soyad  || '';
     document.getElementById('aom-email').value = o?.email     || '';
     document.getElementById('aom-tel').value   = o?.telefon   || '';
+    bransEl.value = o?.brans || '';
     sifGrup.style.display = 'none'; // düzenlemede şifre değiştirilmez
   } else {
     title.textContent = 'Yeni Öğretmen Ekle';
@@ -5967,6 +6000,7 @@ function adaptixOgretmenModalAc(ogretmenId) {
     document.getElementById('aom-email').value = '';
     document.getElementById('aom-tel').value   = '';
     document.getElementById('aom-sifre').value = '';
+    bransEl.value = '';
     sifGrup.style.display = '';
   }
 
@@ -6022,24 +6056,26 @@ async function adaptixOgretmenKaydet() {
   const adSoyad = document.getElementById('aom-ad').value.trim();
   const email   = document.getElementById('aom-email').value.trim();
   const telefon = document.getElementById('aom-tel').value.trim();
+  const brans   = document.getElementById('aom-brans').value;
   const sifre   = document.getElementById('aom-sifre').value;
   const errEl   = document.getElementById('aom-error');
 
   errEl.style.display = 'none';
   if (!adSoyad) { errEl.textContent = 'Ad soyad zorunludur.'; errEl.style.display = 'block'; return; }
+  if (!brans)   { errEl.textContent = 'Branş zorunludur.';    errEl.style.display = 'block'; return; }
   if (!_adaptixEditId && !sifre) { errEl.textContent = 'Şifre zorunludur.'; errEl.style.display = 'block'; return; }
 
   showToast('Kaydediliyor...');
 
   if (_adaptixEditId) {
     // Güncelleme
-    const { error } = await sb.from('ogretmenler').update({ ad_soyad: adSoyad, email, telefon }).eq('ogretmen_id', _adaptixEditId);
+    const { error } = await sb.from('ogretmenler').update({ ad_soyad: adSoyad, email, telefon, brans }).eq('ogretmen_id', _adaptixEditId);
     if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
     showToast('✅ Güncellendi');
   } else {
     // Yeni öğretmen ekle
     const { data: ogretmen, error: oErr } = await sb.from('ogretmenler')
-      .insert({ ad_soyad: adSoyad, email, telefon, durum: 'aktif' })
+      .insert({ ad_soyad: adSoyad, email, telefon, brans, durum: 'aktif' })
       .select().single();
     if (oErr) { errEl.textContent = oErr.message; errEl.style.display = 'block'; return; }
 

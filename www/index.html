@@ -5758,7 +5758,7 @@ async function loadAdaptixDashboard() {
     sb.from('ogretmenler').select('ogretmen_id, ad_soyad, durum'),
     sb.from('ogrenciler').select('ogrenci_id'),
     sb.from('dersler').select('ders_id').gte('tarih', ayBas),
-    sb.from('faturalar').select('fatura_id, tutar, durum'),
+    sb.from('faturalar').select('fatura_id, toplam_tutar, durum'),
   ]);
 
   _adaptixOgretmenler = ogretmenRes.data || [];
@@ -5767,8 +5767,8 @@ async function loadAdaptixDashboard() {
   const aylikDers   = (dersRes.data || []).length;
   const faturalar   = faturaRes.data || [];
   const bekleyenler = faturalar.filter(f => f.durum !== 'odendi');
-  const bekTutar    = bekleyenler.reduce((s, f) => s + (Number(f.tutar) || 0), 0);
-  const tahsilTutar = faturalar.filter(f => f.durum === 'odendi').reduce((s, f) => s + (Number(f.tutar) || 0), 0);
+  const bekTutar    = bekleyenler.reduce((s, f) => s + (Number(f.toplam_tutar) || 0), 0);
+  const tahsilTutar = faturalar.filter(f => f.durum === 'odendi').reduce((s, f) => s + (Number(f.toplam_tutar) || 0), 0);
 
   const stat = (icon, label, val, sub, color, bg) => `
     <div class="card-2xl" style="padding:18px 20px;background:${bg};border:1px solid ${color}22;">
@@ -5816,7 +5816,7 @@ async function loadAdaptixOgretmenler() {
   const [ogrRes, ogrenciRes, faturaRes] = await Promise.all([
     sb.from('ogretmenler').select('*').order('ad_soyad'),
     sb.from('ogrenciler').select('ogrenci_id, ogretmen_id'),
-    sb.from('faturalar').select('fatura_id, ogretmen_id, tutar, durum'),
+    sb.from('faturalar').select('fatura_id, ogretmen_id, toplam_tutar, durum'),
   ]);
 
   _adaptixOgretmenler = ogrRes.data || [];
@@ -6073,7 +6073,7 @@ async function adaptixOgretmenDetay(ogretmenId) {
               <div style="font-size:11.5px;color:var(--ink-soft);">${f.ogrenci_sayisi||0} öğrenci</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:15px;font-weight:800;color:var(--ink);">₺${Number(f.tutar||0).toLocaleString('tr-TR')}</div>
+              <div style="font-size:15px;font-weight:800;color:var(--ink);">₺${Number(f.toplam_tutar||0).toLocaleString('tr-TR')}</div>
               <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:12px;${durumBadge(f.durum)}">${f.durum==='odendi'?'Ödendi':'Bekliyor'}</span>
             </div>
           </div>`).join('')}
@@ -6148,7 +6148,7 @@ function renderAdaptixFaturalar() {
                 <td style="padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink);">${ad}</td>
                 <td style="padding:13px 16px;font-size:13px;color:var(--ink-soft);">${donem}</td>
                 <td style="padding:13px 16px;text-align:center;font-size:14px;font-weight:700;color:#005d8d;">${f.ogrenci_sayisi||0}</td>
-                <td style="padding:13px 16px;text-align:right;font-size:14px;font-weight:800;color:var(--ink);">₺${Number(f.tutar||0).toLocaleString('tr-TR')}</td>
+                <td style="padding:13px 16px;text-align:right;font-size:14px;font-weight:800;color:var(--ink);">₺${Number(f.toplam_tutar||0).toLocaleString('tr-TR')}</td>
                 <td style="padding:13px 16px;text-align:center;">
                   <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:16px;${odendi?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
                     ${odendi?'Ödendi':'Bekliyor'}
@@ -6193,7 +6193,6 @@ async function adaptixFaturaOlustur() {
       ogretmen_id:   o.ogretmen_id,
       donem,
       ogrenci_sayisi: ogrenciler.filter(og => og.ogretmen_id === o.ogretmen_id).length,
-      tutar:          0, // tutar 0 olarak başlar, sonradan düzenlenebilir
       durum:          'bekleyen',
     }));
 

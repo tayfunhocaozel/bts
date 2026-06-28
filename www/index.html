@@ -1152,6 +1152,28 @@ tailwind.config = {
   </div>
 </div>
 
+<!-- ── AdaptiX: Şifre Değiştir Modali ──────────────────────── -->
+<div id="adaptix-sifre-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:26px 24px;max-width:420px;width:92%;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);" id="asm-title">Şifre Değiştir</div>
+      <button onclick="adaptixSifreModalKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div>
+      <label class="lbl">Yeni Şifre *</label>
+      <input type="password" id="asm-sifre" class="field" placeholder="En az 6 karakter" minlength="6"/>
+      <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">Mevcut şifre gösterilemez; yeni şifre belirleyin.</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px;">
+      <button onclick="adaptixSifreModalKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">İptal</button>
+      <button onclick="adaptixSifreKaydet()" class="btn btn-primary" style="flex:1;justify-content:center;">Kaydet</button>
+    </div>
+    <div id="asm-error" style="display:none;margin-top:12px;padding:10px 14px;background:#ffdad6;color:#ba1a1a;border-radius:10px;font-size:13px;font-weight:600;text-align:center;"></div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -5732,6 +5754,7 @@ let _adaptixFaturalar    = [];
 let _adaptixFaturaFiltre = 'tumsi';
 let _adaptixEditId       = null; // düzenlenen ogretmen_id
 let _adaptixNotFaturaId  = null; // not eklenen fatura_id
+let _adaptixSifreOgrId   = null; // şifre değiştirilen ogretmen_id
 
 // ── Sekme Geçişi ──────────────────────────────────────────────
 function adaptixTab(tab) {
@@ -5871,6 +5894,8 @@ async function loadAdaptixOgretmenler() {
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:#e8f4fb;color:#005d8d;border:none;cursor:pointer;">👁 Görüntüle</button>
                     <button onclick="adaptixOgretmenModalAc('${o.ogretmen_id}')"
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">✏️ Düzenle</button>
+                    <button onclick="adaptixSifreDegistir('${o.ogretmen_id}','${o.ad_soyad.replace(/'/g,"\\'")}')"
+                      style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:#fff8e1;color:#7a5500;border:none;cursor:pointer;">🔑 Şifre</button>
                     ${!aktif && o.ogretmen_id !== 'b373a4e6-01b1-4131-99d4-a2deae98b1ea' ? `<button onclick="adaptixOgretmenSil('${o.ogretmen_id}')"
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:rgba(186,26,26,0.1);color:#ba1a1a;border:none;cursor:pointer;">🗑 Sil</button>` : ''}
                   </div>
@@ -5951,6 +5976,46 @@ function adaptixOgretmenModalAc(ogretmenId) {
 function adaptixOgretmenModalKapat() {
   document.getElementById('adaptix-ogr-modal').style.display = 'none';
   _adaptixEditId = null;
+}
+
+function adaptixSifreDegistir(ogretmenId, adSoyad) {
+  _adaptixSifreOgrId = ogretmenId;
+  document.getElementById('asm-title').textContent = 'Şifre Değiştir — ' + adSoyad;
+  document.getElementById('asm-sifre').value = '';
+  document.getElementById('asm-error').style.display = 'none';
+  document.getElementById('adaptix-sifre-modal').style.display = 'flex';
+}
+
+function adaptixSifreModalKapat() {
+  document.getElementById('adaptix-sifre-modal').style.display = 'none';
+  _adaptixSifreOgrId = null;
+}
+
+async function adaptixSifreKaydet() {
+  const sifre = document.getElementById('asm-sifre').value;
+  const errEl = document.getElementById('asm-error');
+  errEl.style.display = 'none';
+
+  if (!sifre || sifre.length < 6) {
+    errEl.textContent = 'Şifre en az 6 karakter olmalıdır.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  showToast('Kaydediliyor...');
+  const hash = await hashSifre(sifre);
+  const { error } = await sb.from('kullanicilar')
+    .update({ sifre_hash: hash })
+    .eq('deger', _adaptixSifreOgrId);
+
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  showToast('✅ Şifre güncellendi');
+  adaptixSifreModalKapat();
 }
 
 async function adaptixOgretmenKaydet() {

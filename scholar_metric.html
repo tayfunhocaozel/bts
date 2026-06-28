@@ -6001,7 +6001,7 @@ async function adaptixOgretmenDetay(ogretmenId) {
 
   const [ogrRes, dersRes, fatRes] = await Promise.all([
     sb.from('ogrenciler').select('ogrenci_id, ad_soyad, sinif').eq('ogretmen_id', ogretmenId).order('ad_soyad'),
-    sb.from('dersler').select('tarih, islened_konu, ogrenci_id').eq('ogretmen_id', ogretmenId).order('tarih', { ascending: false }).limit(10),
+    sb.from('dersler').select('tarih, islenen_konu, ogrenci_id').eq('ogretmen_id', ogretmenId).order('tarih', { ascending: false }).limit(10),
     sb.from('faturalar').select('*').eq('ogretmen_id', ogretmenId).order('donem', { ascending: false }),
   ]);
 
@@ -6051,7 +6051,7 @@ async function adaptixOgretmenDetay(ogretmenId) {
           return `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-container);border-radius:10px;">
             <div>
-              <div style="font-size:13px;font-weight:600;color:var(--ink);">${d.islened_konu||'—'}</div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${d.islenen_konu||'—'}</div>
               <div style="font-size:11.5px;color:var(--ink-soft);">${ogr?.ad_soyad||d.ogrenci_id}</div>
             </div>
             <div style="font-size:11px;color:var(--ink-soft);">${d.tarih?new Date(d.tarih).toLocaleDateString('tr-TR'):''}</div>

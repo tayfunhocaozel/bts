@@ -6000,7 +6000,7 @@ async function adaptixOgretmenDetay(ogretmenId) {
   const o = _adaptixOgretmenler.find(x => x.ogretmen_id === ogretmenId) || {};
 
   const [ogrRes, dersRes, fatRes] = await Promise.all([
-    sb.from('ogrenciler').select('ogrenci_id, ad_soyad, sinif, created_at').eq('ogretmen_id', ogretmenId).order('ad_soyad'),
+    sb.from('ogrenciler').select('ogrenci_id, ad_soyad, sinif').eq('ogretmen_id', ogretmenId).order('ad_soyad'),
     sb.from('dersler').select('tarih, islened_konu, ogrenci_id').eq('ogretmen_id', ogretmenId).order('tarih', { ascending: false }).limit(10),
     sb.from('faturalar').select('*').eq('ogretmen_id', ogretmenId).order('donem', { ascending: false }),
   ]);
@@ -6037,7 +6037,6 @@ async function adaptixOgretmenDetay(ogretmenId) {
               <div style="font-size:13px;font-weight:600;color:var(--ink);">${og.ad_soyad}</div>
               <div style="font-size:11.5px;color:var(--ink-soft);">${og.sinif||'—'}</div>
             </div>
-            <div style="font-size:11px;color:var(--ink-soft);">${og.created_at?new Date(og.created_at).toLocaleDateString('tr-TR'):''}</div>
           </div>`).join('')}
       </div>`}
     </div>

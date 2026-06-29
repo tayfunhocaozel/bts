@@ -1191,7 +1191,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── STATE ─────────────────────────────────────────────────────
 let state = {
-  rol: null, user: null, ogretmen_id: null,
+  rol: null, user: null, ogretmen_id: null, ogretmen: null, brans: null,
   ogrenciler: [], kazanimlar: [], kaynaklar: [],
   _dersKazanimlar: [],
   _dersGecmisGruplar: [],
@@ -1204,20 +1204,14 @@ let state = {
 const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 
 const BRANSLAR = [
-  'Türkçe',
   'İlköğretim Matematik',
-  'Fen Bilimleri',
+  'Türkçe',
   'Sosyal Bilgiler',
   'İngilizce',
+  'T.C. İnkılap Tarihi ve Atatürkçülük',
+  'Fen Bilimleri',
   'Din Kültürü ve Ahlak Bilgisi',
-  'Türk Dili ve Edebiyatı',
-  'Matematik',
-  'Fizik',
-  'Kimya',
-  'Biyoloji',
-  'Tarih',
-  'Coğrafya',
-  'Felsefe',
+  'Diğer',
 ];
 
 async function hashSifre(sifre) {
@@ -1276,6 +1270,7 @@ async function doLogin() {
       state.rol = 'ogretmen';
       state.ogretmen_id = ogretmen?.ogretmen_id || '';
       state.ogretmen = { ...ogretmen };
+      state.brans = ogretmen?.brans || 'İlköğretim Matematik';
       state.user = { ad: ogretmen?.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
       localStorage.setItem('adaptix_ogretmen_id', state.ogretmen_id);
       localStorage.setItem('adaptix_ogretmen_adi', ogretmen?.ad_soyad || '');
@@ -1461,7 +1456,7 @@ function goPage(id) {
 async function loadMasterData() {
   const [o, k, ky] = await Promise.all([
     sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad'),
-    sb.from('kazanimlar').select('*').eq('ders', state.ogretmen?.brans || 'İlköğretim Matematik').order('sinif').order('konu'),
+    sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').order('sinif').order('konu'),
     sb.from('kaynaklar').select('*').order('kaynak_adi'),
   ]);
   state.ogrenciler = o.data || [];
@@ -1543,9 +1538,10 @@ async function dersOgrenciSecildi() {
     return;
   }
 
-  // Supabase'den direkt bu sınıfın kazanımlarını çek
+  // Supabase'den direkt bu sınıfın kazanımlarını çek (branş filtreli)
   const { data, error } = await sb.from('kazanimlar')
     .select('*')
+    .eq('ders', state.brans || 'Matematik')
     .eq('sinif', sinif)
     .order('konu');
 
@@ -1554,6 +1550,7 @@ async function dersOgrenciSecildi() {
     const sinifNo = sinif.match(/\d+/)?.[0] || '';
     const { data: data2 } = await sb.from('kazanimlar')
       .select('*')
+      .eq('ders', state.brans || 'Matematik')
       .ilike('sinif', `%${sinifNo}%`)
       .order('konu');
     state._dersKazanimlar = data2 || [];
@@ -1670,6 +1667,7 @@ async function dersSave() {
   const tarih = edit ? edit.tarih : (document.getElementById('ders-tarih').value || new Date().toISOString().split('T')[0]);
   const rows = secili.map(s => ({
     ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih,
+    ders: state.brans || 'İlköğretim Matematik',
     islenen_konu: konu, kazanim_kodu: s.kod,
     tamamlama_durumu: s.td,
     ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma
@@ -1703,6 +1701,7 @@ async function loadDersGecmisi() {
   const { data } = await sb.from('dersler')
     .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
     .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
+    .eq('ders', state.brans || 'İlköğretim Matematik')
     .order('tarih', { ascending: false })
     .limit(60);
 
@@ -2818,8 +2817,8 @@ async function loadRapor() {
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
     sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId),
-    sb.from('kazanimlar').select('*').eq('ders', state.ogretmen?.brans || 'İlköğretim Matematik').ilike('sinif', ogr?.sinif||''),
-    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+    sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').ilike('sinif', ogr?.sinif||''),
+    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).eq('ders', state.brans || 'İlköğretim Matematik').order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
@@ -4324,10 +4323,11 @@ async function loadOgrDersler() {
   const el = document.getElementById('ogr-dersler-content');
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
-  const { data: dersler } = await sb.from('dersler')
+  let _ogrDersQ = sb.from('dersler')
     .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
-    .eq('ogrenci_id', state.user.ogrenci_id)
-    .order('tarih', { ascending: false });
+    .eq('ogrenci_id', state.user.ogrenci_id);
+  if (state.brans) _ogrDersQ = _ogrDersQ.eq('ders', state.brans);
+  const { data: dersler } = await _ogrDersQ.order('tarih', { ascending: false });
 
   if (!dersler || !dersler.length) {
     el.innerHTML = '<div class="bg-surface-container-lowest rounded-xl p-6 text-center text-sm text-outline">Henüz işlenen ders kaydı yok.</div>';
@@ -4530,9 +4530,15 @@ async function loadVeliPanel() {
   }
 
   // Veri çek
+  let _veliDersQ = sb.from('dersler')
+    .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
+    .eq('ogrenci_id', u.ogrenci_id);
+  if (state.brans) _veliDersQ = _veliDersQ.eq('ders', state.brans);
+  _veliDersQ = _veliDersQ.order('tarih', { ascending: false });
+
   const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id),
-    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
+    _veliDersQ,
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
     sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
   ]);

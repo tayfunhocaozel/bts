@@ -1823,27 +1823,30 @@ async function odevOgrenciSecildi() {
 
   if (!ogrenciId) { alan.style.display = 'none'; uyari.style.display = 'none'; return; }
 
-  state._secilenOgrenciSinif = sinif;
+  state._odevOgrenciSinif = sinif;
+  state._odevKazanimlar = [];
 
   const [kazRes, kayRes] = await Promise.all([
-    sb.from('kazanimlar').select('*')
+    sb.from('kazanimlar').select('unite')
       .eq('ders', state.brans || 'İlköğretim Matematik')
       .eq('sinif', sinif)
       .order('unite'),
     sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
   ]);
 
-  let odevKazanimlar = kazRes.data || [];
-  if (!odevKazanimlar.length && sinif) {
+  let konularRaw = kazRes.data || [];
+  if (!konularRaw.length && sinif) {
     const sinifNo = sinif.match(/\d+/)?.[0] || '';
-    const { data: kazData2 } = await sb.from('kazanimlar').select('*')
-      .eq('ders', state.brans || 'İlköğretim Matematik')
-      .ilike('sinif', `%${sinifNo}%`)
-      .order('unite');
-    odevKazanimlar = kazData2 || [];
+    if (sinifNo) {
+      const { data: kazData2 } = await sb.from('kazanimlar').select('unite')
+        .eq('ders', state.brans || 'İlköğretim Matematik')
+        .ilike('sinif', `%${sinifNo}%`)
+        .order('unite');
+      konularRaw = kazData2 || [];
+    }
   }
-  state._odevKazanimlar = odevKazanimlar;
-  state._odevKaynaklar  = kayRes.data || [];
+  state._odevKonular = [...new Set(konularRaw.map(k => k.unite).filter(Boolean))];
+  state._odevKaynaklar = kayRes.data || [];
   state._odevSinif = sinif;
 
   if (!state._odevKaynaklar.length) {
@@ -1861,8 +1864,8 @@ async function odevOgrenciSecildi() {
 // Ödev formu (tekli — satır değil)
 function renderOdevForm() {
   const container = document.getElementById('odev-form-alani');
-  const konular = [...new Set(state._odevKazanimlar.map(k => k.unite))];
-  const konuOpts = '<option value="">— Konu seçin —</option>' + konular.map(k => `<option>${k}</option>`).join('');
+  const konular = state._odevKonular || [];
+  const konuOpts = '<option value="">— Konu seçin —</option>' + konular.map(k => `<option value="${k}">${k}</option>`).join('');
   const kaynakOpts = '<option value="">— Kaynak seçin —</option>' + state._odevKaynaklar.map(k => `<option>${k.kaynak_adi}</option>`).join('');
 
   container.innerHTML = `
@@ -1881,12 +1884,20 @@ function renderOdevForm() {
       class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">`;
 }
 
-function formKonuSecildi() {
+async function formKonuSecildi() {
   const konu = document.getElementById('f-konu').value;
   const kazanimSel = document.getElementById('f-kazanim');
-  const filtered = state._odevKazanimlar.filter(k => k.unite === konu);
+  if (!konu) {
+    kazanimSel.innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>';
+    return;
+  }
+  const { data } = await sb.from('kazanimlar').select('*')
+    .eq('ders', state.brans || 'İlköğretim Matematik')
+    .eq('sinif', state._odevOgrenciSinif || '')
+    .eq('unite', konu);
+  state._odevKazanimlar = data || [];
   kazanimSel.innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>' +
-    filtered.map(k => `<option value="${k.kazanim_kodu||''}">${k.kazanim_kodu||''} ${(k.kazanim_aciklamasi||'').substring(0,50)}...</option>`).join('');
+    state._odevKazanimlar.map(k => `<option value="${k.kazanim_kodu||''}">${k.kazanim_kodu||''} ${(k.kazanim_aciklamasi||'').substring(0,50)}...</option>`).join('');
 }
 
 // Taslağa ekle

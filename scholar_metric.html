@@ -1063,6 +1063,10 @@ tailwind.config = {
         <button onclick="adaptixTab('faturalar')" id="atab-faturalar" class="tab">
           <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">receipt_long</span> Faturalar
         </button>
+        <button onclick="adaptixTab('basvurular')" id="atab-basvurular" class="tab">
+          <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">assignment</span> Başvurular
+          <span id="basvuru-badge" style="display:none;background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;margin-left:4px;line-height:1.4;"></span>
+        </button>
       </div>
 
       <!-- ── Genel Bakış ─────────────────────────────────────── -->
@@ -1094,6 +1098,11 @@ tailwind.config = {
           </button>
         </div>
         <div id="adaptix-faturalar-tablo"></div>
+      </div>
+
+      <!-- ── Başvurular ───────────────────────────────────────── -->
+      <div id="adaptix-tab-basvurular" class="hidden">
+        <div id="adaptix-basvurular-tablo"></div>
       </div>
 
       <!-- ── Öğretmen Detayı ────────────────────────────────── -->
@@ -5817,7 +5826,7 @@ let _adaptixSifreOgrId   = null; // şifre değiştirilen ogretmen_id
 
 // ── Sekme Geçişi ──────────────────────────────────────────────
 function adaptixTab(tab) {
-  ['dashboard','ogretmenler','faturalar','detay'].forEach(t => {
+  ['dashboard','ogretmenler','faturalar','basvurular','detay'].forEach(t => {
     document.getElementById('adaptix-tab-' + t)?.classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('atab-' + t);
     if (btn) btn.classList.toggle('active', t === tab);
@@ -5825,6 +5834,7 @@ function adaptixTab(tab) {
   if (tab === 'dashboard')   loadAdaptixDashboard();
   if (tab === 'ogretmenler') loadAdaptixOgretmenler();
   if (tab === 'faturalar')   loadAdaptixFaturalar();
+  if (tab === 'basvurular')  loadBasvurular();
 }
 
 // ── Genel Bakış ───────────────────────────────────────────────
@@ -6398,6 +6408,101 @@ async function adaptixNotKaydet() {
   if (idx >= 0) _adaptixFaturalar[idx].notlar = not;
   adaptixNotModalKapat();
   renderAdaptixFaturalar();
+}
+
+// ── Başvurular ─────────────────────────────────────────────────
+async function loadBasvurular() {
+  const el = document.getElementById('adaptix-basvurular-tablo');
+  if (!el) return;
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const { data, error } = await sb.from('basvurular')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) { el.innerHTML = `<div style="color:red;padding:16px;">Hata: ${error.message}</div>`; return; }
+
+  const bekliyor = (data || []).filter(b => b.durum === 'bekliyor').length;
+  const badge = document.getElementById('basvuru-badge');
+  if (badge) {
+    badge.textContent = bekliyor;
+    badge.style.display = bekliyor > 0 ? 'inline' : 'none';
+  }
+
+  renderBasvurular(data || []);
+}
+
+function renderBasvurular(data) {
+  const el = document.getElementById('adaptix-basvurular-tablo');
+  if (!data.length) {
+    el.innerHTML = '<div style="padding:32px;text-align:center;color:#4a6272;font-size:14px;">Henüz başvuru yok.</div>';
+    return;
+  }
+
+  const durumRozet = d => {
+    const map = {
+      bekliyor:   'background:#fff3cd;color:#7d5a00;',
+      goruldu:    'background:#dbeafe;color:#1e40af;',
+      onaylandi:  'background:#d1fae5;color:#065f46;',
+      reddedildi: 'background:#fee2e2;color:#991b1b;',
+    };
+    const label = { bekliyor: 'Bekliyor', goruldu: 'Görüldü', onaylandi: 'Onaylandı', reddedildi: 'Reddedildi' };
+    const s = map[d] || 'background:#f3f4f6;color:#374151;';
+    return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;${s}">${label[d] || d}</span>`;
+  };
+
+  const formatTel = tel => {
+    if (!tel) return '—';
+    const digits = tel.replace(/\D/g, '');
+    const wa = `https://wa.me/90${digits.replace(/^0/, '')}`;
+    return `<a href="${wa}" target="_blank" style="color:#005d8d;font-weight:600;text-decoration:none;">${tel}</a>`;
+  };
+
+  const formatTarih = s => {
+    if (!s) return '—';
+    const d = new Date(s);
+    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+  };
+
+  el.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f0f7ff;">
+            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#013149;white-space:nowrap;">Tarih</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#013149;">Ad Soyad</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#013149;">Branş</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#013149;">Telefon</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#013149;">Not</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#013149;">Durum</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:700;color:#013149;">İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(b => `
+          <tr style="border-bottom:1px solid #e8f0f6;">
+            <td style="padding:10px 12px;white-space:nowrap;color:#4a6272;">${formatTarih(b.created_at)}</td>
+            <td style="padding:10px 12px;font-weight:600;">${b.ad_soyad || '—'}</td>
+            <td style="padding:10px 12px;">${b.brans || '—'}</td>
+            <td style="padding:10px 12px;white-space:nowrap;">${formatTel(b.telefon)}</td>
+            <td style="padding:10px 12px;max-width:200px;color:#4a6272;">${b.mesaj || '—'}</td>
+            <td style="padding:10px 12px;">${durumRozet(b.durum)}</td>
+            <td style="padding:10px 12px;white-space:nowrap;">
+              ${b.durum === 'bekliyor' ? `<button onclick="basvuruDurumGuncelle('${b.id}','goruldu')" style="font-size:11px;padding:3px 8px;border:1px solid #3b82f6;border-radius:6px;color:#3b82f6;background:#fff;cursor:pointer;margin-right:4px;">Görüldü</button>` : ''}
+              ${b.durum !== 'onaylandi' ? `<button onclick="basvuruDurumGuncelle('${b.id}','onaylandi')" style="font-size:11px;padding:3px 8px;border:1px solid #10b981;border-radius:6px;color:#10b981;background:#fff;cursor:pointer;margin-right:4px;">Onayla</button>` : ''}
+              ${b.durum !== 'reddedildi' ? `<button onclick="basvuruDurumGuncelle('${b.id}','reddedildi')" style="font-size:11px;padding:3px 8px;border:1px solid #ef4444;border-radius:6px;color:#ef4444;background:#fff;cursor:pointer;">Reddet</button>` : ''}
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function basvuruDurumGuncelle(id, durum) {
+  const { error } = await sb.from('basvurular').update({ durum }).eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Durum güncellendi');
+  loadBasvurular();
 }
 
 // ══════════════════════════════════════════════════════════════

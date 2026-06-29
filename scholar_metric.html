@@ -1833,7 +1833,16 @@ async function odevOgrenciSecildi() {
     sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
   ]);
 
-  state._odevKazanimlar = kazRes.data || [];
+  let odevKazanimlar = kazRes.data || [];
+  if (!odevKazanimlar.length && sinif) {
+    const sinifNo = sinif.match(/\d+/)?.[0] || '';
+    const { data: kazData2 } = await sb.from('kazanimlar').select('*')
+      .eq('ders', state.brans || 'İlköğretim Matematik')
+      .ilike('sinif', `%${sinifNo}%`)
+      .order('unite');
+    odevKazanimlar = kazData2 || [];
+  }
+  state._odevKazanimlar = odevKazanimlar;
   state._odevKaynaklar  = kayRes.data || [];
   state._odevSinif = sinif;
 

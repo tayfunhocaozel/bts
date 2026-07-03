@@ -1214,6 +1214,106 @@ const BRANSLAR = [
   'Diğer',
 ];
 
+// ── KONU SIRALAMA ─────────────────────────────────────────────
+const KONU_SIRA = {
+  "Türkçe": [
+    "Sözcükte Anlam",
+    "Cümlede Anlam",
+    "Paragrafta Anlam",
+    "Fiilimsiler",
+    "Yazım Kuralları",
+    "Noktalama İşaretleri",
+    "Cümlenin Ögeleri",
+    "Cümle Türleri",
+    "Fiilde Çatı",
+    "Anlatım Bozuklukları",
+    "Metin Türleri ve Söz Sanatları",
+    "Sözel Mantık"
+  ],
+  "Matematik": [
+    "Çarpanlar ve Katlar",
+    "Üslü İfadeler",
+    "Kareköklü İfadeler",
+    "Veri Analizi",
+    "Basit Olayların Olma Olasılığı",
+    "Cebirsel İfadeler ve Özdeşlikler",
+    "Doğrusal Denklemler",
+    "Eşitsizlikler",
+    "Üçgenler",
+    "Eşlik ve Benzerlik",
+    "Dönüşüm Geometrisi",
+    "Geometrik Cisimler"
+  ],
+  "Fen Bilimleri": [
+    "Mevsimler ve İklim",
+    "DNA ve Genetik Kod",
+    "Basınç",
+    "Madde ve Endüstri",
+    "Basit Makineler",
+    "Enerji Dönüşümleri ve Çevre Bilimi",
+    "Elektrik Yükleri ve Elektrik Enerjisi"
+  ],
+  "İnkılap Tarihi": [
+    "Bir Kahraman Doğuyor",
+    "Milli Uyanış: Bağımsızlık Yolunda Atılan Adımlar",
+    "Milli Bir Destan: \"Ya İstiklal Ya Ölüm\"",
+    "Atatürkçülük ve Çağdaşlaşan Türkiye",
+    "Demokratikleşme Çabaları",
+    "Atatürk Dönemi Türk Dış Politikası",
+    "Atatürk'ün Ölümü ve Sonrası"
+  ],
+  "Din Kültürü": [
+    "Kader İnancı",
+    "Zekat ve Sadaka",
+    "Din ve Hayat",
+    "Hz. Muhammed'in Örnekliği",
+    "Kur'an-ı Kerim ve Özellikleri"
+  ],
+  "İngilizce": [
+    "Friendship",
+    "Teen Life",
+    "In The Kitchen",
+    "On the Phone",
+    "The Internet",
+    "Adventures",
+    "Tourism",
+    "Chores",
+    "Science",
+    "Natural Forces"
+  ]
+};
+
+// DB'deki branş adını (BRANSLAR) KONU_SIRA anahtarına eşler
+const BRANS_TO_KONU_SIRA_KEY = {
+  'İlköğretim Matematik': 'Matematik',
+  'Türkçe': 'Türkçe',
+  'İngilizce': 'İngilizce',
+  'T.C. İnkılap Tarihi ve Atatürkçülük': 'İnkılap Tarihi',
+  'Fen Bilimleri': 'Fen Bilimleri',
+  'Din Kültürü ve Ahlak Bilgisi': 'Din Kültürü'
+};
+
+// Bir konu adının, verilen (veya tüm) branşlardaki sabit sıradaki indeksini bulur
+function konuSiraIndex(konuAdi, brans) {
+  if (!konuAdi) return Infinity;
+  const key = brans ? (BRANS_TO_KONU_SIRA_KEY[brans] || brans) : null;
+  if (key && KONU_SIRA[key]) {
+    const idx = KONU_SIRA[key].indexOf(konuAdi);
+    if (idx !== -1) return idx;
+  }
+  // Branş bilinmiyor/eşleşmedi: tüm branşlarda ara (konu adları branşlar arası tekrarsız)
+  for (const arr of Object.values(KONU_SIRA)) {
+    const idx = arr.indexOf(konuAdi);
+    if (idx !== -1) return idx;
+  }
+  return Infinity;
+}
+
+// Konu adı dizisini KONU_SIRA'ya göre sıralar (eşleşmeyenler sona, orijinal sırayla)
+function konuSirala(konular, brans) {
+  return [...(konular || [])].sort((a, b) => konuSiraIndex(a, brans) - konuSiraIndex(b, brans));
+}
+
 async function hashSifre(sifre) {
   const data = new TextEncoder().encode(sifre);
   const buf = await crypto.subtle.digest('SHA-256', data);
@@ -1558,7 +1658,7 @@ async function dersOgrenciSecildi() {
     state._dersKazanimlar = data;
   }
 
-  const konular = [...new Set(state._dersKazanimlar.map(k => k.konu))];
+  const konular = konuSirala([...new Set(state._dersKazanimlar.map(k => k.konu))], state.brans);
   konuSel.innerHTML = '<option value="">— Konu seçin —</option>' +
     konular.map(k => `<option value="${k}">${k}</option>`).join('');
 
@@ -1698,12 +1798,13 @@ async function loadDersGecmisi() {
   wrapper.style.display = '';
   el.innerHTML = '<div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div>';
 
-  const { data } = await sb.from('dersler')
+  const { data, error } = await sb.from('dersler')
     .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
-    .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
-    .eq('ders', state.brans || 'İlköğretim Matematik')
+    .eq('ogrenci_id', ogrenciId)
     .order('tarih', { ascending: false })
     .limit(60);
+
+  if (error) console.error('loadDersGecmisi sorgu hatası:', error);
 
   if (!data || !data.length) {
     document.getElementById('ders-gecmis-sayac').textContent = '0';
@@ -2818,17 +2919,18 @@ async function loadRapor() {
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
     sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId),
     sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').ilike('sinif', ogr?.sinif||''),
-    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).eq('ders', state.brans || 'İlköğretim Matematik').order('tarih', { ascending: false }),
+    sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
   ]);
 
   if (odevRes.error) console.error('Rapor ödev sorgu hatası:', odevRes.error.message);
+  if (dersRes.error) console.error('Rapor ders sorgu hatası:', dersRes.error.message);
   const tumOdevler        = odevRes.data || [];
   const tamamlananOdevler = tumOdevler.filter(o => o.durum === 'TAMAMLANDI');
   const kazData  = kazRes.data   || [];
   const dersler  = dersRes.data  || [];
   const denemeler = denemeRes.data || [];
-  const konular  = [...new Set(kazData.map(k => k.konu))];
+  const konular  = konuSirala([...new Set(kazData.map(k => k.konu))], state.brans);
 
   // Konu istatistikleri
   const konuMap = {};
@@ -2842,7 +2944,7 @@ async function loadRapor() {
     konuMap[konu].toplam += Number(o.toplam)||0;
   });
 
-  const allKonular   = konular.length ? konular : Object.keys(konuMap);
+  const allKonular   = konular.length ? konular : konuSirala(Object.keys(konuMap), state.brans);
   const islenenSayi  = allKonular.filter(k => konuMap[k]).length;
 
   // Konu bazlı zaman serisi (tamamlanan ödevler, tarihe göre sıralı)
@@ -4398,7 +4500,7 @@ async function loadOgrBasari() {
   ]);
 
   const odevler = raporRes.data || [];
-  const konular = [...new Set((kazRes.data||[]).map(k => k.konu))];
+  const konular = konuSirala([...new Set((kazRes.data||[]).map(k => k.konu))]);
 
   const konuMap = {};
   odevler.forEach(o => {
@@ -4410,7 +4512,7 @@ async function loadOgrBasari() {
     konuMap[konu].toplam  += Number(o.toplam)||0;
   });
 
-  const allKonular = konular.length ? konular : Object.keys(konuMap);
+  const allKonular = konular.length ? konular : konuSirala(Object.keys(konuMap));
   const calisilan  = allKonular.filter(k => konuMap[k]).length;
   const topDogru   = Object.values(konuMap).reduce((s,r)=>s+r.dogru,0);
   const topToplam  = Object.values(konuMap).reduce((s,r)=>s+r.toplam,0);
@@ -4545,7 +4647,7 @@ async function loadVeliPanel() {
 
   const odevler    = tumOdevler || [];
   const dersList   = dersler    || [];
-  const konular    = [...new Set((kazData||[]).map(k => k.konu))];
+  const konular    = konuSirala([...new Set((kazData||[]).map(k => k.konu))]);
   const bekleyen   = odevler.filter(o => String(o.durum).trim().toUpperCase() === 'BEKLİYOR');
   const tamamlanan = odevler.filter(o => String(o.durum).trim().toUpperCase() === 'TAMAMLANDI');
   const eksik      = odevler.filter(o => ['EKSİK','YAPILMADI'].includes(String(o.durum).trim().toUpperCase()));
@@ -4591,7 +4693,7 @@ async function loadVeliPanel() {
     konuMap[konu].bos     += Number(o.bos)||0;
     konuMap[konu].toplam  += Number(o.toplam)||0;
   });
-  const allKonular = konular.length ? konular : Object.keys(konuMap);
+  const allKonular = konular.length ? konular : konuSirala(Object.keys(konuMap));
 
   // Veli zaman serisi
   const veliKonuOdevler = {};

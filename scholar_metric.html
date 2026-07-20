@@ -2598,15 +2598,14 @@ async function ogrenciEkle() {
   const okul   = document.getElementById('yeni-okul').value.trim();
   const okulno = document.getElementById('yeni-okulno').value;
 
-  const lastId = state.ogrenciler.length + 1001;
-  const newId  = 'OGR-' + lastId;
-
   showToast('Kaydediliyor...');
-  const { error } = await sb.from('ogrenciler').insert({
-    ogrenci_id: newId, ad_soyad: ad, sinif, sube, okul,
+
+  const { data: eklenen, error } = await sb.from('ogrenciler').insert({
+    ad_soyad: ad, sinif, sube, okul,
     tc_no: tc, okul_no: okulno, kayit_durumu: 'AKTİF', ogretmen_id: state.ogretmen_id
-  });
+  }).select('ogrenci_id').single();
   if (error) { showToast('❌ ' + error.message); return; }
+  const newId = eklenen.ogrenci_id;
   const { error: vErr } = await sb.from('veliler').insert(
     veliler.map(v => ({ ogrenci_id: newId, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
   );

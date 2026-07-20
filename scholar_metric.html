@@ -1778,7 +1778,6 @@ async function dersSave() {
   const tarih = edit ? edit.tarih : (document.getElementById('ders-tarih').value || new Date().toISOString().split('T')[0]);
   const rows = secili.map(s => ({
     ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih,
-    ders: state.brans || 'İlköğretim Matematik',
     islenen_konu: konu, kazanim_kodu: s.kod,
     tamamlama_durumu: s.td,
     ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma

@@ -5949,7 +5949,7 @@ async function loadAdaptixDashboard() {
   const [ogretmenRes, ogrenciRes, dersRes, faturaRes] = await Promise.all([
     sb.from('ogretmenler').select('ogretmen_id, ad_soyad, durum'),
     sb.from('ogrenciler').select('ogrenci_id'),
-    sb.from('dersler').select('ders_id').gte('tarih', ayBas),
+    sb.from('dersler').select('kayit_id').gte('tarih', ayBas),
     sb.from('faturalar').select('fatura_id, toplam_tutar, durum'),
   ]);
 

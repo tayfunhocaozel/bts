@@ -5745,19 +5745,25 @@ async function adaAPICall(conv, selId) {
     messages: apiMessages
   };
 
+  const ADA_BAKIM_MESAJI = 'Ada şu an bakımda, kısa süre sonra döneceğiz. 🙏';
+
   const { data, error } = await sb.functions.invoke('ada-chat', { body });
 
   if (error) {
-    let msg = error.message || 'Ada şu an kullanılamıyor.';
     try {
       if (error.context && typeof error.context.json === 'function') {
         const errBody = await error.context.json();
-        if (errBody?.error) msg = errBody.error;
+        console.error('Ada API hatası:', errBody);
+      } else {
+        console.error('Ada API hatası:', error);
       }
-    } catch(e) { /* yedek mesajla devam */ }
-    throw new Error(msg);
+    } catch(e) { console.error('Ada API hatası:', error); }
+    throw new Error(ADA_BAKIM_MESAJI);
   }
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) {
+    console.error('Ada API hatası:', data.error);
+    throw new Error(ADA_BAKIM_MESAJI);
+  }
 
   return data;
 }

@@ -1566,7 +1566,7 @@ async function loadMasterData() {
   const [o, k, ky] = await Promise.all([
     sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad'),
     sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').order('sinif').order('konu'),
-    sb.from('kaynaklar').select('*').order('kaynak_adi'),
+    sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi'),
   ]);
   state.ogrenciler = o.data || [];
   state.kazanimlar = k.data || [];
@@ -1603,7 +1603,7 @@ async function loadDashboard() {
     </div>`).join('');
 
   // Ödevler
-  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','BEKLİYOR').eq('ogretmen_id', state.ogretmen_id);
+  const { data: odevler } = await sb.from('odevler').select('*').eq('durum','BEKLİYOR').eq('ogretmen_id', state.ogretmen_id).order('verilis_tarihi', { ascending: false });
   const bekleyen = odevler || [];
   document.getElementById('stat-bekleyen').textContent = bekleyen.length;
 
@@ -2106,17 +2106,31 @@ async function odevSave() {
 }
 
 // ── ÖDEV GİR: bekleyen + tamamlanan ödevleri göster ─────────
+const TAMAMLANAN_SAYFA_BOYU = 10;
+
 async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
   const { data } = await sb.from('odevler').select('*')
     .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)
     .order('verilis_tarihi', { ascending: false });
 
   const tumOdevler  = data || [];
-  const bekleyenler = tumOdevler.filter(o => o.durum === 'BEKLİYOR');
-  const tamamlananlar = tumOdevler.filter(o => ['TAMAMLANDI','EKSİK','YAPILMADI'].includes(o.durum));
+  state._ogrGirBekleyen = tumOdevler.filter(o => o.durum === 'BEKLİYOR');
+  state._ogrGirTamamlanan = tumOdevler.filter(o => ['TAMAMLANDI','EKSİK','YAPILMADI'].includes(o.durum));
+  state._ogrGirTamamlananLimit = TAMAMLANAN_SAYFA_BOYU;
+  renderOgrGirOdevListesi();
+}
+
+function ogrGirTamamlananDahaFazla() {
+  state._ogrGirTamamlananLimit = (state._ogrGirTamamlananLimit || TAMAMLANAN_SAYFA_BOYU) + TAMAMLANAN_SAYFA_BOYU;
+  renderOgrGirOdevListesi();
+}
+
+function renderOgrGirOdevListesi() {
+  const bekleyenler   = state._ogrGirBekleyen || [];
+  const tamamlananlar = state._ogrGirTamamlanan || [];
   const bekEl = document.getElementById('bekleyen-odev-listesi-wrapper');
 
-  if (!tumOdevler.length) {
+  if (!bekleyenler.length && !tamamlananlar.length) {
     bekEl.innerHTML = `
       <div class="bg-surface-container-lowest rounded-xl p-5 text-center shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
         <div class="text-3xl mb-2">🎉</div>
@@ -2176,6 +2190,10 @@ async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
       <div class="text-sm font-semibold text-tertiary">Bekleyen ödev yok</div>
     </div>`;
 
+  const tamamlananLimit = state._ogrGirTamamlananLimit || TAMAMLANAN_SAYFA_BOYU;
+  const tamamlananGosterilecek = tamamlananlar.slice(0, tamamlananLimit);
+  const tamamlananKalan = tamamlananlar.length - tamamlananGosterilecek.length;
+
   const tamamlananHTML = tamamlananlar.length ? `
     <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
       <div class="flex items-center justify-between mb-3">
@@ -2183,7 +2201,7 @@ async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
         <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">${tamamlananlar.length}</span>
       </div>
       <div class="divide-y divide-outline-variant/20">
-        ${tamamlananlar.map(o => {
+        ${tamamlananGosterilecek.map(o => {
           const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0, top=Number(o.toplam)||(d+y+b);
           return `
           <div class="py-3">
@@ -2237,6 +2255,12 @@ async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
             </div>
           </div>`;
         }).join('')}
+        ${tamamlananKalan > 0 ? `
+        <div class="px-5 py-3 text-center">
+          <button onclick="ogrGirTamamlananDahaFazla()" class="text-xs font-semibold px-4 py-2 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-high/70">
+            Daha Fazla Göster (${tamamlananKalan})
+          </button>
+        </div>` : ''}
       </div>
     </div>` : '';
 
@@ -2654,11 +2678,12 @@ async function kaynakEkle() {
     yayin_evi: document.getElementById('k-yayinevi').value.trim(),
     sinif: document.getElementById('k-sinif').value,
     zorluk_derecesi: document.getElementById('k-zorluk').value,
-    konu_sayisi: parseInt(document.getElementById('k-konu-sayisi').value) || null
+    konu_sayisi: parseInt(document.getElementById('k-konu-sayisi').value) || null,
+    ders: state.brans || 'İlköğretim Matematik'
   });
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Kaynak eklendi!');
-  const { data } = await sb.from('kaynaklar').select('*').order('kaynak_adi');
+  const { data } = await sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi');
   state.kaynaklar = data || [];
   renderKaynaklar();
   document.getElementById('k-ad').value = '';
@@ -2951,7 +2976,7 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
-    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId),
+    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId).order('verilis_tarihi', { ascending: false }),
     sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
@@ -4148,6 +4173,11 @@ async function loadOgrenciPanel() {
   const tamamlananlar = tumOdevler.filter(o => ['TAMAMLANDI','EKSİK','YAPILMADI'].includes(String(o.durum).trim().toUpperCase()));
   const tamamlandiSayisi = tumOdevler.filter(o => String(o.durum).trim().toUpperCase() === 'TAMAMLANDI').length;
 
+  state._ogrPanelTumOdevler      = tumOdevler;
+  state._ogrPanelTamamlanan      = tamamlananlar;
+  state._ogrPanelTamamlananLimit = TAMAMLANAN_SAYFA_BOYU;
+  state._ogrPanelTumLimit        = TAMAMLANAN_SAYFA_BOYU;
+
   document.getElementById('ogr-stat-bekleyen').textContent   = bekleyen.length;
   document.getElementById('ogr-stat-tamamlanan').textContent = tamamlandiSayisi;
 
@@ -4233,7 +4263,21 @@ async function loadOgrenciPanel() {
       </div>`;
   }
 
-  // ── Tamamlananlar sub-tab (TAMAMLANDI + EKSİK + YAPILMADI) ──
+  renderOgrPanelTamamlanan();
+  renderOgrPanelTumu();
+}
+
+function ogrPanelTamamlananDahaFazla() {
+  state._ogrPanelTamamlananLimit = (state._ogrPanelTamamlananLimit || TAMAMLANAN_SAYFA_BOYU) + TAMAMLANAN_SAYFA_BOYU;
+  renderOgrPanelTamamlanan();
+}
+
+function renderOgrPanelTamamlanan() {
+  const tamamlananlar = state._ogrPanelTamamlanan || [];
+  const limit = state._ogrPanelTamamlananLimit || TAMAMLANAN_SAYFA_BOYU;
+  const gosterilecek = tamamlananlar.slice(0, limit);
+  const kalan = tamamlananlar.length - gosterilecek.length;
+
   const tamEl = document.getElementById('ogr-tamamlanan-bolum');
   if (!tamamlananlar.length) {
     tamEl.innerHTML = `
@@ -4248,7 +4292,7 @@ async function loadOgrenciPanel() {
           <span class="font-headline font-bold text-on-surface text-sm">Tamamlanan Ödevler</span>
           <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">${tamamlananlar.length}</span>
         </div>
-        ${tamamlananlar.map(o => {
+        ${gosterilecek.map(o => {
           const oid = o.odev_id || o.id || '';
           const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0;
           const top=Number(o.toplam)||(d+y+b);
@@ -4321,8 +4365,26 @@ async function loadOgrenciPanel() {
             </div>
           </div>`;
         }).join('')}
+        ${kalan > 0 ? `
+        <div class="px-5 py-3 text-center">
+          <button onclick="ogrPanelTamamlananDahaFazla()" class="text-xs font-semibold px-4 py-2 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-high/70">
+            Daha Fazla Göster (${kalan})
+          </button>
+        </div>` : ''}
       </div>`;
   }
+}
+
+function ogrPanelTumuDahaFazla() {
+  state._ogrPanelTumLimit = (state._ogrPanelTumLimit || TAMAMLANAN_SAYFA_BOYU) + TAMAMLANAN_SAYFA_BOYU;
+  renderOgrPanelTumu();
+}
+
+function renderOgrPanelTumu() {
+  const tumOdevler = state._ogrPanelTumOdevler || [];
+  const limit = state._ogrPanelTumLimit || TAMAMLANAN_SAYFA_BOYU;
+  const gosterilecek = tumOdevler.slice(0, limit);
+  const kalan = tumOdevler.length - gosterilecek.length;
 
   // ── Tümü sub-tab ─────────────────────────────────────────────
   const tumEl = document.getElementById('ogr-tumsi-bolum');
@@ -4341,7 +4403,7 @@ async function loadOgrenciPanel() {
           <span class="font-headline font-bold text-on-surface text-sm">Tüm Ödevler</span>
           <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant">${tumOdevler.length}</span>
         </div>
-        ${tumOdevler.map(o => {
+        ${gosterilecek.map(o => {
           const d=Number(o.dogru)||0, y=Number(o.yanlis)||0, b=Number(o.bos)||0, top=Number(o.toplam)||(d+y+b);
           return `
           <div class="px-5 py-3 border-b border-outline-variant/10 last:border-0">
@@ -4355,6 +4417,12 @@ async function loadOgrenciPanel() {
             </div>
           </div>`;
         }).join('')}
+        ${kalan > 0 ? `
+        <div class="px-5 py-3 text-center">
+          <button onclick="ogrPanelTumuDahaFazla()" class="text-xs font-semibold px-4 py-2 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-high/70">
+            Daha Fazla Göster (${kalan})
+          </button>
+        </div>` : ''}
       </div>`;
   }
 }
@@ -4529,7 +4597,7 @@ async function loadOgrBasari() {
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
   const [raporRes, kazRes] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','TAMAMLANDI'),
+    sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','TAMAMLANDI').order('verilis_tarihi', { ascending: false }),
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`)
   ]);
 
@@ -4673,7 +4741,7 @@ async function loadVeliPanel() {
   _veliDersQ = _veliDersQ.order('tarih', { ascending: false });
 
   const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }] = await Promise.all([
-    sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id),
+    sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id).order('verilis_tarihi', { ascending: false }),
     _veliDersQ,
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
     sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
@@ -5807,7 +5875,8 @@ async function adaExecuteTool(toolName, input) {
     case 'get_odev_analizi': {
       let query = sb.from('odevler')
         .select('gun, kaynak, konu, durum, dogru, yanlis, bos, toplam, verilis_tarihi')
-        .eq('ogrenci_id', input.ogrenci_id);
+        .eq('ogrenci_id', input.ogrenci_id)
+        .order('verilis_tarihi', { ascending: false });
       if (input.son_kac_gun) {
         const sinir = new Date();
         sinir.setDate(sinir.getDate() - input.son_kac_gun);
@@ -5855,7 +5924,7 @@ async function adaExecuteTool(toolName, input) {
     case 'get_ders_oncesi_brifing': {
       const [dersRes, odevRes, denemeRes, uyariRes] = await Promise.all([
         sb.from('dersler').select('tarih,islenen_konu,tamamlama_durumu,ders_gorusu').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
-        sb.from('odevler').select('konu,durum,dogru,yanlis,toplam,verilis_tarihi').eq('ogrenci_id', input.ogrenci_id).limit(20),
+        sb.from('odevler').select('konu,durum,dogru,yanlis,toplam,verilis_tarihi').eq('ogrenci_id', input.ogrenci_id).order('verilis_tarihi', { ascending: false }).limit(20),
         sb.from('denemeler').select('tarih,deneme_adi,net,basari_yuzdesi').eq('ogrenci_id', input.ogrenci_id).order('tarih',{ascending:false}).limit(3),
         sb.from('konu_uyarilari').select('konu,uyari_tipi,durum').eq('ogrenci_id', input.ogrenci_id).in('durum',['acik','kronik_tekrar'])
       ]);

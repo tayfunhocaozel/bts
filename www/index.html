@@ -1198,6 +1198,9 @@ const SUPABASE_URL = 'https://ldxeenczugcoirdrldjv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_V8o8lkgrliAmX_oV-mjXDA_wbpxEeMu';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Eski Ada entegrasyonundan kalan, tarayıcıda açıkta duran API anahtarını temizle
+try { localStorage.removeItem('adaptix_ada_key'); } catch(e) {}
+
 // ── STATE ─────────────────────────────────────────────────────
 let state = {
   rol: null, user: null, ogretmen_id: null, ogretmen: null, brans: null,
@@ -5477,23 +5480,6 @@ let adaLoading = false;
 async function adaSayfaAcildi() {
   const selId = document.getElementById('ada-ogrenci')?.value || '';
   adaRenderMesajlar(selId);
-  // Önce localStorage yedeğini kontrol et (hızlı başlangıç)
-  if (!window._adaApiKey) {
-    window._adaApiKey = localStorage.getItem('adaptix_ada_key') || null;
-  }
-  // Supabase'den taze key çek
-  try {
-    const { data } = await sb.from('kullanicilar')
-      .select('deger')
-      .eq('rol', 'api_key')
-      .single();
-    window._adaApiKey = data?.deger || null;
-    if (window._adaApiKey) {
-      localStorage.setItem('adaptix_ada_key', window._adaApiKey);
-    }
-  } catch(e) {
-    // Supabase erişim hatası — yedek key varsa kullan, yoksa null kalır
-  }
 }
 
 function adaOgrenciSecildi() {
@@ -5748,39 +5734,31 @@ async function adaToolLoop(conv, response, selId) {
 }
 
 async function adaAPICall(conv, selId) {
-  const apiKey = window._adaApiKey;
-  if (!apiKey) {
-    throw new Error('Ada şu an kullanılamıyor. Lütfen sistem yöneticisiyle iletişime geçin.');
-  }
-
   const apiMessages = conv
     .filter(m => m.role !== 'system_info')
     .map(({ _d, ...m }) => m);
 
   const body = {
-    model: 'claude-sonnet-4-6',
     max_tokens: 1500,
     system: ADA_SYSTEM_PROMPT,
     tools: ADA_TOOLS,
     messages: apiMessages
   };
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify(body)
-  });
+  const { data, error } = await sb.functions.invoke('ada-chat', { body });
 
-  const data = await res.json();
-  if (!res.ok) {
-    const msg = data?.error?.message || `HTTP ${res.status}`;
-    throw new Error('Anthropic API hatası: ' + msg);
+  if (error) {
+    let msg = error.message || 'Ada şu an kullanılamıyor.';
+    try {
+      if (error.context && typeof error.context.json === 'function') {
+        const errBody = await error.context.json();
+        if (errBody?.error) msg = errBody.error;
+      }
+    } catch(e) { /* yedek mesajla devam */ }
+    throw new Error(msg);
   }
+  if (data?.error) throw new Error(data.error);
+
   return data;
 }
 

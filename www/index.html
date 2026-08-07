@@ -6024,8 +6024,12 @@ function adaVeliSecici(mesaj, veliler) {
   const modal = document.getElementById('ada-wa-modal');
   const liste = document.getElementById('ada-wa-veli-list');
   if (!modal || !liste) return;
-  liste.innerHTML = veliler.map(v => `
-    <button onclick="adaVeliSecildi('${encodeURIComponent(mesaj)}','${v.telefon}')"
+  // Mesaj metnini onclick HTML özniteliğine gömmüyoruz (kesme işareti/tırnak
+  // gibi karakterler JS'i bozar) — güvenli bir index üzerinden global'e koyup
+  // butondan sadece o index'i geçiyoruz.
+  window._veliSeciciData = veliler.map(v => ({ mesaj, telefon: v.telefon }));
+  liste.innerHTML = veliler.map((v, i) => `
+    <button onclick="adaVeliSecildi(${i})"
       style="display:flex;align-items:center;gap:10px;background:#f5faff;border:1px solid #cce5ff;border-radius:10px;padding:10px 14px;cursor:pointer;width:100%;text-align:left;">
       <span style="font-size:18px;">${v.yakinlik === 'Anne' ? '👩' : v.yakinlik === 'Baba' ? '👨' : '👤'}</span>
       <div>
@@ -6036,9 +6040,11 @@ function adaVeliSecici(mesaj, veliler) {
   modal.style.display = 'flex';
 }
 
-function adaVeliSecildi(mesajEncoded, telefon) {
+function adaVeliSecildi(idx) {
   document.getElementById('ada-wa-modal').style.display = 'none';
-  const mesaj = decodeURIComponent(mesajEncoded);
+  const item = (window._veliSeciciData || [])[idx];
+  if (!item) return;
+  const { mesaj, telefon } = item;
   window.open(`https://wa.me/${formatWhatsappNo(telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
 }
 

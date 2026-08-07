@@ -2978,15 +2978,19 @@ async function loadRapor() {
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
-  const [odevRes, kazRes, dersRes, denemeRes] = await Promise.all([
+  const [odevRes, kazRes, dersRes, denemeRes, aiNotuRes] = await Promise.all([
     sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId).order('verilis_tarihi', { ascending: false }),
     sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+    state.rol === 'ogretmen'
+      ? sb.from('rapor_ai_notlari').select('metin').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   if (odevRes.error) console.error('Rapor ödev sorgu hatası:', odevRes.error.message);
   if (dersRes.error) console.error('Rapor ders sorgu hatası:', dersRes.error.message);
+  const aiNotuKayitli = aiNotuRes?.data?.metin || '';
   const tumOdevler        = odevRes.data || [];
   const tamamlananOdevler = tumOdevler.filter(o => o.durum === 'TAMAMLANDI');
   const kazData  = kazRes.data   || [];
@@ -3242,6 +3246,30 @@ async function loadRapor() {
     </div>
   </div>
 
+  ${state.rol === 'ogretmen' ? `
+  <!-- AI Destekli Sorun Alanları & Gelecek Planlaması -->
+  <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mt-5">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-xl">auto_awesome</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Sorun Alanları & Gelecek Planlaması</h2>
+      <span class="ml-auto text-xs text-outline" id="rapor-ai-notu-durum">${aiNotuKayitli ? 'Onaylı — rapora dahil ✓' : 'Henüz oluşturulmadı'}</span>
+    </div>
+    <div class="p-4">
+      <textarea id="rapor-ai-notu-metin" rows="5"
+        class="w-full rounded-xl p-3 text-sm bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:border-primary"
+        placeholder="AI ile bir taslak oluşturun ya da doğrudan buraya yazın...">${aiNotuKayitli}</textarea>
+      <div class="flex gap-2 mt-3">
+        <button onclick="raporAiNotuOlustur('${ogrenciId}')" class="btn btn-soft" style="font-size:12.5px;padding:8px 14px;">
+          ✨ AI ile Oluştur
+        </button>
+        <button onclick="raporAiNotuOnayla('${ogrenciId}')" class="btn btn-primary" style="font-size:12.5px;padding:8px 14px;">
+          ✅ Onayla ve Rapora Ekle
+        </button>
+      </div>
+      <div class="text-xs text-outline mt-2">Onaylamadan yazdırırsanız bu bölümde otomatik özet gösterilir. Onaylarsanız yukarıdaki metin aynen rapora yansır.</div>
+    </div>
+  </div>` : ''}
+
   ${denemeler.length ? `
   <!-- Denemeler -->
   <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mt-5">
@@ -3320,14 +3348,16 @@ async function loadRapor() {
   </div>`;
 
   // Print görünümünü render et
-  renderRaporPrintHTML({
+  window._raporRenderArgs = {
     ogr, dersOturumSayisi, dersSatir, derslerRaw: dersler,
     tumOdevler, tamamlananOdevler, denemeler,
     konuMap, allKonular,
     topDogru, topYanlis, topBos, topToplam, genelPct,
     odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi,
-    uyarilar: mevcutUyarilar
-  });
+    uyarilar: mevcutUyarilar,
+    aiNotu: aiNotuKayitli
+  };
+  renderRaporPrintHTML(window._raporRenderArgs);
 
   // Rapor verisini global'e yaz (acKonuGrafigi için)
   window._raporData = {
@@ -3375,8 +3405,105 @@ async function loadRapor() {
   }
 }
 
+// ── RAPOR: AI DESTEKLİ SORUN ALANLARI & GELECEK PLANLAMASI ─────
+function raporAiVeriOzetiOlustur() {
+  const a = window._raporRenderArgs;
+  if (!a) return '';
+
+  const konuSatirlari = (a.allKonular || [])
+    .filter(k => a.konuMap[k] && a.konuMap[k].toplam > 0)
+    .map(k => {
+      const r = a.konuMap[k];
+      const pct = Math.round(r.dogru / r.toplam * 100);
+      return `- ${k}: %${pct} başarı (D:${r.dogru} Y:${r.yanlis} B:${r.bos})`;
+    }).join('\n') || 'Henüz tamamlanmış ödev verisi yok.';
+
+  const uyariSatirlari = (a.uyarilar || [])
+    .filter(u => u.durum === 'acik' || u.durum === 'kronik_tekrar')
+    .map(u => `- ${u.konu}: ${u.uyari_tipi}`).join('\n') || 'Açık uyarı yok.';
+
+  const dersNotlari = (a.derslerRaw || [])
+    .filter(d => d.ders_gorusu && d.ders_gorusu.trim())
+    .slice(0, 6)
+    .map(d => `- ${d.ders_gorusu.trim()}`).join('\n') || 'Öğretmen ders notu girilmemiş.';
+
+  const denemeSatirlari = (a.denemeler || [])
+    .slice(0, 5)
+    .map(d => `- ${d.deneme_adi || 'Deneme'}: %${parseFloat(d.basari_yuzdesi || 0).toFixed(0)} (Net: ${parseFloat(d.net || 0).toFixed(1)})`)
+    .join('\n') || 'Deneme kaydı yok.';
+
+  return `Öğrenci: ${a.ogr?.ad_soyad || '—'}, Sınıf: ${a.ogr?.sinif || '—'}
+
+KONU BAZLI BAŞARI:
+${konuSatirlari}
+
+AÇIK KONU UYARILARI:
+${uyariSatirlari}
+
+ÖĞRETMENİN DERS NOTLARI:
+${dersNotlari}
+
+SON DENEME SONUÇLARI:
+${denemeSatirlari}`;
+}
+
+async function raporAiNotuOlustur(ogrenciId) {
+  const durumEl = document.getElementById('rapor-ai-notu-durum');
+  const ta = document.getElementById('rapor-ai-notu-metin');
+  if (durumEl) durumEl.textContent = 'Oluşturuluyor...';
+
+  try {
+    const { data, error } = await sb.functions.invoke('ada-chat', {
+      body: {
+        max_tokens: 2000,
+        system: 'Sen bir öğrenci koçusun. Sana verilen öğrenci performans verilerine göre bir akademik raporun "Sorun Alanları & Gelecek Planlaması" bölümü için 3-5 cümlelik, somut ve aksiyona dönük TEK bir Türkçe paragraf yaz. Öğretmenin veliye sunacağı resmi ama sıcak bir üslup kullan. Sadece paragrafın kendisini yaz; başlık, madde işareti veya "işte" gibi giriş ifadeleri ekleme.',
+        messages: [{ role: 'user', content: raporAiVeriOzetiOlustur() }]
+      }
+    });
+    if (error) {
+      let msg = error.message || 'Ada şu an kullanılamıyor.';
+      try {
+        if (error.context && typeof error.context.json === 'function') {
+          const errBody = await error.context.json();
+          console.error('AI notu hatası:', errBody);
+        }
+      } catch(e) {}
+      throw new Error(msg);
+    }
+    if (data?.error) { console.error('AI notu hatası:', data.error); throw new Error(data.error); }
+
+    const text = (data?.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+    if (ta) ta.value = text;
+    if (durumEl) durumEl.textContent = 'Taslak oluşturuldu — düzenleyip onaylayın';
+  } catch(e) {
+    if (durumEl) durumEl.textContent = '';
+    showToast('❌ AI analiz üretilemedi: ' + (e.message || 'bilinmeyen hata'));
+  }
+}
+
+async function raporAiNotuOnayla(ogrenciId) {
+  const ta = document.getElementById('rapor-ai-notu-metin');
+  const metin = (ta?.value || '').trim();
+  if (!metin) { showToast('⚠️ Önce bir metin oluşturun veya yazın'); return; }
+
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('rapor_ai_notlari').upsert({
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
+    metin, guncelleme_tarihi: new Date().toISOString()
+  }, { onConflict: 'ogrenci_id,ogretmen_id' });
+  if (error) { showToast('❌ ' + error.message); return; }
+
+  showToast('✅ Onaylandı, rapora eklendi');
+  const durumEl = document.getElementById('rapor-ai-notu-durum');
+  if (durumEl) durumEl.textContent = 'Onaylı — rapora dahil ✓';
+  if (window._raporRenderArgs) {
+    window._raporRenderArgs.aiNotu = metin;
+    renderRaporPrintHTML(window._raporRenderArgs);
+  }
+}
+
 // ── RAPOR PRINT VIEW (V2) ─────────────────────────────────────
-function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi, uyarilar }) {
+function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi, uyarilar, aiNotu }) {
   const el = document.getElementById('rapor-print-view');
   if (!el) return;
 
@@ -3558,7 +3685,9 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
 
       <div>
         ${secBas('Sorun Alanları & Gelecek Planlaması')}
-        ${sorunAlanlari.length === 0
+        ${aiNotu && aiNotu.trim()
+          ? `<div style="font-size:8pt;color:#1d2a36;line-height:1.6;white-space:pre-line;">${aiNotu.trim()}</div>`
+          : (sorunAlanlari.length === 0
           ? `<div style="font-size:8pt;color:#888;font-style:italic;margin-bottom:8px;">Kayıtlı sorun alanı bulunmamaktadır.</div>`
           : `<ul style="margin:0 0 8px 0;padding:0;list-style:none;">
               ${sorunAlanlari.map(d => {
@@ -3570,8 +3699,8 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
                   : 'takip edilmesi önerilmektedir.';
                 return `<li style="font-size:8pt;color:#1d2a36;margin-bottom:5px;line-height:1.5;">• ${d.ders_gorusu}; <span style="color:#555;font-style:italic;">${oneri}</span></li>`;
               }).join('')}
-            </ul>`}
-        ${uyarilarAcik.length > 0 ? `
+            </ul>`)}
+        ${!aiNotu && uyarilarAcik.length > 0 ? `
           <div style="font-size:7.5pt;font-weight:700;color:#141d22;margin-bottom:4px;">Planlanan Odak Alanları:</div>
           <ul style="margin:0;padding:0;list-style:none;">
             ${uyarilarAcik.slice(0,4).map(u=>{

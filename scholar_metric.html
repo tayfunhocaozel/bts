@@ -817,9 +817,15 @@ tailwind.config = {
           <h2 style="font-family:Manrope;font-size:20px;font-weight:800;margin:0;color:var(--ink);">Performans Raporu</h2>
           <p style="font-size:13px;color:var(--ink-soft);margin:3px 0 0;">Konu bazlı detaylı analiz</p>
         </div>
-        <button onclick="window.print()" class="btn btn-primary print-hide">
-          <span class="material-symbols-outlined" style="font-size:18px;">print</span> PDF / Yazdır
-        </button>
+        <div class="print-hide" style="display:flex;gap:8px;">
+          <button onclick="raporWhatsappGonder()" title="Veliye WhatsApp'tan gönder"
+            style="width:44px;height:44px;border-radius:12px;border:none;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </button>
+          <button onclick="window.print()" class="btn btn-primary">
+            <span class="material-symbols-outlined" style="font-size:18px;">print</span> PDF / Yazdır
+          </button>
+        </div>
       </div>
       <div id="rapor-ogrenci-secim" class="card-2xl" style="padding:18px 20px;margin-bottom:16px;">
         <select id="rapor-ogrenci" onchange="loadRapor()" class="field">
@@ -3456,7 +3462,7 @@ async function raporAiNotuOlustur(ogrenciId) {
     const { data, error } = await sb.functions.invoke('ada-chat', {
       body: {
         max_tokens: 2000,
-        system: 'Sen bir öğrenci koçusun. Sana verilen öğrenci performans verilerine göre bir akademik raporun "Sorun Alanları & Gelecek Planlaması" bölümü için 3-5 cümlelik, somut ve aksiyona dönük TEK bir Türkçe paragraf yaz. Öğretmenin veliye sunacağı resmi ama sıcak bir üslup kullan. Sadece paragrafın kendisini yaz; başlık, madde işareti veya "işte" gibi giriş ifadeleri ekleme.',
+        system: 'Sen bir öğrenci koçusun. Sana verilen öğrenci performans verilerine göre bir akademik raporun "Sorun Alanları & Gelecek Planlaması" bölümü için 3-5 cümlelik, somut ve aksiyona dönük TEK bir Türkçe paragraf yaz. KONU BAZLI BAŞARI listesini mutlaka dikkate al: en düşük başarı yüzdesine sahip 1-2 konuyu isim ve yüzdeleriyle açıkça belirt, en güçlü olduğu konuyu da kısaca öv. Sadece genel/muğlak ifadeler kullanma — somut konu adları ve sayılar geçsin. Öğretmenin veliye sunacağı resmi ama sıcak bir üslup kullan. Sadece paragrafın kendisini yaz; başlık, madde işareti veya "işte" gibi giriş ifadeleri ekleme.',
         messages: [{ role: 'user', content: raporAiVeriOzetiOlustur() }]
       }
     });
@@ -3500,6 +3506,42 @@ async function raporAiNotuOnayla(ogrenciId) {
     window._raporRenderArgs.aiNotu = metin;
     renderRaporPrintHTML(window._raporRenderArgs);
   }
+}
+
+async function raporWhatsappGonder() {
+  const ogrenciId = document.getElementById('rapor-ogrenci')?.value;
+  if (!ogrenciId) { showToast('⚠️ Önce bir öğrenci seçin'); return; }
+
+  const a = window._raporRenderArgs;
+  const ogr = a?.ogr || state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
+  if (!ogr) { showToast('⚠️ Rapor henüz yüklenmedi'); return; }
+
+  const genelPct    = a?.genelPct ?? 0;
+  const tamamlanan  = a?.odevTamamlananSayi ?? 0;
+  const toplamOdev  = a?.tumOdevler?.length ?? 0;
+  const aiNotu      = (a?.aiNotu || '').trim();
+
+  let mesaj = `Sayın Veli,\n\n${ogr.ad_soyad} (${ogr.sinif || '—'}) için hazırladığımız akademik performans raporunu paylaşmak isterim.\n\n📊 Genel Başarı: %${genelPct}\n📝 Tamamlanan Ödev: ${tamamlanan} / ${toplamOdev}`;
+  if (aiNotu) mesaj += `\n\n${aiNotu}`;
+  mesaj += `\n\nDetaylı rapor PDF'ini ayrıca ileteceğim.\n\nSaygılarımla,\n${state.ogretmen?.ad_soyad || ''}`;
+
+  const { data: veliler } = await sb.from('veliler')
+    .select('veli_adi, telefon, yakinlik')
+    .eq('ogrenci_id', ogrenciId);
+
+  if (veliler && veliler.length > 1) {
+    adaVeliSecici(mesaj, veliler);
+    return;
+  }
+  if (veliler && veliler.length === 1) {
+    window.open(`https://wa.me/${formatWhatsappNo(veliler[0].telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    return;
+  }
+  if (ogr.veli_telefon) {
+    window.open(`https://wa.me/${formatWhatsappNo(ogr.veli_telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    return;
+  }
+  showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı');
 }
 
 // ── RAPOR PRINT VIEW (V2) ─────────────────────────────────────

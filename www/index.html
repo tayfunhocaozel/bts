@@ -195,7 +195,7 @@ tailwind.config = {
   @media print {
     @page { size: A4 portrait; margin: 12mm; }
     body, html { background: white !important; }
-    #sidebar, #bottomNav, .glass-header, #rapor-ogrenci, .print-hide { display: none !important; }
+    #sidebar, #bottomNav, .glass-header, .no-print, #rapor-ogrenci, .print-hide { display: none !important; }
     #appScreen { padding: 0 !important; margin: 0 !important; display: block !important; }
     main { padding: 0 !important; max-width: 100% !important; }
     .page { display: none !important; }
@@ -3416,6 +3416,33 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
     .filter(d => d.ders_gorusu && d.ders_gorusu.trim())
     .slice(0, 5);
 
+  // Küçük yazdırılabilir donut grafik (canvas/kütüphane kullanmadan, saf SVG)
+  function donutSvg(pct, renk, etiket, altYazi) {
+    const p = Math.max(0, Math.min(100, Math.round(pct)));
+    return `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="position:relative;width:52px;height:52px;flex-shrink:0;">
+          <svg width="52" height="52" viewBox="0 0 36 36" style="transform:rotate(-90deg);">
+            <path fill="none" stroke="#e6eff6" stroke-width="4"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+            <path fill="none" stroke="${renk}" stroke-width="4" stroke-linecap="round"
+              stroke-dasharray="${p} ${100-p}"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8.5pt;font-weight:800;color:#141d22;font-family:Manrope,sans-serif;">%${p}</div>
+        </div>
+        <div>
+          <div style="font-size:8pt;font-weight:700;color:#141d22;">${etiket}</div>
+          <div style="font-size:7pt;color:#707881;margin-top:1px;">${altYazi}</div>
+        </div>
+      </div>`;
+  }
+
+  const islenenKonuSayisi = allKonular.filter(k => konuMap[k]).length;
+  const tamamPct  = allKonular.length > 0 ? Math.round(islenenKonuSayisi/allKonular.length*100) : 0;
+  const tamamCol  = tamamPct>=80?'#00661d':tamamPct>=60?'#005d8d':'#805600';
+  const genelCol  = genelPct>=80?'#00661d':genelPct>=60?'#005d8d':'#ba1a1a';
+
   el.innerHTML = `
     <!-- BÖL 1: HEADER -->
     <div style="background:#005d8d;color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
@@ -3444,6 +3471,12 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
             <div style="font-size:7.5pt;color:#5a7fa8;margin-top:1px;">${m.label}</div>
           </div>`).join('')}
       </div>
+    </div>
+
+    <!-- BÖL 2.5: GRAFİKLER -->
+    <div style="padding:10px 20px 0;display:flex;gap:24px;align-items:center;border-bottom:0.5px solid #e8f0f6;padding-bottom:10px;">
+      ${donutSvg(tamamPct, tamamCol, 'Konu Tamamlama', `${islenenKonuSayisi} / ${allKonular.length} konu işlendi`)}
+      ${donutSvg(genelPct, genelCol, 'Genel Başarı', 'Tamamlanan ödevler bazında')}
     </div>
 
     <!-- BÖL 3: KONU ANALİZİ | KRİTİK UYARILAR + AKSİYON -->
@@ -3587,9 +3620,15 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
           </table>`}
     </div>
 
+    <!-- BÖL 5.5: ÖĞRETMEN İMZASI -->
+    <div style="padding:6px 20px 0;text-align:right;">
+      <div style="font-size:9.5pt;font-weight:800;color:#141d22;font-family:Manrope,sans-serif;">${state.ogretmen?.ad_soyad || '—'}</div>
+      <div style="font-size:8pt;color:#5a7fa8;margin-top:1px;">${state.ogretmen?.brans ? state.ogretmen.brans + ' Öğretmeni' : ''}</div>
+    </div>
+
     <!-- BÖL 6: FOOTER -->
     <div style="background:#f5faff;border-top:0.5px solid #b5d4f4;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-      <span style="font-size:8.5pt;color:#185fa5;font-family:Inter,sans-serif;">AdaptiX BTS · Tayfun Hoca · Dijital Eğitim Çözümleri</span>
+      <span style="font-size:8.5pt;color:#185fa5;font-family:Inter,sans-serif;">AdaptiX BTS</span>
       <span style="font-size:8.5pt;color:#888;">1 / 1</span>
       <span style="font-size:8.5pt;color:#aaa;">${raporAyYil}</span>
     </div>

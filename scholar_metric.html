@@ -9,6 +9,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <script>
 tailwind.config = {
   darkMode: "class",
@@ -3521,27 +3522,92 @@ async function raporWhatsappGonder() {
   const toplamOdev  = a?.tumOdevler?.length ?? 0;
   const aiNotu      = (a?.aiNotu || '').trim();
 
-  let mesaj = `Sayın Veli,\n\n${ogr.ad_soyad} (${ogr.sinif || '—'}) için hazırladığımız akademik performans raporunu paylaşmak isterim.\n\n📊 Genel Başarı: %${genelPct}\n📝 Tamamlanan Ödev: ${tamamlanan} / ${toplamOdev}`;
+  let mesaj = `Sayın Veli,\n\n${ogr.ad_soyad} (${ogr.sinif || '—'}) için hazırladığımız akademik performans raporunu ekte paylaşıyorum.\n\n📊 Genel Başarı: %${genelPct}\n📝 Tamamlanan Ödev: ${tamamlanan} / ${toplamOdev}`;
   if (aiNotu) mesaj += `\n\n${aiNotu}`;
-  mesaj += `\n\nDetaylı rapor PDF'ini ayrıca ileteceğim.\n\nSaygılarımla,\n${state.ogretmen?.ad_soyad || ''}`;
+  mesaj += `\n\nSaygılarımla,\n${state.ogretmen?.ad_soyad || ''}`;
 
   const { data: veliler } = await sb.from('veliler')
     .select('veli_adi, telefon, yakinlik')
     .eq('ogrenci_id', ogrenciId);
 
   if (veliler && veliler.length > 1) {
-    adaVeliSecici(mesaj, veliler);
+    adaVeliSecici(mesaj, veliler, { mode: 'pdf', ogrenciAdi: ogr.ad_soyad });
     return;
   }
-  if (veliler && veliler.length === 1) {
-    window.open(`https://wa.me/${formatWhatsappNo(veliler[0].telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+  const tekTelefon = (veliler && veliler.length === 1) ? veliler[0].telefon : ogr.veli_telefon;
+  if (!tekTelefon) { showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı'); return; }
+
+  raporPdfPaylas(tekTelefon, mesaj, ogr.ad_soyad);
+}
+
+async function raporPdfOlustur(dosyaAdi) {
+  const el = document.getElementById('rapor-print-view');
+  if (!el || !el.innerHTML.trim()) throw new Error('Önce rapor yüklenmeli');
+
+  // #rapor-print-view normalde display:none (sadece @media print'te görünür).
+  // html2canvas görünmeyen elemanı yakalayamadığı için ekran dışına alıp
+  // geçici olarak görünür yapıyoruz, işlem bitince eski haline döndürüyoruz.
+  const eski = { display: el.style.display, position: el.style.position, left: el.style.left, top: el.style.top, width: el.style.width, zIndex: el.style.zIndex };
+  el.style.display  = 'block';
+  el.style.position = 'fixed';
+  el.style.left     = '-10000px';
+  el.style.top      = '0';
+  el.style.width    = '210mm';
+  el.style.zIndex   = '-1';
+
+  try {
+    const blob = await html2pdf().set({
+      margin: 0,
+      filename: dosyaAdi,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    }).from(el).outputPdf('blob');
+    return blob;
+  } finally {
+    el.style.display  = eski.display;
+    el.style.position = eski.position;
+    el.style.left     = eski.left;
+    el.style.top       = eski.top;
+    el.style.width     = eski.width;
+    el.style.zIndex    = eski.zIndex;
+  }
+}
+
+async function raporPdfPaylas(telefon, mesaj, ogrenciAdi) {
+  showToast('📄 PDF hazırlanıyor...');
+  const dosyaAdi = `${(ogrenciAdi || 'ogrenci').replace(/\s+/g, '_')}_rapor.pdf`;
+
+  let blob;
+  try {
+    blob = await raporPdfOlustur(dosyaAdi);
+  } catch(e) {
+    showToast('❌ PDF oluşturulamadı: ' + (e.message || ''));
     return;
   }
-  if (ogr.veli_telefon) {
-    window.open(`https://wa.me/${formatWhatsappNo(ogr.veli_telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
-    return;
+
+  const file = new File([blob], dosyaAdi, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Performans Raporu', text: mesaj });
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return; // kullanıcı paylaşımı iptal etti
+      // paylaşım desteklenmiyor/başarısız — aşağıdaki indir+WhatsApp'a düş
+    }
   }
-  showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı');
+
+  // Masaüstü / paylaşım desteklenmeyen tarayıcı: PDF'i indir + WhatsApp'ta metni aç
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = dosyaAdi;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+  showToast('📄 PDF indirildi — WhatsApp açılıyor, dosyayı elle ekleyin');
+  window.open(`https://wa.me/${formatWhatsappNo(telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
 }
 
 // ── RAPOR PRINT VIEW (V2) ─────────────────────────────────────
@@ -6020,14 +6086,14 @@ async function adaWaClick(idx, ogrenciId) {
   showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı');
 }
 
-function adaVeliSecici(mesaj, veliler) {
+function adaVeliSecici(mesaj, veliler, extra) {
   const modal = document.getElementById('ada-wa-modal');
   const liste = document.getElementById('ada-wa-veli-list');
   if (!modal || !liste) return;
   // Mesaj metnini onclick HTML özniteliğine gömmüyoruz (kesme işareti/tırnak
   // gibi karakterler JS'i bozar) — güvenli bir index üzerinden global'e koyup
   // butondan sadece o index'i geçiyoruz.
-  window._veliSeciciData = veliler.map(v => ({ mesaj, telefon: v.telefon }));
+  window._veliSeciciData = veliler.map(v => ({ mesaj, telefon: v.telefon, extra }));
   liste.innerHTML = veliler.map((v, i) => `
     <button onclick="adaVeliSecildi(${i})"
       style="display:flex;align-items:center;gap:10px;background:#f5faff;border:1px solid #cce5ff;border-radius:10px;padding:10px 14px;cursor:pointer;width:100%;text-align:left;">
@@ -6040,11 +6106,15 @@ function adaVeliSecici(mesaj, veliler) {
   modal.style.display = 'flex';
 }
 
-function adaVeliSecildi(idx) {
+async function adaVeliSecildi(idx) {
   document.getElementById('ada-wa-modal').style.display = 'none';
   const item = (window._veliSeciciData || [])[idx];
   if (!item) return;
-  const { mesaj, telefon } = item;
+  const { mesaj, telefon, extra } = item;
+  if (extra?.mode === 'pdf') {
+    await raporPdfPaylas(telefon, mesaj, extra.ogrenciAdi);
+    return;
+  }
   window.open(`https://wa.me/${formatWhatsappNo(telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
 }
 

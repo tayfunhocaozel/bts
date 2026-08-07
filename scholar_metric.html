@@ -6850,7 +6850,7 @@ function logout() {
 }
 
 // Sayfa yüklenince oturumu geri yükle
-(function restoreSession() {
+(async function restoreSession() {
   try {
     const saved = localStorage.getItem('adaptix_session');
     if (!saved) return;
@@ -6859,6 +6859,20 @@ function logout() {
     state.rol         = rol;
     state.user        = user;
     state.ogretmen_id = ogretmen_id || null;
+
+    // localStorage sadece minimal bilgi tutuyor; öğretmenin tam kaydını
+    // (ad_soyad, branş vb.) her oturum geri yüklemesinde tazeden çek —
+    // aksi halde state.ogretmen/state.brans boş kalır (rapor imzası,
+    // branşa göre kaynak/kazanım filtreleri bundan etkilenir).
+    if (rol === 'ogretmen' && state.ogretmen_id) {
+      const { data: ogretmen } = await sb.from('ogretmenler').select('*').eq('ogretmen_id', state.ogretmen_id).single();
+      if (ogretmen) {
+        state.ogretmen = { ...ogretmen };
+        state.brans    = ogretmen.brans || 'İlköğretim Matematik';
+        state.user     = { ad: ogretmen.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
+      }
+    }
+
     initApp();
   } catch(e) { localStorage.removeItem('adaptix_session'); }
 })();

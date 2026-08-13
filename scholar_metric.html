@@ -3102,7 +3102,7 @@ async function loadRapor() {
     if (!tot) return;
     if (!konuOdevler[konu]) konuOdevler[konu] = [];
     konuOdevler[konu].push({
-      tarih: o.tarih,
+      tarih: o.verilis_tarihi,
       dogru_yuzde:  Math.round((Number(o.dogru)||0)/tot*100),
       yanlis_yuzde: Math.round((Number(o.yanlis)||0)/tot*100),
       bos_yuzde:    Math.round((Number(o.bos)||0)/tot*100)
@@ -3431,7 +3431,7 @@ async function loadRapor() {
   window._raporRenderArgs = {
     ogr, dersOturumSayisi, dersSatir, derslerRaw: dersler,
     tumOdevler, tamamlananOdevler, denemeler,
-    konuMap, allKonular,
+    konuMap, allKonular, konuOdevler,
     topDogru, topYanlis, topBos, topToplam, genelPct,
     odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi,
     uyarilar: mevcutUyarilar,
@@ -3688,7 +3688,7 @@ async function raporPdfPaylas(telefon, mesaj, ogrenciAdi) {
 }
 
 // ── RAPOR PRINT VIEW (V2) ─────────────────────────────────────
-function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi, uyarilar, aiNotu }) {
+function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tumOdevler, tamamlananOdevler, denemeler, konuMap, allKonular, konuOdevler, topDogru, topYanlis, topBos, topToplam, genelPct, odevTamamlananSayi, odevYapilmadiSayi, odevEksikSayi, uyarilar, aiNotu }) {
   const el = document.getElementById('rapor-print-view');
   if (!el) return;
 
@@ -3727,6 +3727,50 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
   const sorunAlanlari = (derslerRaw || [])
     .filter(d => d.ders_gorusu && d.ders_gorusu.trim())
     .slice(0, 5);
+
+  // Konu bazlı zaman serisi (doğru yüzdesi trendi) çizgi grafiği — canvas/kütüphane
+  // kullanmadan saf SVG. En az 2 veri noktası olan konulardan en yoğun veriye
+  // sahip en fazla 6 tanesi çizilir (okunabilirlik için); geri kalanı dipnotta belirtilir.
+  function konuZamanSerisiGrafigi(konuOdevler, allKonular) {
+    const RENK_PALETI = ['#005d8d','#00661d','#805600','#ba1a1a','#6b3fa0','#0d76b1'];
+    const tumSeriler = allKonular
+      .map(k => ({ konu: k, veri: (konuOdevler && konuOdevler[k]) || [] }))
+      .filter(s => s.veri.length >= 2);
+    if (!tumSeriler.length) {
+      return `<div style="font-size:8pt;color:#888;font-style:italic;padding:4px 0;">Çizgi grafiği için yeterli veri yok (en az 2 tamamlanmış ödev gereklidir).</div>`;
+    }
+
+    const seriler = [...tumSeriler].sort((a,b) => b.veri.length - a.veri.length).slice(0, 6);
+    const gizliSayisi = tumSeriler.length - seriler.length;
+
+    const tumTarihler = [...new Set(seriler.flatMap(s => s.veri.map(v => v.tarih)))].sort();
+    const xOf = tarih => tumTarihler.length > 1 ? (tumTarihler.indexOf(tarih) / (tumTarihler.length - 1)) * 640 : 320;
+    const yOf = pct => 110 - (Math.max(0, Math.min(100, pct)) / 100) * 100;
+
+    const cizgiler = seriler.map((s, i) => {
+      const renk = RENK_PALETI[i % RENK_PALETI.length];
+      const noktalar = s.veri.map(v => `${xOf(v.tarih).toFixed(1)},${yOf(v.dogru_yuzde).toFixed(1)}`).join(' ');
+      return { renk, konu: s.konu, noktalar, sonYuzde: s.veri[s.veri.length - 1].dogru_yuzde };
+    });
+
+    const izgara = [0, 25, 50, 75, 100].map(pct => {
+      const y = yOf(pct);
+      return `<line x1="0" y1="${y}" x2="640" y2="${y}" stroke="#eef4fa" stroke-width="1"/>
+        <text x="-6" y="${y + 3}" font-size="7" fill="#94a3b8" text-anchor="end">%${pct}</text>`;
+    }).join('');
+
+    return `
+      <svg viewBox="-28 0 668 118" style="width:100%;height:108px;" preserveAspectRatio="none">
+        ${izgara}
+        ${cizgiler.map(c => `<polyline points="${c.noktalar}" fill="none" stroke="${c.renk}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`).join('')}
+      </svg>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">
+        ${cizgiler.map(c => `<span style="font-size:7pt;color:#404850;">
+          <span style="display:inline-block;width:9px;height:9px;background:${c.renk};border-radius:2px;margin-right:3px;vertical-align:middle;"></span>${c.konu} (%${c.sonYuzde})
+        </span>`).join('')}
+      </div>
+      ${gizliSayisi > 0 ? `<div style="font-size:7pt;color:#aaa;margin-top:3px;">+${gizliSayisi} konu daha grafikte gösterilmedi (en az veri noktasına sahip olanlar)</div>` : ''}`;
+  }
 
   // Küçük yazdırılabilir donut grafik (canvas/kütüphane kullanmadan, saf SVG)
   function donutSvg(pct, renk, etiket, altYazi) {
@@ -3799,20 +3843,26 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
         ${konuSatirlari.length === 0
           ? `<div style="font-size:9pt;color:#888;font-style:italic;padding:8px 0;">Henüz tamamlanan ödev verisi yok.</div>`
           : konuSatirlari.map(({konu, r, dPct, yPct, bPct, uyariTip}) => `
-            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
-              <span style="font-size:8pt;color:#141d22;font-weight:600;width:90px;min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${konu}">${konu}</span>
-              <div style="flex:1;height:11px;border-radius:3px;overflow:hidden;display:flex;min-width:60px;">
-                <div style="width:${dPct}%;background:#00661d;height:100%;"></div>
-                <div style="width:${yPct}%;background:#ba1a1a;height:100%;"></div>
-                <div style="width:${bPct}%;background:#b5d4f4;height:100%;"></div>
+            <div style="margin-bottom:9px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px;">
+                <span style="font-size:8pt;font-weight:700;color:#141d22;">${konu}</span>
+                ${rozetHtml(uyariTip)}
               </div>
-              <span style="font-size:7pt;color:#555;white-space:nowrap;width:56px;text-align:right;flex-shrink:0;">D:${dPct}% Y:${yPct}%</span>
-              ${rozetHtml(uyariTip)}
+              <div style="display:flex;align-items:center;gap:7px;">
+                <div style="flex:1;height:11px;border-radius:3px;overflow:hidden;display:flex;min-width:60px;">
+                  <div style="width:${dPct}%;background:#00661d;height:100%;"></div>
+                  <div style="width:${yPct}%;background:#ba1a1a;height:100%;"></div>
+                  <div style="width:${bPct}%;background:#b5d4f4;height:100%;"></div>
+                </div>
+                <span style="font-size:7pt;color:#555;white-space:nowrap;flex-shrink:0;">D:${dPct}% Y:${yPct}% · ${r.toplam}s</span>
+              </div>
+              <div style="font-size:7pt;color:#707881;margin-top:2px;">${r.dogru} Doğru · ${r.yanlis} Yanlış · ${r.bos} Boş</div>
             </div>`).join('')}
-        <div style="display:flex;gap:12px;margin-top:8px;font-size:7.5pt;color:#555;">
+        <div style="display:flex;gap:12px;margin-top:4px;font-size:7.5pt;color:#555;">
           <span><span style="display:inline-block;width:10px;height:10px;background:#00661d;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Doğru</span>
           <span><span style="display:inline-block;width:10px;height:10px;background:#ba1a1a;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Yanlış</span>
           <span><span style="display:inline-block;width:10px;height:10px;background:#b5d4f4;border-radius:2px;margin-right:3px;vertical-align:middle;"></span>Boş</span>
+          <span style="color:#888;">"Ns" = soru sayısı</span>
         </div>
       </div>
 
@@ -3841,34 +3891,9 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
       </div>
     </div>
 
-    <!-- BÖL 4: ÖDEV İSTATİSTİKLERİ | SORUN ALANLARI -->
-    <div style="padding:8px 20px;display:grid;grid-template-columns:55% 43%;gap:2%;">
-
-      <div>
-        ${secBas('Ödev ve Katılım İstatistikleri')}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-          ${[
-            {label:'Toplam Ödev',  val:tumOdevler.length,   bg:'#005d8d'},
-            {label:'Tamamlanan',   val:odevTamamlananSayi,  bg:'#00661d'},
-            {label:'Yapılmayan',   val:odevYapilmadiSayi,   bg:'#ba1a1a'},
-            {label:'Eksik',        val:odevEksikSayi,       bg:'#805600'}
-          ].map(k=>`
-            <div style="background:${k.bg};border-radius:7px;padding:9px 13px;">
-              <div style="font-size:18pt;font-weight:800;color:white;font-family:Manrope,sans-serif;">${k.val}</div>
-              <div style="font-size:8pt;color:rgba(255,255,255,0.85);margin-top:2px;">${k.label}</div>
-            </div>`).join('')}
-        </div>
-        ${topToplam > 0 ? `
-        <div style="background:#f5faff;border-radius:6px;padding:7px 12px;font-size:8pt;color:#141d22;border:0.5px solid #b5d4f4;">
-          <span style="font-weight:700;">Tamamlanan Ödev Net/Soru:</span>
-          D: <b style="color:#00661d;">${topDogru}</b> &nbsp;
-          Y: <b style="color:#ba1a1a;">${topYanlis}</b> &nbsp;
-          B: <b style="color:#888;">${topBos}</b> &nbsp;
-          Top: <b>${topToplam}</b>
-        </div>` : ''}
-      </div>
-
-      <div>
+    <!-- BÖL 4: SORUN ALANLARI -->
+    <div style="padding:8px 20px;">
+      <div style="border:0.5px solid #dce7f0;border-radius:7px;padding:10px 12px;">
         ${secBas('Sorun Alanları & Gelecek Planlaması')}
         ${aiNotu && aiNotu.trim()
           ? `<div style="font-size:8pt;color:#1d2a36;line-height:1.6;white-space:pre-line;">${aiNotu.trim()}</div>`
@@ -3894,6 +3919,12 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
             }).join('')}
           </ul>` : ''}
       </div>
+    </div>
+
+    <!-- BÖL 4.5: KONU BAZLI ZAMAN SERİSİ -->
+    <div style="padding:8px 20px;">
+      ${secBas('Konu Bazlı Zaman Serisi (Başarı Trendi)')}
+      ${konuZamanSerisiGrafigi(konuOdevler, allKonular)}
     </div>
 
     <!-- BÖL 5: DENEME SONUÇLARI -->
@@ -4987,7 +5018,7 @@ async function loadOgrBasari() {
     if (!tot) return;
     if (!ogrKonuOdevler[konu]) ogrKonuOdevler[konu] = [];
     ogrKonuOdevler[konu].push({
-      tarih: o.tarih,
+      tarih: o.verilis_tarihi,
       dogru_yuzde:  Math.round((Number(o.dogru)||0)/tot*100),
       yanlis_yuzde: Math.round((Number(o.yanlis)||0)/tot*100),
       bos_yuzde:    Math.round((Number(o.bos)||0)/tot*100)
@@ -5164,7 +5195,7 @@ async function loadVeliPanel() {
     if (!tot) return;
     if (!veliKonuOdevler[konu]) veliKonuOdevler[konu] = [];
     veliKonuOdevler[konu].push({
-      tarih: o.tarih,
+      tarih: o.verilis_tarihi,
       dogru_yuzde:  Math.round((Number(o.dogru)||0)/tot*100),
       yanlis_yuzde: Math.round((Number(o.yanlis)||0)/tot*100),
       bos_yuzde:    Math.round((Number(o.bos)||0)/tot*100)

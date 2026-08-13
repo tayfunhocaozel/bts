@@ -2197,14 +2197,24 @@ function renderOgrGirOdevListesi() {
     : d==='EKSİK'?'background:rgba(254,178,35,0.2);color:#805600;'
     : 'background:rgba(186,26,26,0.1);color:#ba1a1a;';
 
-  const bekGecikmisSayisi = bekleyenler.filter(odevGecikti).length;
+  const bekGecikmisler = bekleyenler.filter(odevGecikti);
+  const bekGecikmisSayisi = bekGecikmisler.length;
+  if (bekGecikmisSayisi > 0) {
+    const ogrenciId = bekGecikmisler[0].ogrenci_id;
+    window._gecikmisUyarMap = { ...window._gecikmisUyarMap, [ogrenciId]: bekGecikmisler };
+  }
   const bekleyenHTML = bekleyenler.length ? `
     <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="font-headline font-bold text-base text-on-surface">⏳ Bekleyenler</h2>
         <span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background:#e8f4fb;color:#005d8d;">${bekleyenler.length}</span>
       </div>
-      ${bekGecikmisSayisi > 0 ? `<div class="mb-3 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold">⚠️ ${bekGecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>` : ''}
+      ${bekGecikmisSayisi > 0 ? `<div class="mb-3 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold flex items-center justify-between gap-2 flex-wrap">
+        <span>⚠️ ${bekGecikmisSayisi} ödev günü geçtiği halde işlenmedi</span>
+        <button onclick="gecikmisVeliyiUyarTikla('${bekGecikmisler[0].ogrenci_id}')"
+          class="text-xs font-bold px-2.5 py-1 rounded-full"
+          style="background:#e6f4ea;color:#075e2e;border:1px solid #b7ddc4;">📲 Veliyi Tek Mesajla Uyar</button>
+      </div>` : ''}
       <div class="divide-y divide-outline-variant/20">
         ${[...bekleyenler].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o => `
           <div class="py-3">
@@ -2235,10 +2245,6 @@ function renderOgrGirOdevListesi() {
                 class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors">
                 📝 Sonuç Gir
               </button>
-              ${odevGecikti(o) ? `<button onclick="bekleyenModalVeliyiUyar('${o.ogrenci_id}','${(state.ogrenciler.find(x=>x.ogrenci_id===o.ogrenci_id)?.ad_soyad||'').replace(/'/g,"&#39;")}','${(o.konu||'').split(' — ')[0].replace(/'/g,"&#39;")}','${o.gun||''}')"
-                class="text-xs font-semibold px-2.5 py-1 rounded-lg" style="background:#e6f4ea;color:#075e2e;border:1px solid #b7ddc4;">
-                📲 Veliyi Uyar
-              </button>` : ''}
             </div>
           </div>`).join('')}
       </div>
@@ -2395,11 +2401,20 @@ async function acBekleyenModal() {
     ? `<div class="mx-4 mt-3 mb-1 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold">⚠️ ${gecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>`
     : '';
 
+  // Bir öğrencinin birden fazla gecikmiş ödevi olabilir — hepsini tek mesajda
+  // göndermek için ogrenci_id'ye göre grupluyoruz; buton sadece o öğrencinin
+  // İLK gecikmiş satırında gösteriliyor.
+  const gecikmisGrup = {};
+  siraliOdevler.filter(odevGecikti).forEach(o => { (gecikmisGrup[o.ogrenci_id] ||= []).push(o); });
+  window._gecikmisUyarMap = gecikmisGrup;
+
   liste.innerHTML = uyariHTML + siraliOdevler.map(o => {
     const ad   = ogrMap[o.ogrenci_id] || '—';
     const konu = (o.konu||'—').split(' — ')[0];
     const id   = o.odev_id;
     const gecikti = odevGecikti(o);
+    const grupOnUyar = gecikti && gecikmisGrup[o.ogrenci_id][0].odev_id === o.odev_id;
+    const grupBoyu = gecikti ? gecikmisGrup[o.ogrenci_id].length : 0;
     return `
       <div id="bm-row-${id}" class="border-b border-outline-variant/10 last:border-0">
         <div class="flex items-start gap-2 px-4 py-3">
@@ -2412,9 +2427,9 @@ async function acBekleyenModal() {
             </div>
           </div>
           <div class="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
-            ${gecikti ? `<button onclick="bekleyenModalVeliyiUyar('${o.ogrenci_id}','${ad.replace(/'/g,"&#39;")}','${konu.replace(/'/g,"&#39;")}','${o.gun||''}')"
+            ${grupOnUyar ? `<button onclick="gecikmisVeliyiUyarTikla('${o.ogrenci_id}')"
               class="text-xs font-bold px-2.5 py-1 rounded-full"
-              style="background:#e6f4ea;color:#075e2e;border:1px solid #b7ddc4;">📲 Veliyi Uyar</button>` : ''}
+              style="background:#e6f4ea;color:#075e2e;border:1px solid #b7ddc4;">📲 Veliyi Uyar${grupBoyu>1?' ('+grupBoyu+')':''}</button>` : ''}
             <button onclick="bekleyenModalYapildi('${id}')"
               class="text-xs font-bold px-2.5 py-1 rounded-full"
               style="background:#e8f5e9;color:#00661d;">✓ Yapıldı</button>
@@ -3580,22 +3595,26 @@ async function raporWhatsappGonder() {
   const toplamOdev  = a?.tumOdevler?.length ?? 0;
   const aiNotu      = (a?.aiNotu || '').trim();
 
-  let mesaj = `Sayın Veli,\n\n${ogr.ad_soyad} (${ogr.sinif || '—'}) için hazırladığımız akademik performans raporunu ekte paylaşıyorum.\n\n📊 Genel Başarı: %${genelPct}\n📝 Tamamlanan Ödev: ${tamamlanan} / ${toplamOdev}`;
-  if (aiNotu) mesaj += `\n\n${aiNotu}`;
-  mesaj += `\n\nSaygılarımla,\n${state.ogretmen?.ad_soyad || ''}`;
+  const mesajUret = (veli) => {
+    let mesaj = `${veliSelamla(veli)}\n\n${ogr.ad_soyad} (${ogr.sinif || '—'}) için hazırladığımız akademik performans raporunu ekte paylaşıyorum.\n\n📊 Genel Başarı: %${genelPct}\n📝 Tamamlanan Ödev: ${tamamlanan} / ${toplamOdev}`;
+    if (aiNotu) mesaj += `\n\n${aiNotu}`;
+    mesaj += `\n\nSaygılarımla,\n${state.ogretmen?.ad_soyad || ''}`;
+    return mesaj;
+  };
 
   const { data: veliler } = await sb.from('veliler')
     .select('veli_adi, telefon, yakinlik')
     .eq('ogrenci_id', ogrenciId);
 
   if (veliler && veliler.length > 1) {
-    adaVeliSecici(mesaj, veliler, { mode: 'pdf', ogrenciAdi: ogr.ad_soyad });
+    adaVeliSecici(mesajUret, veliler, { mode: 'pdf', ogrenciAdi: ogr.ad_soyad });
     return;
   }
-  const tekTelefon = (veliler && veliler.length === 1) ? veliler[0].telefon : ogr.veli_telefon;
+  const tekVeli = (veliler && veliler.length === 1) ? veliler[0] : null;
+  const tekTelefon = tekVeli ? tekVeli.telefon : ogr.veli_telefon;
   if (!tekTelefon) { showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı'); return; }
 
-  raporPdfPaylas(tekTelefon, mesaj, ogr.ad_soyad);
+  raporPdfPaylas(tekTelefon, mesajUret(tekVeli), ogr.ad_soyad);
 }
 
 async function raporPdfOlustur(dosyaAdi) {
@@ -6126,31 +6145,67 @@ function formatWhatsappNo(tel) {
   return clean;
 }
 
+// Veli kaydından kişiselleştirilmiş hitap üretir: "Sayın Elif Hanım," gibi.
+// veli bilgisi bilinmiyorsa (kayıtlı veli yoksa) genel "Sayın Veli," döner.
+function veliSelamla(veli) {
+  if (!veli || !veli.veli_adi) return 'Sayın Veli,';
+  const ilkAd = veli.veli_adi.trim().split(/\s+/)[0];
+  const unvan = veli.yakinlik === 'Anne' ? 'Hanım' : veli.yakinlik === 'Baba' ? 'Bey' : '';
+  return `Sayın ${ilkAd}${unvan ? ' ' + unvan : ''},`;
+}
+
 // Genel amaçlı: bir öğrencinin velisine (birden fazlaysa seçtirerek) WhatsApp mesajı açar.
-async function veliyeMesajGonder(ogrenciId, mesaj) {
+// mesajOrFn bir string olabilir ya da seçilen veli kaydını (veya bilinmiyorsa null)
+// alıp kişiselleştirilmiş metni döndüren bir fonksiyon (veli) => string olabilir.
+async function veliyeMesajGonder(ogrenciId, mesajOrFn) {
+  const uret = v => typeof mesajOrFn === 'function' ? mesajOrFn(v) : mesajOrFn;
   const { data: veliler } = await sb.from('veliler')
     .select('veli_adi, telefon, yakinlik')
     .eq('ogrenci_id', ogrenciId);
 
   if (veliler && veliler.length > 1) {
-    adaVeliSecici(mesaj, veliler);
+    adaVeliSecici(mesajOrFn, veliler);
     return;
   }
   if (veliler && veliler.length === 1) {
-    window.open(`https://wa.me/${formatWhatsappNo(veliler[0].telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    window.open(`https://wa.me/${formatWhatsappNo(veliler[0].telefon)}?text=${encodeURIComponent(uret(veliler[0]))}`, '_blank');
     return;
   }
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   if (ogr?.veli_telefon) {
-    window.open(`https://wa.me/${formatWhatsappNo(ogr.veli_telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    window.open(`https://wa.me/${formatWhatsappNo(ogr.veli_telefon)}?text=${encodeURIComponent(uret(null))}`, '_blank');
     return;
   }
   showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı');
 }
 
-function bekleyenModalVeliyiUyar(ogrenciId, ogrenciAdi, konu, gun) {
-  const mesaj = `Sayın Veli,\n\n${ogrenciAdi} için ${gun ? gun + ' günü ' : ''}verilen "${konu}" ödevi henüz sisteme işlenmedi. Ödevin tamamlanıp tamamlanmadığını kontrol edebilir misiniz?\n\nTeşekkürler.`;
-  veliyeMesajGonder(ogrenciId, mesaj);
+// Bir öğrencinin gecikmiş TÜM ödevlerini TEK mesajda listeleyen üretici döndürür
+// (veli) => string — böylece aynı öğrenciye birden fazla gecikmiş ödev için
+// ayrı ayrı mesaj değil, tek bir toplu mesaj gönderilir.
+function gecikmisMesajUret(ogrenciAdi, items) {
+  return (veli) => {
+    const selam = veliSelamla(veli);
+    if (items.length === 1) {
+      const o = items[0];
+      const konu = (o.konu || '—').split(' — ')[0];
+      return `${selam}\n\n${ogrenciAdi} için ${o.gun ? o.gun + ' günü ' : ''}verilen "${konu}" ödevi henüz sisteme işlenmedi. Kontrol edebilir misiniz?\n\nTeşekkürler.`;
+    }
+    const satirlar = items.map(o => {
+      const konu = (o.konu || '—').split(' — ')[0];
+      return '• ' + [o.gun, konu, o.kaynak].filter(Boolean).join(' — ');
+    }).join('\n');
+    return `${selam}\n\n${ogrenciAdi} için verilen ${items.length} ödev henüz sisteme işlenmedi:\n\n${satirlar}\n\nKontrol edebilir misiniz?\n\nTeşekkürler.`;
+  };
+}
+
+// acBekleyenModal / renderOgrGirOdevListesi render edilirken ogrenci_id -> gecikmiş
+// ödev satırları haritası buraya yazılır; buton tıklanınca tüm liste tek mesajda gider.
+window._gecikmisUyarMap = {};
+function gecikmisVeliyiUyarTikla(ogrenciId) {
+  const items = (window._gecikmisUyarMap || {})[ogrenciId];
+  if (!items || !items.length) return;
+  const ad = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId)?.ad_soyad || 'Öğrenci';
+  veliyeMesajGonder(ogrenciId, gecikmisMesajUret(ad, items));
 }
 
 async function adaWaClick(idx, ogrenciId) {
@@ -6182,14 +6237,18 @@ async function adaWaClick(idx, ogrenciId) {
   showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı');
 }
 
-function adaVeliSecici(mesaj, veliler, extra) {
+function adaVeliSecici(mesajOrFn, veliler, extra) {
   const modal = document.getElementById('ada-wa-modal');
   const liste = document.getElementById('ada-wa-veli-list');
   if (!modal || !liste) return;
   // Mesaj metnini onclick HTML özniteliğine gömmüyoruz (kesme işareti/tırnak
   // gibi karakterler JS'i bozar) — güvenli bir index üzerinden global'e koyup
-  // butondan sadece o index'i geçiyoruz.
-  window._veliSeciciData = veliler.map(v => ({ mesaj, telefon: v.telefon, extra }));
+  // butondan sadece o index'i geçiyoruz. mesajOrFn bir fonksiyonsa, her veli
+  // için o veliye özel (isimli) mesaj burada, seçim anında üretilir.
+  window._veliSeciciData = veliler.map(v => ({
+    mesaj: typeof mesajOrFn === 'function' ? mesajOrFn(v) : mesajOrFn,
+    telefon: v.telefon, extra
+  }));
   liste.innerHTML = veliler.map((v, i) => `
     <button onclick="adaVeliSecildi(${i})"
       style="display:flex;align-items:center;gap:10px;background:#f5faff;border:1px solid #cce5ff;border-radius:10px;padding:10px 14px;cursor:pointer;width:100%;text-align:left;">

@@ -1222,6 +1222,43 @@ let state = {
 
 const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 
+// ── Ödev tarih/gecikme yardımcıları ──────────────────────────
+// Seçilen gün adından (örn. "Salı"), bugünden başlayarak o günün
+// ilk geleceği takvim tarihini üretir (bugün dahil). Ödev formunda
+// kullanıcı yine "gün" seçer, ama Supabase'e gerçek tarih yazılır.
+function gununTarihi(gunAdi, baseDate) {
+  const bugun = baseDate ? new Date(baseDate) : new Date();
+  bugun.setHours(0, 0, 0, 0);
+  const idx = GUNLER.indexOf(gunAdi); // 0=Pazartesi .. 6=Pazar
+  if (idx === -1) return bugun.toISOString().split('T')[0];
+  const jsGun = bugun.getDay(); // 0=Pazar,1=Pazartesi,...,6=Cumartesi
+  const bugunIdx = jsGun === 0 ? 6 : jsGun - 1; // 0=Pazartesi .. 6=Pazar
+  let fark = idx - bugunIdx;
+  if (fark < 0) fark += 7;
+  const hedef = new Date(bugun);
+  hedef.setDate(bugun.getDate() + fark);
+  return hedef.toISOString().split('T')[0];
+}
+
+function bugunISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().split('T')[0];
+}
+
+// Ödev, hedef gününü geçtiği halde hâlâ BEKLİYOR durumundaysa "gecikti" sayılır.
+function odevGecikti(o) {
+  return String(o?.durum).trim().toUpperCase() === 'BEKLİYOR'
+    && o?.verilis_tarihi && o.verilis_tarihi < bugunISO();
+}
+
+function odevTarihGoster(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+}
+
 const BRANSLAR = [
   'İlköğretim Matematik',
   'Türkçe',
@@ -1629,16 +1666,22 @@ async function loadDashboard() {
   const ogrMap = {};
   state.ogrenciler.forEach(o => ogrMap[o.ogrenci_id] = o.ad_soyad);
   const el = document.getElementById('bekleyen-odevler');
+  const gecikmisSayisi = bekleyen.filter(odevGecikti).length;
   if (!bekleyen.length) {
     el.innerHTML = '<div class="text-tertiary text-sm font-semibold py-2">🎉 Bekleyen ödev yok!</div>';
   } else {
-    el.innerHTML = bekleyen.slice(0,5).map(o => `
+    const siraliBekleyen = [...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0));
+    el.innerHTML =
+      (gecikmisSayisi > 0 ? `<div class="text-xs font-bold text-error mb-2">⚠️ ${gecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>` : '') +
+      siraliBekleyen.slice(0,5).map(o => `
       <div class="flex items-center justify-between py-3 border-b border-outline-variant/20 last:border-0">
         <div>
           <div class="text-sm font-semibold text-on-surface">${ogrMap[o.ogrenci_id]||o.ogrenci_id}</div>
           <div class="text-xs text-outline mt-0.5">${o.gun||'—'} — ${o.konu||'—'}</div>
         </div>
-        <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">Bekliyor</span>
+        ${odevGecikti(o)
+          ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-error/10 text-error">⚠️ Gecikti</span>`
+          : `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">Bekliyor</span>`}
       </div>`).join('') +
       (bekleyen.length > 5 ? `<div class="text-xs text-outline pt-2">+${bekleyen.length-5} daha...</div>` : '');
   }
@@ -2038,7 +2081,8 @@ function taslakEkle() {
     _id: Date.now() + Math.random(),
     gun, kaynak, konu, kazanim,
     kazanim_aciklamasi: kazObj?.kazanim_aciklamasi || '',
-    odev_detay: detay
+    odev_detay: detay,
+    hedef_tarih: gununTarihi(gun)
   });
 
   renderTaslakTablo();
@@ -2078,7 +2122,7 @@ function renderTaslakTablo() {
 
   liste.innerHTML = sorted.map(t => `
     <div class="flex items-start gap-3 py-3">
-      <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-primary flex-shrink-0 mt-0.5">${t.gun}</span>
+      <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-primary flex-shrink-0 mt-0.5">${t.gun}${t.hedef_tarih?' · '+odevTarihGoster(t.hedef_tarih):''}</span>
       <div class="flex-1 min-w-0">
         <div class="text-sm font-semibold text-on-surface">${t.konu}${t.kazanim?' — '+t.kazanim:''}</div>
         <div class="text-xs text-outline mt-0.5">📚 ${t.kaynak}${t.odev_detay && t.odev_detay.trim() ? ' &nbsp;•&nbsp; 📄 '+t.odev_detay.trim() : ''}</div>
@@ -2093,10 +2137,9 @@ async function odevSave() {
   if (!state._odevTaslaklari.length) { showToast('⚠️ Önce tabloya ödev ekleyin'); return; }
 
   showToast('Kaydediliyor...');
-  const tarih = new Date().toISOString().split('T')[0];
   const rows = state._odevTaslaklari.map(t => ({
     ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
-    verilis_tarihi: tarih,
+    verilis_tarihi: t.hedef_tarih || gununTarihi(t.gun),
     gun: t.gun,
     kaynak: t.kaynak,
     konu: t.kazanim ? `${t.konu} — ${t.kazanim}` : t.konu,
@@ -2154,22 +2197,23 @@ function renderOgrGirOdevListesi() {
     : d==='EKSİK'?'background:rgba(254,178,35,0.2);color:#805600;'
     : 'background:rgba(186,26,26,0.1);color:#ba1a1a;';
 
+  const bekGecikmisSayisi = bekleyenler.filter(odevGecikti).length;
   const bekleyenHTML = bekleyenler.length ? `
     <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="font-headline font-bold text-base text-on-surface">⏳ Bekleyenler</h2>
         <span class="text-xs font-bold px-2.5 py-1 rounded-full" style="background:#e8f4fb;color:#005d8d;">${bekleyenler.length}</span>
       </div>
+      ${bekGecikmisSayisi > 0 ? `<div class="mb-3 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold">⚠️ ${bekGecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>` : ''}
       <div class="divide-y divide-outline-variant/20">
-        ${bekleyenler.map(o => `
+        ${[...bekleyenler].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o => `
           <div class="py-3">
             <div class="flex items-start justify-between gap-2 mb-2">
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Gecikti</span>':''}</div>
                 <div class="text-xs text-outline mt-0.5">
-                  📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}
+                  📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}
                   ${o.odev_detay && o.odev_detay.trim() ? '&nbsp;•&nbsp; 📄 '+o.odev_detay.trim() : ''}
-                  &nbsp;•&nbsp; <span class="opacity-60">${o.verilis_tarihi||''}</span>
                 </div>
               </div>
               <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style="${durumBadgeStyle(o.durum)}">${o.durum}</span>
@@ -2191,6 +2235,10 @@ function renderOgrGirOdevListesi() {
                 class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors">
                 📝 Sonuç Gir
               </button>
+              ${odevGecikti(o) ? `<button onclick="bekleyenModalVeliyiUyar('${o.ogrenci_id}','${(state.ogrenciler.find(x=>x.ogrenci_id===o.ogrenci_id)?.ad_soyad||'').replace(/'/g,"&#39;")}','${(o.konu||'').split(' — ')[0].replace(/'/g,"&#39;")}','${o.gun||''}')"
+                class="text-xs font-semibold px-2.5 py-1 rounded-lg" style="background:#e6f4ea;color:#075e2e;border:1px solid #b7ddc4;">
+                📲 Veliyi Uyar
+              </button>` : ''}
             </div>
           </div>`).join('')}
       </div>
@@ -2341,22 +2389,32 @@ async function acBekleyenModal() {
   const ogrMap = {};
   state.ogrenciler.forEach(o => { ogrMap[o.ogrenci_id] = o.ad_soyad; });
 
-  liste.innerHTML = odevler.map(o => {
+  const gecikmisSayisi = odevler.filter(odevGecikti).length;
+  const siraliOdevler = [...odevler].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0));
+  const uyariHTML = gecikmisSayisi > 0
+    ? `<div class="mx-4 mt-3 mb-1 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold">⚠️ ${gecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>`
+    : '';
+
+  liste.innerHTML = uyariHTML + siraliOdevler.map(o => {
     const ad   = ogrMap[o.ogrenci_id] || '—';
     const konu = (o.konu||'—').split(' — ')[0];
     const id   = o.odev_id;
+    const gecikti = odevGecikti(o);
     return `
       <div id="bm-row-${id}" class="border-b border-outline-variant/10 last:border-0">
         <div class="flex items-start gap-2 px-4 py-3">
           <div class="flex-1 min-w-0">
-            <div class="text-sm font-bold text-on-surface truncate">${ad}</div>
+            <div class="text-sm font-bold text-on-surface truncate">${ad}${gecikti?' <span class="text-xs font-bold text-error">⚠️ Gecikti</span>':''}</div>
             <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-              <span class="text-xs text-outline">${o.gun||'—'}</span>
+              <span class="text-xs text-outline">${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''}</span>
               <span class="text-xs font-medium text-on-surface-variant">${o.kaynak||'—'}</span>
               <span class="text-xs text-primary">${konu}</span>
             </div>
           </div>
           <div class="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+            ${gecikti ? `<button onclick="bekleyenModalVeliyiUyar('${o.ogrenci_id}','${ad.replace(/'/g,"&#39;")}','${konu.replace(/'/g,"&#39;")}','${o.gun||''}')"
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              style="background:#e6f4ea;color:#075e2e;border:1px solid #b7ddc4;">📲 Veliyi Uyar</button>` : ''}
             <button onclick="bekleyenModalYapildi('${id}')"
               class="text-xs font-bold px-2.5 py-1 rounded-full"
               style="background:#e8f5e9;color:#00661d;">✓ Yapıldı</button>
@@ -4468,10 +4526,10 @@ async function loadOgrenciPanel() {
   const belEl = document.getElementById('bekleyen-toggle-liste');
   belEl.innerHTML = bekleyen.length ? `
     <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
-      ${bekleyen.map(o => `
+      ${[...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o => `
         <div class="px-4 py-3 border-b border-outline-variant/15 last:border-0">
-          <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
-          <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
+          <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
+          <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
           ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
         </div>`).join('')}
       <div class="px-4 py-2 text-xs italic" style="color:var(--outline);opacity:.7;">Tüm bekleyen ödevleriniz listelenmektedir.</div>
@@ -4487,13 +4545,15 @@ async function loadOgrenciPanel() {
         <div class="text-sm text-outline mt-1">Harika iş çıkardın.</div>
       </div>`;
   } else {
+    const ogrBekGecikmis = bekleyen.filter(odevGecikti).length;
     bekEl.innerHTML = `
       <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mb-4 overflow-hidden">
         <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between">
           <span class="font-headline font-bold text-error text-sm">⏳ Bekleyen Ödevler</span>
           <span class="text-xs font-bold bg-error/10 text-error px-2 py-0.5 rounded-full">${bekleyen.length}</span>
         </div>
-        ${bekleyen.map(o => {
+        ${ogrBekGecikmis > 0 ? `<div class="mx-5 mt-4 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold">⚠️ ${ogrBekGecikmis} ödevinin süresi geçti</div>` : ''}
+        ${[...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o => {
           const oid = o.odev_id || o.id || '';
           return `
           <div class="border-b border-outline-variant/15 last:border-0">
@@ -4501,8 +4561,8 @@ async function loadOgrenciPanel() {
               <div class="flex items-start gap-3 mb-3">
                 <div class="w-2.5 h-2.5 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
                 <div class="flex-1">
-                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
-                  <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
+                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
+                  <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
                   ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
                 </div>
               </div>
@@ -5102,8 +5162,17 @@ async function loadVeliPanel() {
 
   const guclu  = allKonular.filter(k => konuMap[k] && konuMap[k].toplam>0 && Math.round(konuMap[k].dogru/konuMap[k].toplam*100)>=80);
   const zayif  = allKonular.filter(k => konuMap[k] && konuMap[k].toplam>0 && Math.round(konuMap[k].dogru/konuMap[k].toplam*100)<60);
+  const veliGecikmis = bekleyen.filter(odevGecikti);
 
   document.getElementById('veli-tab-ozet').innerHTML = `
+    ${veliGecikmis.length ? `
+    <div class="bg-error-container/20 border border-error/20 rounded-xl p-4 mb-3 flex items-start gap-2">
+      <span class="material-symbols-outlined text-error text-lg flex-shrink-0">warning</span>
+      <div>
+        <div class="text-sm font-bold text-error">${veliGecikmis.length} ödev günü geçtiği halde işlenmedi</div>
+        <div class="text-xs text-outline mt-0.5">"Ödevler" sekmesinden detayları görebilir, çocuğunuzla kontrol edebilirsiniz.</div>
+      </div>
+    </div>` : ''}
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-surface-container-lowest rounded-xl p-4 text-center shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
         <div class="font-headline text-2xl font-extrabold text-error">${bekleyen.length}</div>
@@ -5146,11 +5215,11 @@ async function loadVeliPanel() {
         <span class="font-headline font-bold text-error text-sm">⏳ Bekleyen</span>
         <span class="text-xs font-bold bg-error/10 text-error px-2 py-0.5 rounded-full">${bekleyen.length}</span>
       </div>
-      ${bekleyen.map(o=>`
+      ${[...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o=>`
         <div class="px-5 py-3 border-b border-outline-variant/10 last:border-0 flex items-start gap-3">
           <div class="w-2 h-2 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
-          <div><div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
-          <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div></div>
+          <div><div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
+          <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div></div>
         </div>`).join('')}
     </div>` : ''}
     ${tamamlanan.length ? `
@@ -6055,6 +6124,33 @@ function formatWhatsappNo(tel) {
   if (clean.startsWith('0')) clean = '9' + clean;
   if (!clean.startsWith('90')) clean = '90' + clean;
   return clean;
+}
+
+// Genel amaçlı: bir öğrencinin velisine (birden fazlaysa seçtirerek) WhatsApp mesajı açar.
+async function veliyeMesajGonder(ogrenciId, mesaj) {
+  const { data: veliler } = await sb.from('veliler')
+    .select('veli_adi, telefon, yakinlik')
+    .eq('ogrenci_id', ogrenciId);
+
+  if (veliler && veliler.length > 1) {
+    adaVeliSecici(mesaj, veliler);
+    return;
+  }
+  if (veliler && veliler.length === 1) {
+    window.open(`https://wa.me/${formatWhatsappNo(veliler[0].telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    return;
+  }
+  const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
+  if (ogr?.veli_telefon) {
+    window.open(`https://wa.me/${formatWhatsappNo(ogr.veli_telefon)}?text=${encodeURIComponent(mesaj)}`, '_blank');
+    return;
+  }
+  showToast('Bu öğrenci için kayıtlı veli telefonu bulunamadı');
+}
+
+function bekleyenModalVeliyiUyar(ogrenciId, ogrenciAdi, konu, gun) {
+  const mesaj = `Sayın Veli,\n\n${ogrenciAdi} için ${gun ? gun + ' günü ' : ''}verilen "${konu}" ödevi henüz sisteme işlenmedi. Ödevin tamamlanıp tamamlanmadığını kontrol edebilir misiniz?\n\nTeşekkürler.`;
+  veliyeMesajGonder(ogrenciId, mesaj);
 }
 
 async function adaWaClick(idx, ogrenciId) {

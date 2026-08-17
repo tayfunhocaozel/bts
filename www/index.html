@@ -1601,7 +1601,7 @@ function goPage(id) {
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   if (id === 'ders-programi') loadHaftalikProgram();
-  if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = new Date().toISOString().split('T')[0]; }
+  if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = yerelISO(new Date()); }
   if (id === 'ada') adaSayfaAcildi();
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
@@ -1839,7 +1839,7 @@ async function dersSave() {
     if (delErr) { showToast('❌ Güncelleme hatası: ' + delErr.message); return; }
   }
 
-  const tarih = edit ? edit.tarih : (document.getElementById('ders-tarih').value || new Date().toISOString().split('T')[0]);
+  const tarih = edit ? edit.tarih : (document.getElementById('ders-tarih').value || yerelISO(new Date()));
   const rows = secili.map(s => ({
     ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih,
     islenen_konu: konu, kazanim_kodu: s.kod,
@@ -1859,7 +1859,7 @@ async function dersSave() {
   document.getElementById('ders-hatirlatma').value = '';
   document.getElementById('kazanim-checkboxlar').innerHTML = '<div class="p-4 text-sm text-outline">Konu seçin</div>';
   document.getElementById('ders-konu').value = '';
-  document.getElementById('ders-tarih').value = new Date().toISOString().split('T')[0];
+  document.getElementById('ders-tarih').value = yerelISO(new Date());
   loadDersGecmisi();
 }
 
@@ -3550,7 +3550,7 @@ async function loadRapor() {
           yeniUyarilar.push({
             uyari_id: crypto.randomUUID(), ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
             konu, uyari_tipi: analiz.tip,
-            uyari_tarihi: new Date().toISOString().split('T')[0],
+            uyari_tarihi: yerelISO(new Date()),
             tetikleyen_deger: analiz.deger, durum: yeniDurum
           });
         }
@@ -4342,7 +4342,7 @@ async function uyariAksiyonKaydet(uyariId) {
   const { error } = await sb.from('konu_uyarilari').update({
     durum: 'aksiyon_alindi',
     ogretmen_notu: not,
-    aksiyon_tarihi: new Date().toISOString().split('T')[0]
+    aksiyon_tarihi: yerelISO(new Date())
   }).eq('uyari_id', uyariId);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Aksiyon kaydedildi');
@@ -5239,7 +5239,7 @@ async function loadVeliPanel() {
   }
 
   // Aylık özet
-  const buAy = new Date().toISOString().slice(0,7);
+  const buAy = yerelISO(new Date()).slice(0,7);
   const ayOdevler = tamamlanan.filter(o => (o.verilis_tarihi||'').startsWith(buAy));
   const ayDersler = dersList.filter(d => (d.tarih||'').startsWith(buAy));
   const ayDogru   = ayOdevler.reduce((s,o)=>s+(Number(o.dogru)||0),0);
@@ -6421,7 +6421,7 @@ async function adaExecuteTool(toolName, input) {
       if (input.son_kac_gun) {
         const sinir = new Date();
         sinir.setDate(sinir.getDate() - input.son_kac_gun);
-        query = query.gte('verilis_tarihi', sinir.toISOString().split('T')[0]);
+        query = query.gte('verilis_tarihi', yerelISO(sinir));
       }
       const { data } = await query;
       if (!data?.length) return { odev_yok: true };
@@ -6554,7 +6554,7 @@ async function loadAdaptixDashboard() {
   statsEl.innerHTML = '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:32px;"><div class="spinner"></div></div>';
 
   const buAy = new Date();
-  const ayBas = new Date(buAy.getFullYear(), buAy.getMonth(), 1).toISOString().split('T')[0];
+  const ayBas = yerelISO(new Date(buAy.getFullYear(), buAy.getMonth(), 1));
 
   const [ogretmenRes, ogrenciRes, dersRes, faturaRes] = await Promise.all([
     sb.from('ogretmenler').select('ogretmen_id, ad_soyad, durum'),
@@ -7046,7 +7046,7 @@ async function adaptixFaturaOlustur() {
   showToast('Faturalar kontrol ediliyor...');
 
   const buAy = new Date();
-  const donem = new Date(buAy.getFullYear(), buAy.getMonth(), 1).toISOString().split('T')[0];
+  const donem = yerelISO(new Date(buAy.getFullYear(), buAy.getMonth(), 1));
 
   const [ogretmenRes, ogrenciRes, mevcutRes] = await Promise.all([
     sb.from('ogretmenler').select('ogretmen_id, ad_soyad').eq('durum', 'aktif'),
@@ -7083,14 +7083,14 @@ async function adaptixFaturaOdendi(faturaId) {
   showToast('Güncelleniyor...');
   const { error } = await sb.from('faturalar').update({
     durum: 'odendi',
-    odeme_tarihi: new Date().toISOString().split('T')[0]
+    odeme_tarihi: yerelISO(new Date())
   }).eq('fatura_id', faturaId);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Ödendi olarak işaretlendi');
   const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === faturaId);
   if (idx >= 0) {
     _adaptixFaturalar[idx].durum = 'odendi';
-    _adaptixFaturalar[idx].odeme_tarihi = new Date().toISOString().split('T')[0];
+    _adaptixFaturalar[idx].odeme_tarihi = yerelISO(new Date());
   }
   renderAdaptixFaturalar();
 }

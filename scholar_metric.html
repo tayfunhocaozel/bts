@@ -2167,10 +2167,144 @@ async function loadBekleyenOdevlerForOgrenci(ogrenciId) {
     .order('verilis_tarihi', { ascending: false });
 
   const tumOdevler  = data || [];
+  state._ogrGirOdevMap = {};
+  tumOdevler.forEach(o => { state._ogrGirOdevMap[o.odev_id] = o; });
   state._ogrGirBekleyen = tumOdevler.filter(o => o.durum === 'BEKLİYOR');
   state._ogrGirTamamlanan = tumOdevler.filter(o => ['TAMAMLANDI','EKSİK','YAPILMADI'].includes(o.durum));
   state._ogrGirTamamlananLimit = TAMAMLANAN_SAYFA_BOYU;
   renderOgrGirOdevListesi();
+}
+
+// Konu alanına kaydedilen "konu — kazanım" birleşik metninden saf konu adını çıkarır.
+function odevKonuBaz(o) {
+  if (o.kazanim && o.konu && o.konu.endsWith(' — ' + o.kazanim)) {
+    return o.konu.slice(0, -(' — ' + o.kazanim).length);
+  }
+  return o.konu;
+}
+
+// İçerik + durum + sonuç birlikte düzenlenebilen ortak form (hem bekleyen hem tamamlanan satırlarda kullanılır)
+function odevDuzenleFormHTML(o) {
+  const baz = odevKonuBaz(o);
+  const konular = state._odevKonular || [];
+  const gunOpts = GUNLER.map(g => `<option ${g===o.gun?'selected':''}>${g}</option>`).join('');
+  const kaynakOpts = (state._odevKaynaklar||[]).map(k => `<option ${k.kaynak_adi===o.kaynak?'selected':''}>${k.kaynak_adi}</option>`).join('');
+  const konuOpts = '<option value="">— Konu seçin —</option>' + konular.map(k => `<option value="${k}" ${k===baz?'selected':''}>${k}</option>`).join('');
+  return `
+    <div id="odev-duzenle-${o.odev_id}" class="hidden mt-3 bg-surface-container rounded-xl p-4">
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <select class="od-gun px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${gunOpts}</select>
+        <select class="od-kaynak px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${kaynakOpts}</select>
+      </div>
+      <select class="od-konu w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none mb-2" onchange="odevDuzenleKonuSecildi('${o.odev_id}')">${konuOpts}</select>
+      <select class="od-kazanim w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none mb-2">
+        <option value="">— Kazanım (opsiyonel) —</option>
+      </select>
+      <input type="text" class="od-detay w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm mb-3" placeholder="Sayfa / Test numarası" value="${(o.odev_detay||'').replace(/"/g,'&quot;')}">
+      <div class="mb-3">
+        <div class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Durum</div>
+        <select class="od-durum w-full rounded-lg px-3 py-2 text-sm bg-surface border border-outline-variant focus:outline-none" onchange="odevDurumInputToggle('${o.odev_id}')">
+          <option value="BEKLİYOR" ${o.durum==='BEKLİYOR'?'selected':''}>⏳ BEKLİYOR</option>
+          <option value="TAMAMLANDI" ${o.durum==='TAMAMLANDI'?'selected':''}>✅ TAMAMLANDI</option>
+          <option value="EKSİK" ${o.durum==='EKSİK'?'selected':''}>⚠️ EKSİK</option>
+          <option value="YAPILMADI" ${o.durum==='YAPILMADI'?'selected':''}>❌ YAPILMADI</option>
+        </select>
+      </div>
+      <div class="od-dyb ${o.durum!=='TAMAMLANDI'?'hidden':''} mb-3">
+        <div class="grid grid-cols-4 gap-2">
+          <div><div class="text-xs font-semibold mb-1" style="color:#00661d;">D</div><input type="number" class="od-d w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.dogru||''}" placeholder="0"/></div>
+          <div><div class="text-xs font-semibold mb-1" style="color:#ba1a1a;">Y</div><input type="number" class="od-y w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.yanlis||''}" placeholder="0"/></div>
+          <div><div class="text-xs font-semibold mb-1 text-outline">B</div><input type="number" class="od-b w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.bos||''}" placeholder="0"/></div>
+          <div><div class="text-xs font-semibold mb-1 text-outline">Top</div><input type="number" class="od-top w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.toplam||''}" placeholder="0"/></div>
+        </div>
+      </div>
+      <div class="flex gap-2 justify-between">
+        <button onclick="odevSil('${o.odev_id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-error-container/20 text-error">🗑️ Sil</button>
+        <div class="flex gap-2">
+          <button onclick="odevDuzenleToggle('${o.odev_id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant">İptal</button>
+          <button onclick="odevDuzenleKaydet('${o.odev_id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-on-primary">Kaydet</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function odevDuzenleToggle(id) {
+  const form = document.getElementById('odev-duzenle-' + id);
+  if (!form) return;
+  const opening = form.classList.contains('hidden');
+  form.classList.toggle('hidden');
+  if (opening && !form.dataset.loaded) {
+    form.dataset.loaded = '1';
+    await odevDuzenleKonuSecildi(id, true);
+  }
+}
+
+async function odevDuzenleKonuSecildi(id, preselect) {
+  const form = document.getElementById('odev-duzenle-' + id);
+  if (!form) return;
+  const konu = form.querySelector('.od-konu').value;
+  const kazanimSel = form.querySelector('.od-kazanim');
+  if (!konu) { kazanimSel.innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>'; return; }
+  const { data } = await sb.from('kazanimlar').select('*')
+    .eq('ders', state.brans || 'İlköğretim Matematik')
+    .eq('sinif', state._odevOgrenciSinif || '')
+    .eq('konu', konu);
+  const o = preselect ? state._ogrGirOdevMap[id] : null;
+  kazanimSel.innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>' +
+    (data||[]).map(k => `<option value="${k.kazanim_kodu||''}" ${preselect && o && k.kazanim_kodu===o.kazanim?'selected':''}>${k.kazanim_kodu||''} ${(k.kazanim_aciklamasi||'').substring(0,50)}...</option>`).join('');
+}
+
+function odevDurumInputToggle(id) {
+  const form = document.getElementById('odev-duzenle-' + id);
+  if (!form) return;
+  const durum = form.querySelector('.od-durum').value;
+  form.querySelector('.od-dyb')?.classList.toggle('hidden', durum !== 'TAMAMLANDI');
+}
+
+async function odevDuzenleKaydet(id) {
+  const form = document.getElementById('odev-duzenle-' + id);
+  if (!form) return;
+  const gun     = form.querySelector('.od-gun').value;
+  const kaynak  = form.querySelector('.od-kaynak').value;
+  const konu    = form.querySelector('.od-konu').value;
+  const kazanim = form.querySelector('.od-kazanim').value;
+  const detay   = form.querySelector('.od-detay').value.trim();
+  const durum   = form.querySelector('.od-durum').value;
+  if (!gun)    { showToast('⚠️ Gün seçin'); return; }
+  if (!kaynak) { showToast('⚠️ Kaynak seçin'); return; }
+  if (!konu)   { showToast('⚠️ Konu seçin'); return; }
+
+  const update = {
+    gun, kaynak,
+    konu: kazanim ? `${konu} — ${kazanim}` : konu,
+    kazanim,
+    odev_detay: detay,
+    verilis_tarihi: gununTarihi(gun),
+    durum
+  };
+  if (durum === 'TAMAMLANDI') {
+    update.dogru  = parseInt(form.querySelector('.od-d').value)   || 0;
+    update.yanlis = parseInt(form.querySelector('.od-y').value)   || 0;
+    update.bos    = parseInt(form.querySelector('.od-b').value)   || 0;
+    update.toplam = parseInt(form.querySelector('.od-top').value) || (update.dogru+update.yanlis+update.bos) || 0;
+  }
+
+  showToast('Kaydediliyor...');
+  const { error } = await sb.from('odevler').update(update).eq('odev_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Ödev güncellendi');
+  const ogrenciId = document.getElementById('odev-ogrenci').value;
+  if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
+}
+
+async function odevSil(id) {
+  if (!confirm('Bu ödevi kalıcı olarak silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+  showToast('Siliniyor...');
+  const { error } = await sb.from('odevler').delete().eq('odev_id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑️ Ödev silindi');
+  const ogrenciId = document.getElementById('odev-ogrenci').value;
+  if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
 }
 
 function ogrGirTamamlananDahaFazla() {
@@ -2245,7 +2379,12 @@ function renderOgrGirOdevListesi() {
                 class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary hover:text-on-primary transition-colors">
                 📝 Sonuç Gir
               </button>
+              <button onclick="odevDuzenleToggle('${o.odev_id}')"
+                class="text-xs font-semibold px-2.5 py-1 rounded-lg" style="background:#e8f4fb;color:#005d8d;border:1px solid #b5d4f4;">
+                ✏️ Düzenle
+              </button>
             </div>
+            ${odevDuzenleFormHTML(o)}
           </div>`).join('')}
       </div>
     </div>` : `
@@ -2277,46 +2416,10 @@ function renderOgrGirOdevListesi() {
               </div>
               <span class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0" style="${durumBadgeStyle(o.durum)}">${o.durum}</span>
             </div>
-            <button onclick="ogretmenOdevDuzenleToggle('${o.odev_id}')"
+            <button onclick="odevDuzenleToggle('${o.odev_id}')"
               class="text-xs font-semibold px-3 py-1.5 rounded-lg"
               style="background:#e8f4fb;color:#005d8d;border:1px solid #b5d4f4;">✏️ Düzenle</button>
-            <div id="ogr-ogr-form-${o.odev_id}" class="hidden mt-3 bg-surface-container rounded-xl p-4">
-              <div class="mb-3">
-                <div class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Durum</div>
-                <select class="ogr-form-durum w-full rounded-lg px-3 py-2 text-sm bg-surface border border-outline-variant focus:outline-none"
-                  onchange="ogretmenOdevDurumInputToggle('${o.odev_id}')">
-                  <option value="TAMAMLANDI" ${o.durum==='TAMAMLANDI'?'selected':''}>✅ TAMAMLANDI</option>
-                  <option value="EKSİK" ${o.durum==='EKSİK'?'selected':''}>⚠️ EKSİK</option>
-                  <option value="YAPILMADI" ${o.durum==='YAPILMADI'?'selected':''}>❌ YAPILMADI</option>
-                </select>
-              </div>
-              <div class="ogr-form-dyb ${o.durum!=='TAMAMLANDI'?'hidden':''} mb-3">
-                <div class="grid grid-cols-4 gap-2">
-                  <div>
-                    <div class="text-xs font-semibold mb-1" style="color:#00661d;">D</div>
-                    <input type="number" class="ogr-form-d w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.dogru||''}" placeholder="0"/>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold mb-1" style="color:#ba1a1a;">Y</div>
-                    <input type="number" class="ogr-form-y w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.yanlis||''}" placeholder="0"/>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold mb-1 text-outline">B</div>
-                    <input type="number" class="ogr-form-b w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.bos||''}" placeholder="0"/>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold mb-1 text-outline">Top</div>
-                    <input type="number" class="ogr-form-top w-full border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-center bg-surface" value="${o.toplam||''}" placeholder="0"/>
-                  </div>
-                </div>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button onclick="ogretmenOdevDuzenleToggle('${o.odev_id}')"
-                  class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-container-high text-on-surface-variant">İptal</button>
-                <button onclick="ogretmenOdevDuzenleKaydet('${o.odev_id}')"
-                  class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-on-primary">Kaydet</button>
-              </div>
-            </div>
+            ${odevDuzenleFormHTML(o)}
           </div>`;
         }).join('')}
         ${tamamlananKalan > 0 ? `
@@ -2339,35 +2442,6 @@ async function durumDegistir(odevId, yeniDurum) {
   const { error } = await sb.from('odevler').update({ durum: yeniDurum }).eq('odev_id', odevId);
   if (error) { showToast('❌ ' + error.message); return; }
   showToast('✅ Durum güncellendi');
-  const ogrenciId = document.getElementById('odev-ogrenci').value;
-  if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
-}
-
-function ogretmenOdevDuzenleToggle(odevId) {
-  document.getElementById('ogr-ogr-form-' + odevId)?.classList.toggle('hidden');
-}
-
-function ogretmenOdevDurumInputToggle(odevId) {
-  const form = document.getElementById('ogr-ogr-form-' + odevId);
-  if (!form) return;
-  const durum = form.querySelector('.ogr-form-durum')?.value;
-  form.querySelector('.ogr-form-dyb')?.classList.toggle('hidden', durum !== 'TAMAMLANDI');
-}
-
-async function ogretmenOdevDuzenleKaydet(odevId) {
-  const form = document.getElementById('ogr-ogr-form-' + odevId);
-  if (!form) return;
-  const durum = form.querySelector('.ogr-form-durum').value;
-  const d   = parseInt(form.querySelector('.ogr-form-d').value)   || 0;
-  const y   = parseInt(form.querySelector('.ogr-form-y').value)   || 0;
-  const b   = parseInt(form.querySelector('.ogr-form-b').value)   || 0;
-  const top = parseInt(form.querySelector('.ogr-form-top').value) || (d+y+b) || 0;
-  showToast('Kaydediliyor...');
-  const update = { durum };
-  if (durum === 'TAMAMLANDI') { update.dogru = d; update.yanlis = y; update.bos = b; update.toplam = top; }
-  const { error } = await sb.from('odevler').update(update).eq('odev_id', odevId);
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast('✅ Kaydedildi');
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
 }

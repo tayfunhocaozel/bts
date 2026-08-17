@@ -1223,6 +1223,17 @@ let state = {
 const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 
 // ── Ödev tarih/gecikme yardımcıları ──────────────────────────
+// toISOString() UTC'ye çevirir; Türkiye UTC+3 olduğu için yerel gece
+// yarısını bu şekilde string'e dökmek tarihi her zaman bir gün geriye
+// kaydırır. Yerel takvim tarihini saat dilimi kaymasından etkilenmeden
+// üretmek için bileşenlerden elle string kuruyoruz.
+function yerelISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const g = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${g}`;
+}
+
 // Seçilen gün adından (örn. "Salı"), bugünden başlayarak o günün
 // ilk geleceği takvim tarihini üretir (bugün dahil). Ödev formunda
 // kullanıcı yine "gün" seçer, ama Supabase'e gerçek tarih yazılır.
@@ -1230,20 +1241,20 @@ function gununTarihi(gunAdi, baseDate) {
   const bugun = baseDate ? new Date(baseDate) : new Date();
   bugun.setHours(0, 0, 0, 0);
   const idx = GUNLER.indexOf(gunAdi); // 0=Pazartesi .. 6=Pazar
-  if (idx === -1) return bugun.toISOString().split('T')[0];
+  if (idx === -1) return yerelISO(bugun);
   const jsGun = bugun.getDay(); // 0=Pazar,1=Pazartesi,...,6=Cumartesi
   const bugunIdx = jsGun === 0 ? 6 : jsGun - 1; // 0=Pazartesi .. 6=Pazar
   let fark = idx - bugunIdx;
   if (fark < 0) fark += 7;
   const hedef = new Date(bugun);
   hedef.setDate(bugun.getDate() + fark);
-  return hedef.toISOString().split('T')[0];
+  return yerelISO(hedef);
 }
 
 function bugunISO() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
-  return d.toISOString().split('T')[0];
+  return yerelISO(d);
 }
 
 // Ödev, hedef gününü geçtiği halde hâlâ BEKLİYOR durumundaysa "gecikti" sayılır.

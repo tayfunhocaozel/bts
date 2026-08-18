@@ -430,7 +430,7 @@ tailwind.config = {
           </div>
           <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-bekleyen"><div class="spinner"></div></div>
         </div>
-        <div class="card-2xl stat-green" style="padding:20px 22px;">
+        <div class="card-2xl stat-green" style="padding:20px 22px;cursor:pointer;" onclick="acAyDersModal()">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">menu_book</span>
             <span style="font-size:12px;font-weight:600;opacity:.85;">Bu Ay Ders</span>
@@ -687,6 +687,10 @@ tailwind.config = {
             </select>
             <input type="number" id="k-konu-sayisi" placeholder="Konu sayısı" class="field"/>
           </div>
+          <select id="k-tur" class="field">
+            <option value="Alıştırma" selected>📘 Alıştırma</option>
+            <option value="Deneme">🧪 Deneme (sonuçlar otomatik Denemeler'e işlenir)</option>
+          </select>
           <button onclick="kaynakEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:18px;">save</span> Havuza Ekle
           </button>
@@ -2194,6 +2198,37 @@ function odevKonuBaz(o) {
   return o.konu;
 }
 
+// Ödevin kaynağı "Deneme" türündeyse, sonucu denemeler tablosuna da yansıtır
+// (odev_id üzerinden eşleştirip günceller — tekrar sonuç girilirse yeni satır açmaz).
+// Durum TAMAMLANDI değilse veya kaynak deneme türünde değilse, varsa eski senkron kaydı siler.
+async function odevDenemeSenkronla(odev) {
+  const kaynakTanim = (state.kaynaklar || []).find(k => k.kaynak_adi === odev.kaynak);
+  if (odev.durum !== 'TAMAMLANDI' || !kaynakTanim || kaynakTanim.tur !== 'Deneme') {
+    await sb.from('denemeler').delete().eq('odev_id', odev.odev_id);
+    return;
+  }
+
+  const d = Number(odev.dogru) || 0, y = Number(odev.yanlis) || 0, b = Number(odev.bos) || 0;
+  const top = Number(odev.toplam) || (d + y + b);
+  const net = parseFloat((d - y / 3).toFixed(2));
+  const pct = top > 0 ? parseFloat((net / top * 100).toFixed(2)) : 0;
+  const konuBaz = odevKonuBaz(odev);
+
+  const payload = {
+    ogrenci_id: odev.ogrenci_id, ogretmen_id: odev.ogretmen_id, tarih: odev.verilis_tarihi,
+    deneme_adi: konuBaz ? `${odev.kaynak} — ${konuBaz}` : odev.kaynak,
+    dogru: d, yanlis: y, bos: b, toplam_soru: top, net, basari_yuzdesi: pct,
+    odev_id: odev.odev_id
+  };
+
+  const { data: mevcut } = await sb.from('denemeler').select('deneme_id').eq('odev_id', odev.odev_id).maybeSingle();
+  if (mevcut) {
+    await sb.from('denemeler').update(payload).eq('deneme_id', mevcut.deneme_id);
+  } else {
+    await sb.from('denemeler').insert({ deneme_id: crypto.randomUUID(), ...payload });
+  }
+}
+
 // İçerik + durum + sonuç birlikte düzenlenebilen ortak form (hem bekleyen hem tamamlanan satırlarda kullanılır)
 function odevDuzenleFormHTML(o) {
   const baz = odevKonuBaz(o);
@@ -2303,6 +2338,7 @@ async function odevDuzenleKaydet(id) {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('odevler').update(update).eq('odev_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
+  await odevDenemeSenkronla({ ...state._ogrGirOdevMap[id], ...update, odev_id: id });
   showToast('✅ Ödev güncellendi');
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
@@ -2457,6 +2493,67 @@ async function durumDegistir(odevId, yeniDurum) {
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
 }
 
+// ── BU AY DERS MODAL ───────────────────────────────────────────
+async function acAyDersModal() {
+  if (state.rol !== 'ogretmen') return;
+  const modal = document.getElementById('ay-ders-modal');
+  const liste = document.getElementById('ayd-liste');
+  modal.classList.remove('hidden');
+  liste.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+
+  const buAy = new Date();
+  const ayBaslangic = `${buAy.getFullYear()}-${String(buAy.getMonth() + 1).padStart(2, '0')}-01`;
+  document.getElementById('ayd-baslik').textContent = buAy.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }) + ' Dersleri';
+
+  const { data, error } = await sb.from('dersler')
+    .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu, ogrenci_id')
+    .eq('ogretmen_id', state.ogretmen_id)
+    .gte('tarih', ayBaslangic)
+    .order('tarih', { ascending: false });
+
+  if (error) { liste.innerHTML = `<div class="p-5 text-sm text-error">❌ ${error.message}</div>`; return; }
+
+  const ogrMap = {};
+  state.ogrenciler.forEach(o => { ogrMap[o.ogrenci_id] = o.ad_soyad; });
+
+  // Aynı gün + öğrenci + konu satırlarını (her kazanım ayrı satır) tek karta topla
+  const gruplar = {};
+  (data || []).forEach(d => {
+    const k = d.tarih + '||' + d.ogrenci_id + '||' + (d.islenen_konu || '');
+    if (!gruplar[k]) gruplar[k] = { tarih: d.tarih, ogrenci_id: d.ogrenci_id, konu: d.islenen_konu || '', kazanimlar: [], sorun: d.ders_gorusu || '' };
+    if (d.kazanim_kodu) gruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu || 'tam' });
+  });
+
+  // Gün metni (text kolon) leksikografik sıralama takvim sıralamasıyla örtüştüğü için yakın→uzak doğru çıkar
+  const sirali = Object.values(gruplar).sort((a, b) => (b.tarih || '').localeCompare(a.tarih || ''));
+  document.getElementById('ayd-sayac').textContent = sirali.length;
+
+  if (!sirali.length) {
+    liste.innerHTML = '<div class="flex flex-col items-center justify-center py-16 text-outline"><div class="text-4xl mb-3">📭</div><div class="text-sm font-semibold">Bu ay henüz ders kaydı yok</div></div>';
+    return;
+  }
+
+  const tdCss = d => d === 'tam' ? 'background:#e8f5e9;color:#2e7d32;' : d === 'kismi' ? 'background:#fff3e0;color:#e65100;' : 'background:#e3f2fd;color:#1565c0;';
+  const tdLbl = d => d === 'tam' ? '✅ Tam' : d === 'kismi' ? '⚠️ Kısmi' : '🔵 Başlandı';
+
+  liste.innerHTML = `<div class="divide-y divide-outline-variant/20 px-5">` + sirali.map(g => {
+    const tarihStr = g.tarih ? new Date(g.tarih).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) : '—';
+    return `
+      <div class="py-3">
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-bold text-on-surface">${ogrMap[g.ogrenci_id] || 'Bilinmiyor öğrenci'}</div>
+          <div class="text-xs text-outline mt-0.5">📅 ${tarihStr} &nbsp;•&nbsp; ${g.konu || '—'}</div>
+        </div>
+        <div class="flex flex-wrap gap-1.5 mt-1.5">
+          ${g.kazanimlar.map(k => `
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full border border-outline-variant/40">${k.kod}</span>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="${tdCss(k.durum)}">${tdLbl(k.durum)}</span>`).join('')}
+        </div>
+        ${g.sorun ? `<div class="text-xs text-outline mt-1">⚠️ ${g.sorun}</div>` : ''}
+      </div>`;
+  }).join('') + '</div>';
+}
+
 // ── BEKLEYENLERİ YÖNETİ MODAL ─────────────────────────────────
 async function acBekleyenModal() {
   if (state.rol !== 'ogretmen') return;
@@ -2470,6 +2567,8 @@ async function acBekleyenModal() {
     .order('verilis_tarihi', { ascending: true });
 
   const odevler = data || [];
+  state._bmOdevMap = {};
+  odevler.forEach(o => { state._bmOdevMap[o.odev_id] = o; });
   document.getElementById('bm-sayac').textContent = odevler.length;
 
   if (!odevler.length) {
@@ -2589,6 +2688,7 @@ async function bekleyenModalDybKaydet(id) {
     durum: 'TAMAMLANDI', dogru: d, yanlis: y, bos: b, toplam: t
   }).eq('odev_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
+  await odevDenemeSenkronla({ ...state._bmOdevMap?.[id], dogru: d, yanlis: y, bos: b, toplam: t, durum: 'TAMAMLANDI', odev_id: id });
   document.getElementById('bm-row-' + id)?.remove();
   bmSayacGuncelle();
   const pct = t > 0 ? Math.round(d / t * 100) : 0;
@@ -2627,10 +2727,12 @@ async function sonucModalKaydet() {
   const bos    = parseInt(modal.querySelector('#sm-bos').value)   || 0;
   modal.classList.add('hidden');
   showToast('Kaydediliyor...');
+  const toplam = soru || dogru+yanlis+bos;
   const { error } = await sb.from('odevler').update({
-    dogru, yanlis, bos, toplam: soru || dogru+yanlis+bos, durum: 'TAMAMLANDI'
+    dogru, yanlis, bos, toplam, durum: 'TAMAMLANDI'
   }).eq('odev_id', odevId);
   if (error) { showToast('❌ ' + error.message); return; }
+  await odevDenemeSenkronla({ ...state._ogrGirOdevMap[odevId], dogru, yanlis, bos, toplam, durum: 'TAMAMLANDI', odev_id: odevId });
   showToast(`✅ Sonuç kaydedildi (%${Math.round(dogru/(dogru+yanlis+bos||1)*100)})`);
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
@@ -2829,11 +2931,25 @@ function renderKaynaklar() {
           <div class="text-sm font-semibold text-on-surface">${k.kaynak_adi}</div>
           <div class="text-xs text-outline">${k.yayin_evi||'—'} — ${k.sinif}</div>
         </div>
+        <select onchange="kaynakTurGuncelle('${k.kaynak_id}', this.value)"
+          class="text-xs font-bold px-2 py-1 rounded-full border-none appearance-none cursor-pointer"
+          style="${k.tur==='Deneme' ? 'background:#e8f4fb;color:#005d8d;' : 'background:var(--surface-container-high);color:var(--ink-soft);'}">
+          <option value="Alıştırma" ${k.tur!=='Deneme'?'selected':''}>📘 Alıştırma</option>
+          <option value="Deneme" ${k.tur==='Deneme'?'selected':''}>🧪 Deneme</option>
+        </select>
         <span class="text-xs font-bold px-2.5 py-1 rounded-full ${k.zorluk_derecesi==='Kolay'?'bg-tertiary-container/40 text-tertiary':k.zorluk_derecesi==='Zor'?'bg-error-container/40 text-error':'bg-secondary-container/40 text-on-secondary-container'}">
           ${k.zorluk_derecesi||'—'}
         </span>
         <span class="text-xs text-outline">${k.konu_sayisi||'—'} konu</span>
       </div>`).join('');
+}
+
+async function kaynakTurGuncelle(kaynakId, tur) {
+  const { error } = await sb.from('kaynaklar').update({ tur }).eq('kaynak_id', kaynakId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  const k = state.kaynaklar.find(x => x.kaynak_id === kaynakId);
+  if (k) k.tur = tur;
+  showToast('✅ Tür güncellendi');
 }
 
 async function kaynakEkle() {
@@ -2847,6 +2963,7 @@ async function kaynakEkle() {
     sinif: document.getElementById('k-sinif').value,
     zorluk_derecesi: document.getElementById('k-zorluk').value,
     konu_sayisi: parseInt(document.getElementById('k-konu-sayisi').value) || null,
+    tur: document.getElementById('k-tur').value || 'Alıştırma',
     ders: state.brans || 'İlköğretim Matematik'
   });
   if (error) { showToast('❌ ' + error.message); return; }
@@ -2857,6 +2974,7 @@ async function kaynakEkle() {
   document.getElementById('k-ad').value = '';
   document.getElementById('k-yayinevi').value = '';
   document.getElementById('k-konu-sayisi').value = '';
+  document.getElementById('k-tur').value = 'Alıştırma';
 }
 
 async function ataOgrenciSecildi() {
@@ -3105,7 +3223,7 @@ async function loadDenemeler() {
               const tarihStr = r.tarih ? new Date(r.tarih).toLocaleDateString('tr-TR') : '—';
               return `<tr class="border-b border-outline-variant/10 last:border-0 ${bg}">
                 <td class="px-4 py-3 text-xs text-outline">${tarihStr}</td>
-                <td class="px-4 py-3 font-semibold text-on-surface">${r.deneme_adi||'—'}</td>
+                <td class="px-4 py-3 font-semibold text-on-surface">${r.deneme_adi||'—'}${r.odev_id ? ' <span class="text-xs font-bold px-2 py-0.5 rounded-full" style="background:#e8f4fb;color:#005d8d;">📚 Ödevden</span>' : ''}</td>
                 <td class="px-3 py-3 text-center font-bold text-tertiary">${r.dogru}</td>
                 <td class="px-3 py-3 text-center font-bold text-error">${r.yanlis}</td>
                 <td class="px-3 py-3 text-center text-outline">${r.bos}</td>
@@ -7389,6 +7507,21 @@ function showToast(msg) {
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors text-lg font-bold">✕</button>
     </div>
     <div id="bm-liste" class="overflow-y-auto flex-1"></div>
+  </div>
+</div>
+
+<div id="ay-ders-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <div class="bg-surface rounded-2xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined ico-fill text-primary" style="font-size:20px;">menu_book</span>
+        <span class="font-headline font-bold text-base text-on-surface" id="ayd-baslik">Bu Ay Yapılan Dersler</span>
+        <span id="ayd-sayac" class="text-xs font-bold px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container">0</span>
+      </div>
+      <button onclick="document.getElementById('ay-ders-modal').classList.add('hidden')"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors text-lg font-bold">✕</button>
+    </div>
+    <div id="ayd-liste" class="overflow-y-auto flex-1"></div>
   </div>
 </div>
 

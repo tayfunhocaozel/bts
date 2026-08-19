@@ -688,7 +688,7 @@ tailwind.config = {
             <input type="number" id="k-konu-sayisi" placeholder="Konu sayısı" class="field"/>
           </div>
           <select id="k-tur" class="field">
-            <option value="Alıştırma" selected>📘 Alıştırma</option>
+            <option value="Soru Bankası" selected>📘 Soru Bankası</option>
             <option value="Deneme">🧪 Deneme (sonuçlar otomatik Denemeler'e işlenir)</option>
           </select>
           <button onclick="kaynakEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
@@ -2934,7 +2934,7 @@ function renderKaynaklar() {
         <select onchange="kaynakTurGuncelle('${k.kaynak_id}', this.value)"
           class="text-xs font-bold px-2 py-1 rounded-full border-none appearance-none cursor-pointer"
           style="${k.tur==='Deneme' ? 'background:#e8f4fb;color:#005d8d;' : 'background:var(--surface-container-high);color:var(--ink-soft);'}">
-          <option value="Alıştırma" ${k.tur!=='Deneme'?'selected':''}>📘 Alıştırma</option>
+          <option value="Soru Bankası" ${k.tur!=='Deneme'?'selected':''}>📘 Soru Bankası</option>
           <option value="Deneme" ${k.tur==='Deneme'?'selected':''}>🧪 Deneme</option>
         </select>
         <span class="text-xs font-bold px-2.5 py-1 rounded-full ${k.zorluk_derecesi==='Kolay'?'bg-tertiary-container/40 text-tertiary':k.zorluk_derecesi==='Zor'?'bg-error-container/40 text-error':'bg-secondary-container/40 text-on-secondary-container'}">
@@ -2963,7 +2963,7 @@ async function kaynakEkle() {
     sinif: document.getElementById('k-sinif').value,
     zorluk_derecesi: document.getElementById('k-zorluk').value,
     konu_sayisi: parseInt(document.getElementById('k-konu-sayisi').value) || null,
-    tur: document.getElementById('k-tur').value || 'Alıştırma',
+    tur: document.getElementById('k-tur').value || 'Soru Bankası',
     ders: state.brans || 'İlköğretim Matematik'
   });
   if (error) { showToast('❌ ' + error.message); return; }
@@ -2974,7 +2974,7 @@ async function kaynakEkle() {
   document.getElementById('k-ad').value = '';
   document.getElementById('k-yayinevi').value = '';
   document.getElementById('k-konu-sayisi').value = '';
-  document.getElementById('k-tur').value = 'Alıştırma';
+  document.getElementById('k-tur').value = 'Soru Bankası';
 }
 
 async function ataOgrenciSecildi() {

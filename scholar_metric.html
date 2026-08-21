@@ -694,6 +694,9 @@ tailwind.config = {
           <button onclick="kaynakEkle()" class="btn btn-primary" style="width:100%;justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:18px;">save</span> Havuza Ekle
           </button>
+          <button onclick="kameraKaynakModalAc()" class="btn btn-ghost" style="width:100%;justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:18px;">photo_camera</span> Kamera ile Ekle
+          </button>
         </div>
 
         <!-- Öğrenciye Ata -->
@@ -1197,6 +1200,19 @@ tailwind.config = {
       <button onclick="adaptixSifreKaydet()" class="btn btn-primary" style="flex:1;justify-content:center;">Kaydet</button>
     </div>
     <div id="asm-error" style="display:none;margin-top:12px;padding:10px 14px;background:#ffdad6;color:#ba1a1a;border-radius:10px;font-size:13px;font-weight:600;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ── Kamera ile Kaynak Ekle Modali ──────────────────────── -->
+<div id="kkm-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);">📷 Kamera ile Kaynak Ekle</div>
+      <button onclick="kkmKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div id="kkm-govde"></div>
   </div>
 </div>
 
@@ -2043,7 +2059,14 @@ function renderOdevForm() {
   const container = document.getElementById('odev-form-alani');
   const konular = state._odevKonular || [];
   const konuOpts = '<option value="">— Konu seçin —</option>' + konular.map(k => `<option value="${k}">${k}</option>`).join('');
-  const kaynakOpts = '<option value="">— Kaynak seçin —</option>' + state._odevKaynaklar.map(k => `<option>${k.kaynak_adi}</option>`).join('');
+  const kaynakOpts = '<option value="">— Kaynak seçin —</option>' + state._odevKaynaklar.map(k => {
+    const kr = state.kaynaklar.find(x => x.kaynak_adi === k.kaynak_adi);
+    return `<option value="${kr ? kr.kaynak_id : ''}" data-adi="${k.kaynak_adi}">${k.kaynak_adi}</option>`;
+  }).join('');
+
+  state._odevSecilenKaynakId = '';
+  state._odevKaynakKonulari = [];
+  state._odevKaynakTestler  = [];
 
   container.innerHTML = `
     <div class="grid grid-cols-2 gap-2">
@@ -2051,14 +2074,73 @@ function renderOdevForm() {
         <option value="">— Gün —</option>
         ${GUNLER.map(g => `<option>${g}</option>`).join('')}
       </select>
-      <select id="f-kaynak" class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${kaynakOpts}</select>
+      <select id="f-kaynak" onchange="formKaynakSecildi()" class="px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${kaynakOpts}</select>
     </div>
-    <select id="f-konu" onchange="formKonuSecildi()" class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${konuOpts}</select>
-    <select id="f-kazanim" class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">
-      <option value="">— Kazanım (opsiyonel) —</option>
-    </select>
+    <div id="f-konu-checkbox-alani" style="display:none;"></div>
+    <div id="f-konu-legacy-alani">
+      <select id="f-konu" onchange="formKonuSecildi()" class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${konuOpts}</select>
+      <select id="f-kazanim" class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none" style="margin-top:12px;">
+        <option value="">— Kazanım (opsiyonel) —</option>
+      </select>
+    </div>
     <input type="text" id="f-detay" placeholder="Sayfa / Test numarası"
       class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">`;
+}
+
+// Kaynak seçildiğinde: kaynak_konulari/kaynak_cevap_anahtari doluysa checkbox listesi,
+// boşsa (manuel eklenmiş kaynak) eski serbest konu seçimine geri dön
+async function formKaynakSecildi() {
+  const sel = document.getElementById('f-kaynak');
+  const kaynakId = sel.value;
+  state._odevSecilenKaynakId = kaynakId;
+
+  const checkboxAlani = document.getElementById('f-konu-checkbox-alani');
+  const legacyAlani = document.getElementById('f-konu-legacy-alani');
+
+  if (!kaynakId) {
+    checkboxAlani.style.display = 'none';
+    checkboxAlani.innerHTML = '';
+    legacyAlani.style.display = '';
+    return;
+  }
+
+  const [{ data: konular }, { data: testler }] = await Promise.all([
+    sb.from('kaynak_konulari').select('*').eq('kaynak_id', kaynakId).order('sira'),
+    sb.from('kaynak_cevap_anahtari').select('*').eq('kaynak_id', kaynakId).order('test_no')
+  ]);
+  state._odevKaynakKonulari = konular || [];
+  state._odevKaynakTestler  = testler || [];
+
+  if (!state._odevKaynakKonulari.length && !state._odevKaynakTestler.length) {
+    checkboxAlani.style.display = 'none';
+    checkboxAlani.innerHTML = '';
+    legacyAlani.style.display = '';
+    return;
+  }
+
+  legacyAlani.style.display = 'none';
+  checkboxAlani.style.display = '';
+  checkboxAlani.innerHTML = `
+    ${state._odevKaynakKonulari.length ? `
+      <div class="text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Konular</div>
+      <div style="max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:4px 10px;margin-bottom:10px;">
+        ${state._odevKaynakKonulari.map(k => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+            <input type="checkbox" class="f-konu-check" value="${k.id}">
+            <span style="flex:1;">${k.konu_adi}</span>
+            ${k.sayfa_no ? `<span class="text-xs text-outline">sf. ${k.sayfa_no}</span>` : ''}
+          </label>`).join('')}
+      </div>` : ''}
+    ${state._odevKaynakTestler.length ? `
+      <div class="text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Testler</div>
+      <div style="max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:4px 10px;">
+        ${state._odevKaynakTestler.map(t => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+            <input type="checkbox" class="f-test-check" value="${t.id}">
+            <span style="flex:1;">Test ${t.test_no ?? '—'}</span>
+            ${t.sayfa_no ? `<span class="text-xs text-outline">sf. ${t.sayfa_no}</span>` : ''}
+          </label>`).join('')}
+      </div>` : ''}`;
 }
 
 async function formKonuSecildi() {
@@ -2077,39 +2159,70 @@ async function formKonuSecildi() {
     state._odevKazanimlar.map(k => `<option value="${k.kazanim_kodu||''}">${k.kazanim_kodu||''} ${(k.kazanim_aciklamasi||'').substring(0,50)}...</option>`).join('');
 }
 
-// Taslağa ekle
+// Taslağa ekle — kaynağın kaynak_konulari/kaynak_cevap_anahtari'ı varsa
+// işaretli tüm konu/testler ayrı satırlar olarak, yoksa eski serbest konu seçimiyle tek satır eklenir
 function taslakEkle() {
-  const gun     = document.getElementById('f-gun').value;
-  const kaynak  = document.getElementById('f-kaynak').value;
-  const konu    = document.getElementById('f-konu').value;
-  const kazanim = document.getElementById('f-kazanim').value;
-  const detay   = document.getElementById('f-detay').value.trim();
+  const gun       = document.getElementById('f-gun').value;
+  const kaynakSel = document.getElementById('f-kaynak');
+  const kaynakId  = kaynakSel.value;
+  const kaynakAdi = kaynakSel.selectedOptions[0]?.dataset.adi || '';
+  const detay     = document.getElementById('f-detay').value.trim();
 
-  if (!gun)    { showToast('⚠️ Gün seçin'); return; }
-  if (!kaynak) { showToast('⚠️ Kaynak seçin'); return; }
-  if (!konu)   { showToast('⚠️ Konu seçin'); return; }
+  if (!gun)       { showToast('⚠️ Gün seçin'); return; }
+  if (!kaynakAdi) { showToast('⚠️ Kaynak seçin'); return; }
 
-  // kazanimAciklamasi'ni da sakla ki tabloda gösterelim
-  const kazObj = state._odevKazanimlar.find(k => k.kazanim_kodu === kazanim);
+  const checkboxModu = document.getElementById('f-konu-legacy-alani').style.display === 'none';
+  let eklenenSayisi = 0;
 
-  state._odevTaslaklari.push({
-    _id: Date.now() + Math.random(),
-    gun, kaynak, konu, kazanim,
-    kazanim_aciklamasi: kazObj?.kazanim_aciklamasi || '',
-    odev_detay: detay,
-    hedef_tarih: gununTarihi(gun)
-  });
+  if (checkboxModu) {
+    const secilenKonular = [...document.querySelectorAll('.f-konu-check:checked')].map(cb => cb.value);
+    const secilenTestler = [...document.querySelectorAll('.f-test-check:checked')].map(cb => cb.value);
+    if (!secilenKonular.length && !secilenTestler.length) { showToast('⚠️ En az bir konu veya test seçin'); return; }
+
+    secilenKonular.forEach(id => {
+      const k = state._odevKaynakKonulari.find(x => x.id === id);
+      if (!k) return;
+      state._odevTaslaklari.push({
+        _id: Date.now() + Math.random(),
+        gun, kaynak: kaynakAdi, konu: k.konu_adi, kazanim: '', kazanim_aciklamasi: '',
+        odev_detay: detay, hedef_tarih: gununTarihi(gun),
+        kaynak_id: kaynakId, kaynak_konu_id: k.id, sayfa_baslangic: k.sayfa_no, sayfa_bitis: k.sayfa_no
+      });
+      eklenenSayisi++;
+    });
+    secilenTestler.forEach(id => {
+      const t = state._odevKaynakTestler.find(x => x.id === id);
+      if (!t) return;
+      state._odevTaslaklari.push({
+        _id: Date.now() + Math.random(),
+        gun, kaynak: kaynakAdi, konu: `Test ${t.test_no ?? '—'}`, kazanim: '', kazanim_aciklamasi: '',
+        odev_detay: detay, hedef_tarih: gununTarihi(gun),
+        kaynak_id: kaynakId, test_no: t.test_no, sayfa_baslangic: t.sayfa_no, sayfa_bitis: t.sayfa_no
+      });
+      eklenenSayisi++;
+    });
+  } else {
+    const konu    = document.getElementById('f-konu').value;
+    const kazanim = document.getElementById('f-kazanim').value;
+    if (!konu) { showToast('⚠️ Konu seçin'); return; }
+
+    // kazanimAciklamasi'ni da sakla ki tabloda gösterelim
+    const kazObj = state._odevKazanimlar.find(k => k.kazanim_kodu === kazanim);
+
+    state._odevTaslaklari.push({
+      _id: Date.now() + Math.random(),
+      gun, kaynak: kaynakAdi, konu, kazanim,
+      kazanim_aciklamasi: kazObj?.kazanim_aciklamasi || '',
+      odev_detay: detay,
+      hedef_tarih: gununTarihi(gun),
+      kaynak_id: kaynakId || null
+    });
+    eklenenSayisi = 1;
+  }
 
   renderTaslakTablo();
-
-  // Formu temizle
-  document.getElementById('f-gun').value = '';
-  document.getElementById('f-kaynak').value = '';
-  document.getElementById('f-konu').value = '';
-  document.getElementById('f-kazanim').innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>';
-  document.getElementById('f-detay').value = '';
-
-  showToast('✅ Tabloya eklendi');
+  renderOdevForm();
+  showToast(eklenenSayisi > 1 ? `✅ ${eklenenSayisi} kayıt tabloya eklendi` : '✅ Tabloya eklendi');
 }
 
 function taslakSil(id) {
@@ -2161,7 +2274,12 @@ async function odevSave() {
     kazanim: t.kazanim,
     odev_detay: t.odev_detay,
     durum: 'BEKLİYOR',
-    dogru: 0, yanlis: 0, bos: 0, toplam: 0
+    dogru: 0, yanlis: 0, bos: 0, toplam: 0,
+    kaynak_id: t.kaynak_id || null,
+    kaynak_konu_id: t.kaynak_konu_id || null,
+    test_no: t.test_no ?? null,
+    sayfa_baslangic: t.sayfa_baslangic ?? null,
+    sayfa_bitis: t.sayfa_bitis ?? null
   }));
 
   const { error } = await sb.from('odevler').insert(rows);
@@ -2977,6 +3095,308 @@ async function kaynakEkle() {
   document.getElementById('k-tur').value = 'Soru Bankası';
 }
 
+// ── KAMERA İLE KAYNAK EKLE ───────────────────────────────────
+const KKM_ADIMLAR = [
+  { key: 'kapak',          baslik: 'Kapak Fotoğrafı',              atlanabilir: false },
+  { key: 'icindekiler',    baslik: 'İçindekiler Fotoğrafı',        atlanabilir: false },
+  { key: 'cevap_anahtari', baslik: 'Cevap Anahtarı (opsiyonel)',   atlanabilir: true  },
+];
+let _kkmCidSayac = 0;
+function kkmCid() { return 'c' + (_kkmCidSayac++); }
+
+function kkmEsc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function kameraKaynakModalAc() {
+  state._kkm = {
+    adimIndex: 0,
+    fotolar: [null, null, null],
+    sonuc: { kaynak_adi: '', yayin_evi: '', sinif: '8. Sınıf', konu_listesi: [], cevap_anahtari: [] }
+  };
+  document.getElementById('kkm-modal').style.display = 'flex';
+  kkmRenderAdim();
+}
+
+function kkmKapat() {
+  document.getElementById('kkm-modal').style.display = 'none';
+  state._kkm = null;
+}
+
+function kkmResimSikistir(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxBoyut = 1600;
+        let w = img.width, h = img.height;
+        if (w > maxBoyut || h > maxBoyut) {
+          const oran = Math.min(maxBoyut / w, maxBoyut / h);
+          w = Math.round(w * oran); h = Math.round(h * oran);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve({ mimeType: 'image/jpeg', base64: dataUrl.split(',')[1], dataUrl });
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function kkmFotoSecildi(inputEl) {
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  const foto = await kkmResimSikistir(file);
+  state._kkm.fotolar[state._kkm.adimIndex] = foto;
+  kkmRenderAdim();
+}
+
+function kkmGeri() {
+  state._kkm.adimIndex = Math.max(0, state._kkm.adimIndex - 1);
+  kkmRenderAdim();
+}
+
+function kkmAtla() {
+  kkmRenderOnizleme();
+}
+
+function kkmGeriOnizlemeden() {
+  state._kkm.adimIndex = KKM_ADIMLAR.length - 1;
+  kkmRenderAdim();
+}
+
+function kkmRenderAdim() {
+  const k = state._kkm;
+  const adim = KKM_ADIMLAR[k.adimIndex];
+  const foto = k.fotolar[k.adimIndex];
+  const govde = document.getElementById('kkm-govde');
+
+  const cubuk = KKM_ADIMLAR.map((a, i) => `
+    <div style="flex:1;height:4px;border-radius:2px;background:${i <= k.adimIndex ? 'var(--primary)' : 'var(--surface-container-high)'};"></div>`).join('');
+
+  govde.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:18px;">${cubuk}</div>
+    <div style="text-align:center;">
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;">Adım ${k.adimIndex+1}/${KKM_ADIMLAR.length}</div>
+      <div style="font-family:Manrope;font-weight:700;font-size:15px;color:var(--ink);margin-bottom:14px;">${adim.baslik}</div>
+      ${foto
+        ? `<img src="${foto.dataUrl}" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px;margin-bottom:12px;background:var(--surface-container-low);"/>`
+        : `<div style="height:140px;border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);margin-bottom:12px;">
+             <span class="material-symbols-outlined" style="font-size:36px;">image</span>
+           </div>`}
+      <label for="kkm-file-input" class="btn btn-ghost" style="width:100%;justify-content:center;cursor:pointer;">
+        <span class="material-symbols-outlined" style="font-size:18px;">photo_camera</span> ${foto ? 'Fotoğrafı Değiştir' : 'Fotoğraf Çek / Seç'}
+      </label>
+      <input type="file" id="kkm-file-input" accept="image/*" capture="environment" style="display:none;" onchange="kkmFotoSecildi(this)"/>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        ${k.adimIndex > 0 ? `<button onclick="kkmGeri()" class="btn btn-ghost" style="flex:1;justify-content:center;">Geri</button>` : ''}
+        ${adim.atlanabilir ? `<button onclick="kkmAtla()" class="btn btn-ghost" style="flex:1;justify-content:center;">Atla</button>` : ''}
+        <button onclick="kkmAnalizEt()" id="kkm-analiz-btn" class="btn btn-primary" style="flex:2;justify-content:center;" ${foto ? '' : 'disabled'}>
+          <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span> Analiz Et
+        </button>
+      </div>
+      <div id="kkm-durum" style="margin-top:10px;font-size:13px;color:var(--ink-soft);min-height:18px;"></div>
+    </div>`;
+}
+
+async function kkmAnalizEt() {
+  const k = state._kkm;
+  const adim = KKM_ADIMLAR[k.adimIndex];
+  const foto = k.fotolar[k.adimIndex];
+  if (!foto) { showToast('⚠️ Önce fotoğraf seçin'); return; }
+
+  const durum = document.getElementById('kkm-durum');
+  const btn = document.getElementById('kkm-analiz-btn');
+  if (durum) durum.textContent = 'Analiz ediliyor...';
+  if (btn) btn.disabled = true;
+
+  try {
+    const { data, error } = await sb.functions.invoke('kaynak-ocr', {
+      body: { adim: adim.key, mimeType: foto.mimeType, data: foto.base64 }
+    });
+    if (error) {
+      let msg = error.message || 'OCR başarısız';
+      try {
+        if (error.context && typeof error.context.json === 'function') {
+          const errBody = await error.context.json();
+          msg = errBody?.error || msg;
+        }
+      } catch(e) {}
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+
+    if (adim.key === 'kapak') {
+      k.sonuc.kaynak_adi = data.kaynak_adi || k.sonuc.kaynak_adi;
+      k.sonuc.yayin_evi  = data.yayin_evi || k.sonuc.yayin_evi;
+      if (data.sinif) k.sonuc.sinif = data.sinif;
+    } else if (adim.key === 'icindekiler') {
+      k.sonuc.konu_listesi = (data.konu_listesi || []).map(x => ({ _cid: kkmCid(), konu_adi: x.konu_adi || '', sayfa_no: x.sayfa_no ?? null }));
+    } else if (adim.key === 'cevap_anahtari') {
+      k.sonuc.cevap_anahtari = (data.cevap_anahtari || []).map(x => ({ _cid: kkmCid(), test_no: x.test_no ?? null, sayfa_no: x.sayfa_no ?? null, cevaplar: (x.cevaplar || []).join(', ') }));
+    }
+
+    if (k.adimIndex < KKM_ADIMLAR.length - 1) {
+      k.adimIndex++;
+      kkmRenderAdim();
+    } else {
+      kkmRenderOnizleme();
+    }
+  } catch (err) {
+    if (durum) durum.textContent = '❌ ' + err.message;
+    if (btn) btn.disabled = false;
+  }
+}
+
+function kkmKonuTabloHTML() {
+  const s = state._kkm.sonuc;
+  if (!s.konu_listesi.length) return `<div style="padding:12px 0;text-align:center;font-size:13px;color:var(--ink-soft);">Henüz konu eklenmedi</div>`;
+  return s.konu_listesi.map(o => `
+    <div style="display:flex;gap:6px;align-items:center;padding:5px 0;">
+      <input type="text" value="${kkmEsc(o.konu_adi)}" onchange="kkmKonuAlanGuncelle('${o._cid}','konu_adi',this.value)" placeholder="Konu adı" style="flex:1;padding:7px 10px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;"/>
+      <input type="number" value="${o.sayfa_no ?? ''}" onchange="kkmKonuAlanGuncelle('${o._cid}','sayfa_no',this.value)" placeholder="sf." style="width:56px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
+      <button onclick="kkmKonuSil('${o._cid}')" class="text-error" style="background:none;border:none;cursor:pointer;font-size:16px;font-weight:700;">×</button>
+    </div>`).join('');
+}
+
+function kkmKonuAlanGuncelle(cid, alan, val) {
+  const o = state._kkm.sonuc.konu_listesi.find(x => x._cid === cid);
+  if (!o) return;
+  o[alan] = alan === 'sayfa_no' ? (parseInt(val) || null) : val;
+}
+
+function kkmKonuEkle() {
+  state._kkm.sonuc.konu_listesi.push({ _cid: kkmCid(), konu_adi: '', sayfa_no: null });
+  kkmRenderOnizleme();
+}
+
+function kkmKonuSil(cid) {
+  state._kkm.sonuc.konu_listesi = state._kkm.sonuc.konu_listesi.filter(x => x._cid !== cid);
+  kkmRenderOnizleme();
+}
+
+function kkmTestTabloHTML() {
+  const s = state._kkm.sonuc;
+  if (!s.cevap_anahtari.length) return `<div style="padding:12px 0;text-align:center;font-size:13px;color:var(--ink-soft);">Cevap anahtarı yok</div>`;
+  return s.cevap_anahtari.map(o => `
+    <div style="display:flex;gap:6px;align-items:center;padding:5px 0;">
+      <input type="number" value="${o.test_no ?? ''}" onchange="kkmTestAlanGuncelle('${o._cid}','test_no',this.value)" placeholder="Test #" style="width:64px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
+      <input type="number" value="${o.sayfa_no ?? ''}" onchange="kkmTestAlanGuncelle('${o._cid}','sayfa_no',this.value)" placeholder="sf." style="width:56px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
+      <input type="text" value="${kkmEsc(o.cevaplar)}" onchange="kkmTestAlanGuncelle('${o._cid}','cevaplar',this.value)" placeholder="A, C, B, ..." style="flex:1;padding:7px 10px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;"/>
+      <button onclick="kkmTestSil('${o._cid}')" class="text-error" style="background:none;border:none;cursor:pointer;font-size:16px;font-weight:700;">×</button>
+    </div>`).join('');
+}
+
+function kkmTestAlanGuncelle(cid, alan, val) {
+  const o = state._kkm.sonuc.cevap_anahtari.find(x => x._cid === cid);
+  if (!o) return;
+  o[alan] = (alan === 'test_no' || alan === 'sayfa_no') ? (parseInt(val) || null) : val;
+}
+
+function kkmTestEkle() {
+  state._kkm.sonuc.cevap_anahtari.push({ _cid: kkmCid(), test_no: null, sayfa_no: null, cevaplar: '' });
+  kkmRenderOnizleme();
+}
+
+function kkmTestSil(cid) {
+  state._kkm.sonuc.cevap_anahtari = state._kkm.sonuc.cevap_anahtari.filter(x => x._cid !== cid);
+  kkmRenderOnizleme();
+}
+
+function kkmRenderOnizleme() {
+  const s = state._kkm.sonuc;
+  const govde = document.getElementById('kkm-govde');
+  const sinifOpts = ['5. Sınıf','6. Sınıf','7. Sınıf','8. Sınıf'].map(sn => `<option ${s.sinif===sn?'selected':''}>${sn}</option>`).join('');
+
+  govde.innerHTML = `
+    <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Bilgileri kontrol edip düzenleyin, ardından kaydedin.</div>
+    <label class="lbl">Kaynak Adı *</label>
+    <input type="text" id="kkm-o-ad" class="field" value="${kkmEsc(s.kaynak_adi)}"/>
+    <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      <input type="text" id="kkm-o-yayinevi" placeholder="Yayınevi" class="field" value="${kkmEsc(s.yayin_evi)}"/>
+      <select id="kkm-o-sinif" class="field">${sinifOpts}</select>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;margin-bottom:8px;">
+      <div class="lbl" style="margin:0;">Konular (${s.konu_listesi.length})</div>
+      <button onclick="kkmKonuEkle()" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">+ Satır</button>
+    </div>
+    <div id="kkm-konu-tablo">${kkmKonuTabloHTML()}</div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;margin-bottom:8px;">
+      <div class="lbl" style="margin:0;">Cevap Anahtarı — Testler (${s.cevap_anahtari.length})</div>
+      <button onclick="kkmTestEkle()" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">+ Test</button>
+    </div>
+    <div id="kkm-test-tablo">${kkmTestTabloHTML()}</div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button onclick="kkmGeriOnizlemeden()" class="btn btn-ghost" style="flex:1;justify-content:center;">Geri</button>
+      <button onclick="kkmKaydet()" id="kkm-kaydet-btn" class="btn btn-primary" style="flex:2;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
+      </button>
+    </div>
+    <div id="kkm-kayit-durum" style="margin-top:10px;font-size:13px;color:var(--ink-soft);min-height:18px;"></div>`;
+}
+
+async function kkmKaydet() {
+  const k = state._kkm;
+  const s = k.sonuc;
+  s.kaynak_adi  = document.getElementById('kkm-o-ad').value.trim();
+  s.yayin_evi   = document.getElementById('kkm-o-yayinevi').value.trim();
+  s.sinif       = document.getElementById('kkm-o-sinif').value;
+
+  if (!s.kaynak_adi) { showToast('⚠️ Kaynak adı zorunlu'); return; }
+  if (!s.konu_listesi.length) { showToast('⚠️ En az bir konu ekleyin'); return; }
+
+  const durum = document.getElementById('kkm-kayit-durum');
+  const btn = document.getElementById('kkm-kaydet-btn');
+  if (durum) durum.textContent = 'Kaydediliyor...';
+  if (btn) btn.disabled = true;
+
+  const kaynakId = 'KYN-' + Date.now();
+  try {
+    const { error: kErr } = await sb.from('kaynaklar').insert({
+      kaynak_adi: s.kaynak_adi, kaynak_id: kaynakId,
+      yayin_evi: s.yayin_evi, sinif: s.sinif,
+      zorluk_derecesi: 'Orta',
+      konu_sayisi: s.konu_listesi.length,
+      tur: 'Soru Bankası',
+      ders: state.brans || 'İlköğretim Matematik'
+    });
+    if (kErr) throw new Error(kErr.message);
+
+    const { error: kkErr } = await sb.from('kaynak_konulari').insert(
+      s.konu_listesi.map((o, i) => ({ kaynak_id: kaynakId, konu_adi: o.konu_adi, sayfa_no: o.sayfa_no, sira: i }))
+    );
+    if (kkErr) throw new Error('Konular kaydedilemedi: ' + kkErr.message);
+
+    if (s.cevap_anahtari.length) {
+      const { error: caErr } = await sb.from('kaynak_cevap_anahtari').insert(
+        s.cevap_anahtari.map(o => ({
+          kaynak_id: kaynakId, test_no: o.test_no, sayfa_no: o.sayfa_no,
+          cevaplar: (o.cevaplar || '').split(',').map(c => c.trim()).filter(Boolean)
+        }))
+      );
+      if (caErr) throw new Error('Cevap anahtarı kaydedilemedi: ' + caErr.message);
+    }
+
+    showToast('✅ Kaynak kaydedildi!');
+    const { data } = await sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi');
+    state.kaynaklar = data || [];
+    renderKaynaklar();
+    kkmKapat();
+  } catch (err) {
+    if (durum) durum.textContent = '❌ ' + err.message;
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function ataOgrenciSecildi() {
   const sel = document.getElementById('ata-ogrenci');
   const ogrenciId = sel.value;
@@ -2999,11 +3419,52 @@ async function ataOgrenciSecildi() {
     return;
   }
 
+  // ogrn_kaynak kaynak_id tutmuyor, kaynak_adi'ndan state.kaynaklar üzerinden çözülüyor
+  const kaynakIdMap = {};
+  kaynaklar.forEach(k => {
+    const kr = state.kaynaklar.find(x => x.kaynak_adi === k.kaynak_adi);
+    if (kr) kaynakIdMap[k.kayit_id] = kr.kaynak_id;
+  });
+  const kaynakIds = [...new Set(Object.values(kaynakIdMap))];
+
+  // Otomatik ilerleme: kaynak_konulari satır sayısı + odevler'de TAMAMLANDI işaretli kaynak_konu_id'ler
+  const konuSayilari = {}, tamamlananSet = {};
+  if (kaynakIds.length) {
+    const [{ data: konular }, { data: tamamlananlar }] = await Promise.all([
+      sb.from('kaynak_konulari').select('id, kaynak_id').in('kaynak_id', kaynakIds),
+      sb.from('odevler').select('kaynak_id, kaynak_konu_id').eq('ogrenci_id', ogrenciId).eq('durum', 'TAMAMLANDI').not('kaynak_konu_id', 'is', null)
+    ]);
+    (konular || []).forEach(kk => { konuSayilari[kk.kaynak_id] = (konuSayilari[kk.kaynak_id] || 0) + 1; });
+    (tamamlananlar || []).forEach(o => {
+      if (!tamamlananSet[o.kaynak_id]) tamamlananSet[o.kaynak_id] = new Set();
+      tamamlananSet[o.kaynak_id].add(o.kaynak_konu_id);
+    });
+  }
+
   el.innerHTML = '<div class="mt-3 text-xs font-semibold text-outline uppercase tracking-wider mb-2">Atanmış Kaynaklar</div>' +
     kaynaklar.map(k => {
-      const toplam = k.konu_sayisi || 0;
-      const islenen = k.islenen_konu || 0;
+      const kaynakId = kaynakIdMap[k.kayit_id];
+      const otomatikToplam = kaynakId ? (konuSayilari[kaynakId] || 0) : 0;
+
+      let toplam, islenen, girisAlani;
+      if (otomatikToplam > 0) {
+        // Kamera ile eklenmiş kaynak: ilerleme odevler tamamlanma durumundan otomatik hesaplanır
+        toplam = otomatikToplam;
+        islenen = tamamlananSet[kaynakId] ? tamamlananSet[kaynakId].size : 0;
+        girisAlani = `<span class="text-xs text-outline" style="min-width:60px;text-align:right;">${islenen}/${toplam} (oto)</span>`;
+      } else {
+        // Manuel eklenmiş kaynak (kaynak_konulari yok): eski elle sayaç akışı
+        toplam = k.konu_sayisi || 0;
+        islenen = k.islenen_konu || 0;
+        girisAlani = `
+          <div class="flex items-center gap-1">
+            <input type="number" min="0" max="${toplam}" value="${islenen}" onchange="kaynakGuncelle('${k.kayit_id}',this.value,${toplam})"
+              class="w-12 text-center px-1 py-1 rounded-lg bg-surface-container-low border-none text-xs font-bold">
+            <span class="text-xs text-outline">/${toplam}</span>
+          </div>`;
+      }
       const pct = toplam > 0 ? Math.round(islenen/toplam*100) : 0;
+
       return `
         <div class="py-2.5 border-b border-outline-variant/20 last:border-0">
           <div class="flex items-center justify-between mb-1.5">
@@ -3012,11 +3473,7 @@ async function ataOgrenciSecildi() {
           </div>
           <div class="flex items-center gap-2">
             <div class="flex-1 progress-bar"><div class="progress-fill bg-primary" style="width:${pct}%"></div></div>
-            <div class="flex items-center gap-1">
-              <input type="number" min="0" max="${toplam}" value="${islenen}" onchange="kaynakGuncelle('${k.kayit_id}',this.value)"
-                class="w-12 text-center px-1 py-1 rounded-lg bg-surface-container-low border-none text-xs font-bold">
-              <span class="text-xs text-outline">/${toplam}</span>
-            </div>
+            ${girisAlani}
           </div>
         </div>`;
     }).join('');
@@ -3029,10 +3486,11 @@ async function kaynakAta() {
 
   showToast('Atanıyor...');
   // kaynakId burada kaynak_adi değeri taşıyor (select value="kaynak_adi")
+  const secilenKaynak = state.kaynaklar.find(x => x.kaynak_adi === kaynakId);
   const { error } = await sb.from('ogrn_kaynak').insert({
     ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
     kaynak_adi: kaynakId,
-    konu_sayisi: 12,
+    konu_sayisi: secilenKaynak?.konu_sayisi || 12,
     islenen_konu: 0,
     ilerleme_yuzdesi: 0
   });
@@ -3048,8 +3506,10 @@ async function kaynakSil(id) {
   ataOgrenciSecildi();
 }
 
-async function kaynakGuncelle(id, deger) {
-  await sb.from('ogrn_kaynak').update({ islened_konu: parseInt(deger)||0, ilerleme_yuzdesi: Math.round((parseInt(deger)||0)/12*100) }).eq('kayit_id', id);
+async function kaynakGuncelle(id, deger, toplam) {
+  const islenen = parseInt(deger) || 0;
+  const pct = toplam > 0 ? Math.round(islenen/toplam*100) : 0;
+  await sb.from('ogrn_kaynak').update({ islenen_konu: islenen, ilerleme_yuzdesi: pct }).eq('kayit_id', id);
   showToast('✅ Güncellendi');
 }
 

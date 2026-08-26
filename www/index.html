@@ -77,6 +77,22 @@ tailwind.config = {
     --orange: #f57c00; --orange-600: #e96b00;
     --card-shadow: 0 1px 2px rgba(1,49,73,.04), 0 8px 24px rgba(1,49,73,.06);
     --card-shadow-hover: 0 4px 12px rgba(1,49,73,.08), 0 18px 40px rgba(1,49,73,.10);
+    /* tailwind.config'teki theme.extend.colors ile birebir aynı değerler — Tailwind bunlardan
+       yalnızca utility sınıfları (bg-surface, text-primary...) üretir, CSS custom property
+       olarak dışa vermez. Kodun bazı yerlerinde inline style="...var(--surface)..." gibi
+       kullanımlar olduğu için bu değerleri burada da tanımlıyoruz, yoksa arka plan rengi
+       sessizce şeffafa düşüyor. */
+    --primary: #005d8d; --on-primary: #ffffff;
+    --primary-container: #0d76b1; --on-primary-container: #f0f6ff; --primary-fixed: #cce5ff;
+    --secondary: #805600; --secondary-container: #feb223; --on-secondary-container: #6b4800;
+    --tertiary: #00661d; --tertiary-container: #008228; --on-tertiary-container: #d9ffd3;
+    --error: #ba1a1a; --error-container: #ffdad6;
+    --surface: #f5faff; --on-surface: #141d22;
+    --surface-variant: #dbe4eb; --on-surface-variant: #404850;
+    --surface-container-lowest: #ffffff; --surface-container-low: #ecf5fc;
+    --surface-container: #e6eff6; --surface-container-high: #e0e9f0; --surface-container-highest: #dbe4eb;
+    --outline: #707881; --outline-variant: #c0c7d1;
+    --inverse-surface: #293237;
   }
   .card { background:#fff; border-radius:1rem; box-shadow:var(--card-shadow); border:1px solid var(--line); }
   .card-2xl { border-radius:1.25rem; background:#fff; box-shadow:var(--card-shadow); border:1px solid var(--line); }
@@ -3096,10 +3112,12 @@ async function kaynakEkle() {
 }
 
 // ── KAMERA İLE KAYNAK EKLE ───────────────────────────────────
+// Üç adımda da sadece fotoğraf toplanır; Gemini'ye analiz isteği yalnızca SON adımda
+// ("Analiz Et"), o ana kadar toplanan tüm fotoğraflarla TEK seferde gönderilir.
 const KKM_ADIMLAR = [
-  { key: 'kapak',          baslik: 'Kapak Fotoğrafı',              atlanabilir: false, coklu: false },
-  { key: 'icindekiler',    baslik: 'İçindekiler Fotoğrafı',        atlanabilir: false, coklu: true  },
-  { key: 'cevap_anahtari', baslik: 'Cevap Anahtarı (opsiyonel)',   atlanabilir: true,  coklu: true  },
+  { key: 'kapak',          baslik: 'Kapak Fotoğrafı',              zorunlu: true,  coklu: false },
+  { key: 'icindekiler',    baslik: 'İçindekiler Fotoğrafı',        zorunlu: true,  coklu: true  },
+  { key: 'cevap_anahtari', baslik: 'Cevap Anahtarı (opsiyonel)',   zorunlu: false, coklu: true  },
 ];
 let _kkmCidSayac = 0;
 function kkmCid() { return 'c' + (_kkmCidSayac++); }
@@ -3173,8 +3191,12 @@ function kkmGeri() {
   kkmRenderAdim();
 }
 
-function kkmAtla() {
-  kkmRenderOnizleme();
+function kkmIleri() {
+  const k = state._kkm;
+  const adim = KKM_ADIMLAR[k.adimIndex];
+  if (adim.zorunlu && !k.fotolar[k.adimIndex].length) { showToast('⚠️ En az bir fotoğraf ekleyin'); return; }
+  k.adimIndex++;
+  kkmRenderAdim();
 }
 
 function kkmGeriOnizlemeden() {
@@ -3187,6 +3209,7 @@ function kkmRenderAdim() {
   const adim = KKM_ADIMLAR[k.adimIndex];
   const fotolar = k.fotolar[k.adimIndex];
   const varMi = fotolar.length > 0;
+  const sonAdimMi = k.adimIndex === KKM_ADIMLAR.length - 1;
   const govde = document.getElementById('kkm-govde');
 
   const cubuk = KKM_ADIMLAR.map((a, i) => `
@@ -3222,10 +3245,13 @@ function kkmRenderAdim() {
       <input type="file" id="kkm-file-input" accept="image/*" capture="environment" style="display:none;" onchange="kkmFotoSecildi(this)"/>
       <div style="display:flex;gap:10px;margin-top:14px;">
         ${k.adimIndex > 0 ? `<button onclick="kkmGeri()" class="btn btn-ghost" style="flex:1;justify-content:center;">Geri</button>` : ''}
-        ${adim.atlanabilir ? `<button onclick="kkmAtla()" class="btn btn-ghost" style="flex:1;justify-content:center;">Atla</button>` : ''}
-        <button onclick="kkmAnalizEt()" id="kkm-analiz-btn" class="btn btn-primary" style="flex:2;justify-content:center;" ${varMi ? '' : 'disabled'}>
-          <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span> Analiz Et
-        </button>
+        ${sonAdimMi
+          ? `<button onclick="kkmAnalizEt()" id="kkm-analiz-btn" class="btn btn-primary" style="flex:2;justify-content:center;">
+              <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span> ${varMi ? 'Tümünü Analiz Et' : 'Cevap Anahtarı Olmadan Analiz Et'}
+            </button>`
+          : `<button onclick="kkmIleri()" class="btn btn-primary" style="flex:2;justify-content:center;" ${varMi ? '' : 'disabled'}>
+              İleri <span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span>
+            </button>`}
       </div>
       <div id="kkm-durum" style="margin-top:10px;font-size:13px;color:var(--ink-soft);min-height:18px;"></div>
     </div>`;
@@ -3233,18 +3259,20 @@ function kkmRenderAdim() {
 
 async function kkmAnalizEt() {
   const k = state._kkm;
-  const adim = KKM_ADIMLAR[k.adimIndex];
-  const fotolar = k.fotolar[k.adimIndex];
-  if (!fotolar.length) { showToast('⚠️ Önce fotoğraf seçin'); return; }
-
   const durum = document.getElementById('kkm-durum');
   const btn = document.getElementById('kkm-analiz-btn');
-  if (durum) durum.textContent = 'Analiz ediliyor...';
+  if (durum) durum.textContent = 'Tüm fotoğraflar birlikte analiz ediliyor... (biraz sürebilir)';
   if (btn) btn.disabled = true;
+
+  const paketle = fotolar => fotolar.map(f => ({ mimeType: f.mimeType, data: f.base64 }));
 
   try {
     const { data, error } = await sb.functions.invoke('kaynak-ocr', {
-      body: { adim: adim.key, images: fotolar.map(f => ({ mimeType: f.mimeType, data: f.base64 })) }
+      body: {
+        kapak: paketle(k.fotolar[0]),
+        icindekiler: paketle(k.fotolar[1]),
+        cevap_anahtari: paketle(k.fotolar[2]),
+      }
     });
     if (error) {
       let msg = error.message || 'OCR başarısız';
@@ -3258,22 +3286,13 @@ async function kkmAnalizEt() {
     }
     if (data?.error) throw new Error(data.error);
 
-    if (adim.key === 'kapak') {
-      k.sonuc.kaynak_adi = data.kaynak_adi || k.sonuc.kaynak_adi;
-      k.sonuc.yayin_evi  = data.yayin_evi || k.sonuc.yayin_evi;
-      if (data.sinif) k.sonuc.sinif = data.sinif;
-    } else if (adim.key === 'icindekiler') {
-      k.sonuc.konu_listesi = (data.konu_listesi || []).map(x => ({ _cid: kkmCid(), konu_adi: x.konu_adi || '', sayfa_no: x.sayfa_no ?? null }));
-    } else if (adim.key === 'cevap_anahtari') {
-      k.sonuc.cevap_anahtari = (data.cevap_anahtari || []).map(x => ({ _cid: kkmCid(), test_no: x.test_no ?? null, sayfa_no: x.sayfa_no ?? null, cevaplar: (x.cevaplar || []).join(', ') }));
-    }
+    k.sonuc.kaynak_adi = data.kaynak_adi || k.sonuc.kaynak_adi;
+    k.sonuc.yayin_evi  = data.yayin_evi || k.sonuc.yayin_evi;
+    if (data.sinif) k.sonuc.sinif = data.sinif;
+    k.sonuc.konu_listesi = (data.konu_listesi || []).map(x => ({ _cid: kkmCid(), konu_adi: x.konu_adi || '', sayfa_no: x.sayfa_no ?? null }));
+    k.sonuc.cevap_anahtari = (data.cevap_anahtari || []).map(x => ({ _cid: kkmCid(), test_no: x.test_no ?? null, sayfa_no: x.sayfa_no ?? null, cevaplar: (x.cevaplar || []).join(', ') }));
 
-    if (k.adimIndex < KKM_ADIMLAR.length - 1) {
-      k.adimIndex++;
-      kkmRenderAdim();
-    } else {
-      kkmRenderOnizleme();
-    }
+    kkmRenderOnizleme();
   } catch (err) {
     if (durum) durum.textContent = '❌ ' + err.message;
     if (btn) btn.disabled = false;

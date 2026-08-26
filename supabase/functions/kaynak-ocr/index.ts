@@ -34,9 +34,13 @@ const ADIMLAR: Record<string, { prompt: string; schema: any }> = {
   },
   icindekiler: {
     prompt:
-      "Bu bir ders kaynağının içindekiler sayfası fotoğrafıdır. Sırasıyla her konu başlığını " +
-      "ve yanındaki sayfa numarasını çıkar. Alt başlıkları değil, ana konu başlıklarını al. " +
-      "Sayfa numarası okunamıyorsa null bırak.",
+      "Bu bir ders kaynağının içindekiler sayfası fotoğraf(lar)ıdır. Birden fazla ardışık sayfa " +
+      "fotoğrafı verilmiş olabilir; fotoğrafların sırası sayfa sırasıdır. Hepsini birlikte " +
+      "değerlendirip TEK, birleşik ve sıralı bir konu listesi döndür — sayfalar arasında tekrar " +
+      "eden başlıkları (örn. bir sonraki fotoğrafın başında önceki sayfanın son satırı tekrar " +
+      "görünüyorsa) yalnızca bir kez say. Sırasıyla her konu başlığını ve yanındaki sayfa " +
+      "numarasını çıkar. Alt başlıkları değil, ana konu başlıklarını al. Sayfa numarası " +
+      "okunamıyorsa null bırak.",
     schema: {
       type: "OBJECT",
       properties: {
@@ -57,8 +61,11 @@ const ADIMLAR: Record<string, { prompt: string; schema: any }> = {
   },
   cevap_anahtari: {
     prompt:
-      "Bu bir soru bankası cevap anahtarı fotoğrafıdır. Her test/bölüm için test numarasını, " +
-      "bulunduğu sayfa numarasını ve sıradaki cevapları (A/B/C/D/E) bir dizi olarak çıkar.",
+      "Bu bir soru bankası cevap anahtarı fotoğraf(lar)ıdır. Birden fazla ardışık sayfa fotoğrafı " +
+      "verilmiş olabilir; fotoğrafların sırası sayfa sırasıdır. Hepsini birlikte değerlendirip TEK, " +
+      "birleşik bir test listesi döndür — aynı test birden fazla fotoğrafta görünüyorsa tekrar " +
+      "etme. Her test/bölüm için test numarasını, bulunduğu sayfa numarasını ve sıradaki " +
+      "cevapları (A/B/C/D/E) bir dizi olarak çıkar.",
     schema: {
       type: "OBJECT",
       properties: {
@@ -94,7 +101,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { adim, mimeType, data } = body;
+    const { adim, images } = body;
 
     const tanim = ADIMLAR[adim];
     if (!tanim) {
@@ -103,9 +110,9 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (!mimeType || !data) {
+    if (!Array.isArray(images) || !images.length || images.some((img: any) => !img?.mimeType || !img?.data)) {
       return new Response(
-        JSON.stringify({ error: "mimeType ve data (base64) zorunlu." }),
+        JSON.stringify({ error: "images: en az bir { mimeType, data (base64) } öğesi zorunlu." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -115,7 +122,7 @@ Deno.serve(async (req) => {
         role: "user",
         parts: [
           { text: tanim.prompt },
-          { inlineData: { mimeType, data } },
+          ...images.map((img: any) => ({ inlineData: { mimeType: img.mimeType, data: img.data } })),
         ],
       }],
       generationConfig: {

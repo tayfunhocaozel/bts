@@ -3097,9 +3097,9 @@ async function kaynakEkle() {
 
 // ── KAMERA İLE KAYNAK EKLE ───────────────────────────────────
 const KKM_ADIMLAR = [
-  { key: 'kapak',          baslik: 'Kapak Fotoğrafı',              atlanabilir: false },
-  { key: 'icindekiler',    baslik: 'İçindekiler Fotoğrafı',        atlanabilir: false },
-  { key: 'cevap_anahtari', baslik: 'Cevap Anahtarı (opsiyonel)',   atlanabilir: true  },
+  { key: 'kapak',          baslik: 'Kapak Fotoğrafı',              atlanabilir: false, coklu: false },
+  { key: 'icindekiler',    baslik: 'İçindekiler Fotoğrafı',        atlanabilir: false, coklu: true  },
+  { key: 'cevap_anahtari', baslik: 'Cevap Anahtarı (opsiyonel)',   atlanabilir: true,  coklu: true  },
 ];
 let _kkmCidSayac = 0;
 function kkmCid() { return 'c' + (_kkmCidSayac++); }
@@ -3111,7 +3111,7 @@ function kkmEsc(s) {
 function kameraKaynakModalAc() {
   state._kkm = {
     adimIndex: 0,
-    fotolar: [null, null, null],
+    fotolar: [[], [], []],
     sonuc: { kaynak_adi: '', yayin_evi: '', sinif: '8. Sınıf', konu_listesi: [], cevap_anahtari: [] }
   };
   document.getElementById('kkm-modal').style.display = 'flex';
@@ -3152,8 +3152,19 @@ function kkmResimSikistir(file) {
 async function kkmFotoSecildi(inputEl) {
   const file = inputEl.files && inputEl.files[0];
   if (!file) return;
+  const k = state._kkm;
+  const adim = KKM_ADIMLAR[k.adimIndex];
   const foto = await kkmResimSikistir(file);
-  state._kkm.fotolar[state._kkm.adimIndex] = foto;
+  if (adim.coklu) {
+    k.fotolar[k.adimIndex].push(foto);
+  } else {
+    k.fotolar[k.adimIndex] = [foto];
+  }
+  kkmRenderAdim();
+}
+
+function kkmFotoSil(fotoIdx) {
+  state._kkm.fotolar[state._kkm.adimIndex].splice(fotoIdx, 1);
   kkmRenderAdim();
 }
 
@@ -3174,30 +3185,45 @@ function kkmGeriOnizlemeden() {
 function kkmRenderAdim() {
   const k = state._kkm;
   const adim = KKM_ADIMLAR[k.adimIndex];
-  const foto = k.fotolar[k.adimIndex];
+  const fotolar = k.fotolar[k.adimIndex];
+  const varMi = fotolar.length > 0;
   const govde = document.getElementById('kkm-govde');
 
   const cubuk = KKM_ADIMLAR.map((a, i) => `
     <div style="flex:1;height:4px;border-radius:2px;background:${i <= k.adimIndex ? 'var(--primary)' : 'var(--surface-container-high)'};"></div>`).join('');
 
+  const gorselAlani = adim.coklu
+    ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;justify-content:center;">
+        ${fotolar.map((f, i) => `
+          <div style="position:relative;width:72px;height:72px;">
+            <img src="${f.dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;background:var(--surface-container-low);"/>
+            <button onclick="kkmFotoSil(${i})" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--error);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:700;line-height:20px;padding:0;">×</button>
+          </div>`).join('')}
+        <label for="kkm-file-input" style="width:72px;height:72px;border:2px dashed var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);cursor:pointer;">
+          <span class="material-symbols-outlined" style="font-size:24px;">add_a_photo</span>
+        </label>
+      </div>`
+    : (varMi
+        ? `<img src="${fotolar[0].dataUrl}" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px;margin-bottom:12px;background:var(--surface-container-low);"/>`
+        : `<div style="height:140px;border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);margin-bottom:12px;">
+             <span class="material-symbols-outlined" style="font-size:36px;">image</span>
+           </div>`);
+
   govde.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:18px;">${cubuk}</div>
     <div style="text-align:center;">
-      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;">Adım ${k.adimIndex+1}/${KKM_ADIMLAR.length}</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;">Adım ${k.adimIndex+1}/${KKM_ADIMLAR.length}${adim.coklu ? ' · birden fazla fotoğraf eklenebilir' : ''}</div>
       <div style="font-family:Manrope;font-weight:700;font-size:15px;color:var(--ink);margin-bottom:14px;">${adim.baslik}</div>
-      ${foto
-        ? `<img src="${foto.dataUrl}" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px;margin-bottom:12px;background:var(--surface-container-low);"/>`
-        : `<div style="height:140px;border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);margin-bottom:12px;">
-             <span class="material-symbols-outlined" style="font-size:36px;">image</span>
-           </div>`}
+      ${gorselAlani}
+      ${!adim.coklu ? `
       <label for="kkm-file-input" class="btn btn-ghost" style="width:100%;justify-content:center;cursor:pointer;">
-        <span class="material-symbols-outlined" style="font-size:18px;">photo_camera</span> ${foto ? 'Fotoğrafı Değiştir' : 'Fotoğraf Çek / Seç'}
-      </label>
+        <span class="material-symbols-outlined" style="font-size:18px;">photo_camera</span> ${varMi ? 'Fotoğrafı Değiştir' : 'Fotoğraf Çek / Seç'}
+      </label>` : ''}
       <input type="file" id="kkm-file-input" accept="image/*" capture="environment" style="display:none;" onchange="kkmFotoSecildi(this)"/>
       <div style="display:flex;gap:10px;margin-top:14px;">
         ${k.adimIndex > 0 ? `<button onclick="kkmGeri()" class="btn btn-ghost" style="flex:1;justify-content:center;">Geri</button>` : ''}
         ${adim.atlanabilir ? `<button onclick="kkmAtla()" class="btn btn-ghost" style="flex:1;justify-content:center;">Atla</button>` : ''}
-        <button onclick="kkmAnalizEt()" id="kkm-analiz-btn" class="btn btn-primary" style="flex:2;justify-content:center;" ${foto ? '' : 'disabled'}>
+        <button onclick="kkmAnalizEt()" id="kkm-analiz-btn" class="btn btn-primary" style="flex:2;justify-content:center;" ${varMi ? '' : 'disabled'}>
           <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span> Analiz Et
         </button>
       </div>
@@ -3208,8 +3234,8 @@ function kkmRenderAdim() {
 async function kkmAnalizEt() {
   const k = state._kkm;
   const adim = KKM_ADIMLAR[k.adimIndex];
-  const foto = k.fotolar[k.adimIndex];
-  if (!foto) { showToast('⚠️ Önce fotoğraf seçin'); return; }
+  const fotolar = k.fotolar[k.adimIndex];
+  if (!fotolar.length) { showToast('⚠️ Önce fotoğraf seçin'); return; }
 
   const durum = document.getElementById('kkm-durum');
   const btn = document.getElementById('kkm-analiz-btn');
@@ -3218,7 +3244,7 @@ async function kkmAnalizEt() {
 
   try {
     const { data, error } = await sb.functions.invoke('kaynak-ocr', {
-      body: { adim: adim.key, mimeType: foto.mimeType, data: foto.base64 }
+      body: { adim: adim.key, images: fotolar.map(f => ({ mimeType: f.mimeType, data: f.base64 })) }
     });
     if (error) {
       let msg = error.message || 'OCR başarısız';
@@ -3397,6 +3423,43 @@ async function kkmKaydet() {
   }
 }
 
+// Öğrencinin kamera ile eklenmiş (kaynak_konulari'ı olan) kaynaklarındaki otomatik ilerlemesini
+// hesaplar: kaynak_konulari satır sayısı + odevler'de TAMAMLANDI işaretli kaynak_konu_id'ler.
+// ataOgrenciSecildi() (Kaynaklar sayfası) ve loadRapor() (Rapor sayfası) tarafından ortak kullanılır.
+// ogrnKaynakRows verilirse (çağıran zaten çekmişse) tekrar sorgu atılmaz.
+async function kaynakIlerlemeleriGetir(ogrenciId, ogrnKaynakRows) {
+  const kaynaklar = ogrnKaynakRows || (await sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)).data || [];
+  if (!kaynaklar.length) return [];
+
+  // ogrn_kaynak kaynak_id tutmuyor, kaynak_adi'ndan state.kaynaklar üzerinden çözülüyor
+  const kaynakIdMap = {};
+  kaynaklar.forEach(k => {
+    const kr = state.kaynaklar.find(x => x.kaynak_adi === k.kaynak_adi);
+    if (kr) kaynakIdMap[k.kayit_id] = kr.kaynak_id;
+  });
+  const kaynakIds = [...new Set(Object.values(kaynakIdMap))];
+  if (!kaynakIds.length) return [];
+
+  const konuSayilari = {}, tamamlananSet = {};
+  const [{ data: konular }, { data: tamamlananlar }] = await Promise.all([
+    sb.from('kaynak_konulari').select('id, kaynak_id').in('kaynak_id', kaynakIds),
+    sb.from('odevler').select('kaynak_id, kaynak_konu_id').eq('ogrenci_id', ogrenciId).eq('durum', 'TAMAMLANDI').not('kaynak_konu_id', 'is', null)
+  ]);
+  (konular || []).forEach(kk => { konuSayilari[kk.kaynak_id] = (konuSayilari[kk.kaynak_id] || 0) + 1; });
+  (tamamlananlar || []).forEach(o => {
+    if (!tamamlananSet[o.kaynak_id]) tamamlananSet[o.kaynak_id] = new Set();
+    tamamlananSet[o.kaynak_id].add(o.kaynak_konu_id);
+  });
+
+  return kaynaklar.map(k => {
+    const kaynakId = kaynakIdMap[k.kayit_id];
+    const toplam = kaynakId ? (konuSayilari[kaynakId] || 0) : 0;
+    if (!toplam) return null;
+    const islenen = tamamlananSet[kaynakId] ? tamamlananSet[kaynakId].size : 0;
+    return { kayit_id: k.kayit_id, kaynak_adi: k.kaynak_adi, toplam, islenen, pct: Math.round(islenen/toplam*100) };
+  }).filter(Boolean);
+}
+
 async function ataOgrenciSecildi() {
   const sel = document.getElementById('ata-ogrenci');
   const ogrenciId = sel.value;
@@ -3419,38 +3482,19 @@ async function ataOgrenciSecildi() {
     return;
   }
 
-  // ogrn_kaynak kaynak_id tutmuyor, kaynak_adi'ndan state.kaynaklar üzerinden çözülüyor
-  const kaynakIdMap = {};
-  kaynaklar.forEach(k => {
-    const kr = state.kaynaklar.find(x => x.kaynak_adi === k.kaynak_adi);
-    if (kr) kaynakIdMap[k.kayit_id] = kr.kaynak_id;
-  });
-  const kaynakIds = [...new Set(Object.values(kaynakIdMap))];
-
-  // Otomatik ilerleme: kaynak_konulari satır sayısı + odevler'de TAMAMLANDI işaretli kaynak_konu_id'ler
-  const konuSayilari = {}, tamamlananSet = {};
-  if (kaynakIds.length) {
-    const [{ data: konular }, { data: tamamlananlar }] = await Promise.all([
-      sb.from('kaynak_konulari').select('id, kaynak_id').in('kaynak_id', kaynakIds),
-      sb.from('odevler').select('kaynak_id, kaynak_konu_id').eq('ogrenci_id', ogrenciId).eq('durum', 'TAMAMLANDI').not('kaynak_konu_id', 'is', null)
-    ]);
-    (konular || []).forEach(kk => { konuSayilari[kk.kaynak_id] = (konuSayilari[kk.kaynak_id] || 0) + 1; });
-    (tamamlananlar || []).forEach(o => {
-      if (!tamamlananSet[o.kaynak_id]) tamamlananSet[o.kaynak_id] = new Set();
-      tamamlananSet[o.kaynak_id].add(o.kaynak_konu_id);
-    });
-  }
+  const otomatikIlerlemeler = await kaynakIlerlemeleriGetir(ogrenciId, kaynaklar);
+  const otomatikMap = {};
+  otomatikIlerlemeler.forEach(o => { otomatikMap[o.kayit_id] = o; });
 
   el.innerHTML = '<div class="mt-3 text-xs font-semibold text-outline uppercase tracking-wider mb-2">Atanmış Kaynaklar</div>' +
     kaynaklar.map(k => {
-      const kaynakId = kaynakIdMap[k.kayit_id];
-      const otomatikToplam = kaynakId ? (konuSayilari[kaynakId] || 0) : 0;
+      const oto = otomatikMap[k.kayit_id];
 
       let toplam, islenen, girisAlani;
-      if (otomatikToplam > 0) {
+      if (oto) {
         // Kamera ile eklenmiş kaynak: ilerleme odevler tamamlanma durumundan otomatik hesaplanır
-        toplam = otomatikToplam;
-        islenen = tamamlananSet[kaynakId] ? tamamlananSet[kaynakId].size : 0;
+        toplam = oto.toplam;
+        islenen = oto.islenen;
         girisAlani = `<span class="text-xs text-outline" style="min-width:60px;text-align:right;">${islenen}/${toplam} (oto)</span>`;
       } else {
         // Manuel eklenmiş kaynak (kaynak_konulari yok): eski elle sayaç akışı
@@ -3722,7 +3766,7 @@ async function loadRapor() {
 
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes, aiNotuRes] = await Promise.all([
-    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay').eq('ogrenci_id', ogrenciId).order('verilis_tarihi', { ascending: false }),
+    sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay,kaynak_konu_id').eq('ogrenci_id', ogrenciId).order('verilis_tarihi', { ascending: false }),
     sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
@@ -3730,12 +3774,17 @@ async function loadRapor() {
       ? sb.from('rapor_ai_notlari').select('metin').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
+  const kaynakIlerlemeleri = await kaynakIlerlemeleriGetir(ogrenciId);
 
   if (odevRes.error) console.error('Rapor ödev sorgu hatası:', odevRes.error.message);
   if (dersRes.error) console.error('Rapor ders sorgu hatası:', dersRes.error.message);
   const aiNotuKayitli = aiNotuRes?.data?.metin || '';
   const tumOdevler        = odevRes.data || [];
   const tamamlananOdevler = tumOdevler.filter(o => o.durum === 'TAMAMLANDI');
+  // Kaynak_konu_id'li (kamera ile eklenmiş kaynaktan gelen) satırların konu metni müfredat
+  // (kazanimlar.konu) değil kitabın kendi başlığıdır — müfredat bazlı konuMap'e karıştırılmaz,
+  // ayrı olarak "Kaynak Bazlı İlerleme" kartında gösterilir.
+  const tamamlananOdevlerMufredat = tamamlananOdevler.filter(o => !o.kaynak_konu_id);
   const kazData  = kazRes.data   || [];
   const dersler  = dersRes.data  || [];
   const denemeler = denemeRes.data || [];
@@ -3743,7 +3792,7 @@ async function loadRapor() {
 
   // Konu istatistikleri
   const konuMap = {};
-  tamamlananOdevler.forEach(o => {
+  tamamlananOdevlerMufredat.forEach(o => {
     const konu = (o.konu||'').split(' — ')[0];
     if (!konu) return;
     if (!konuMap[konu]) konuMap[konu] = { dogru:0, yanlis:0, bos:0, toplam:0 };
@@ -3756,9 +3805,20 @@ async function loadRapor() {
   const allKonular   = konular.length ? konular : konuSirala(Object.keys(konuMap), state.brans);
   const islenenSayi  = allKonular.filter(k => konuMap[k]).length;
 
+  // Ders işleme durumu (her müfredat konusu için en güncel dersler.tamamlama_durumu)
+  const konuDersDurumu = {};
+  dersler.forEach(d => {
+    const konu = d.islenen_konu || '';
+    if (!konu) return;
+    const mevcut = konuDersDurumu[konu];
+    if (!mevcut || (d.tarih||'') > (mevcut.tarih||'')) {
+      konuDersDurumu[konu] = { tarih: d.tarih, durum: d.tamamlama_durumu || 'tam' };
+    }
+  });
+
   // Konu bazlı zaman serisi (tamamlanan ödevler, tarihe göre sıralı)
   const konuOdevler = {};
-  tamamlananOdevler.forEach(o => {
+  tamamlananOdevlerMufredat.forEach(o => {
     const konu = (o.konu||'').split(' — ')[0];
     if (!konu) return;
     const tot = Number(o.toplam)||0;
@@ -3849,6 +3909,7 @@ async function loadRapor() {
           <thead>
             <tr class="bg-surface-container border-b border-outline-variant/20">
               <th class="px-4 py-3 text-xs font-bold text-outline uppercase tracking-wider">Konu</th>
+              <th class="px-3 py-3 text-xs font-bold text-primary uppercase text-center w-16">Ders</th>
               <th class="px-3 py-3 text-xs font-bold text-tertiary uppercase text-center w-10">D</th>
               <th class="px-3 py-3 text-xs font-bold text-error uppercase text-center w-10">Y</th>
               <th class="px-3 py-3 text-xs font-bold text-outline uppercase text-center w-10">B</th>
@@ -3858,9 +3919,12 @@ async function loadRapor() {
           <tbody>
             ${allKonular.map((konu, i) => {
               const r = konuMap[konu];
+              const dd = konuDersDurumu[konu];
+              const dersEtiket = !dd ? '—' : dd.durum==='tam' ? '✅' : dd.durum==='kismi' ? '⚠️' : '🔵';
               const bg = i%2===0?'':'bg-surface-container/40';
               return `<tr class="border-b border-outline-variant/10 ${bg}">
                 <td class="px-4 py-2.5 font-medium text-on-surface text-xs">${konu}</td>
+                <td class="px-3 py-2.5 text-center text-sm" title="${dd ? (dd.durum==='tam'?'İşlendi':dd.durum==='kismi'?'Kısmi işlendi':'Başlandı') : 'Derste işlenmedi'}">${dersEtiket}</td>
                 <td class="px-3 py-2.5 text-center font-bold text-tertiary text-sm">${r?r.dogru:'—'}</td>
                 <td class="px-3 py-2.5 text-center font-bold text-error text-sm">${r?r.yanlis:'—'}</td>
                 <td class="px-3 py-2.5 text-center text-outline text-sm">${r?r.bos:'—'}</td>
@@ -3871,6 +3935,7 @@ async function loadRapor() {
           <tfoot>
             <tr class="bg-surface-container-high border-t-2 border-outline-variant/30">
               <td class="px-4 py-3 text-xs font-extrabold text-on-surface uppercase">Genel Toplam</td>
+              <td></td>
               <td class="px-3 py-3 text-center font-extrabold text-tertiary">${topDogru}</td>
               <td class="px-3 py-3 text-center font-extrabold text-error">${topYanlis}</td>
               <td class="px-3 py-3 text-center font-extrabold text-outline">${topBos}</td>
@@ -3931,6 +3996,29 @@ async function loadRapor() {
       </div>
     </div>
   </div>
+
+  ${kaynakIlerlemeleri.length ? `
+  <!-- Kaynak Bazlı İlerleme (kamera ile eklenmiş kaynaklar, kitap taksonomisi — müfredat tablosuyla karıştırılmaz) -->
+  <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mb-5">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-xl">menu_book</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Kaynak Bazlı İlerleme</h2>
+    </div>
+    <div class="p-5 flex flex-col gap-3">
+      ${kaynakIlerlemeleri.map(k => {
+        const col = k.pct>=80?'#00661d':k.pct>=60?'#005d8d':'#805600';
+        return `<div>
+          <div class="flex justify-between text-xs font-semibold mb-1">
+            <span class="text-on-surface">${k.kaynak_adi||'—'}</span>
+            <span style="color:${col}">${k.islenen}/${k.toplam} konu (%${k.pct})</span>
+          </div>
+          <div class="h-2.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all" style="width:${k.pct}%;background:${col}"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>` : ''}
 
   <!-- Ders Akışı -->
   <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20">

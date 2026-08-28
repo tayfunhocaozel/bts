@@ -281,6 +281,14 @@ tailwind.config = {
   @keyframes floatUpFade { 0% { opacity:1; transform:translateY(0); } 100% { opacity:0; transform:translateY(-40px); } }
   .pet-balloon { position:absolute; top:-8px; left:50%; transform:translate(-50%,-100%); background:#fff; color:#141d22; border-radius:12px; padding:9px 13px; box-shadow:0 4px 16px rgba(0,29,49,.18); font-size:12.5px; font-weight:600; white-space:normal; width:220px; z-index:20; text-align:center; }
   .pet-balloon::after { content:''; position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); width:12px; height:12px; background:#fff; rotate:45deg; }
+  .pet-seviye-badge { display:inline-block; font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:999px; background:rgba(255,255,255,.2); margin-top:3px; }
+  .pet-aksesuar-overlay { position:absolute; bottom:-4px; right:-4px; font-size:16px; background:rgba(255,255,255,.92); border-radius:999px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,29,49,.25); }
+  .aksesuar-kart { display:flex; flex-direction:column; align-items:center; gap:5px; padding:12px 6px; border-radius:14px; border:1.5px solid var(--outline-variant,#e2e8ec); background:var(--surface-container-lowest,#fff); text-align:center; }
+  .aksesuar-kart .emoji { font-size:28px; }
+  .aksesuar-kart .ad { font-size:11px; font-weight:700; color:var(--ink,#141d22); }
+  .aksesuar-kart .fiyat { font-size:11px; font-weight:600; color:var(--ink-soft,#6b7785); }
+  .aksesuar-kart.sahip { border-color:#00661d; background:rgba(0,102,29,.06); }
+  .aksesuar-kart.takili { border-color:#feb223; background:rgba(254,178,35,.1); }
 </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen">
@@ -924,6 +932,19 @@ tailwind.config = {
               class="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">İptal</button>
             <button onclick="petSahiplen()"
               class="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/80 transition-colors">🐾 Sahiplen</button>
+          </div>
+        </div>
+      </div>
+      <div id="pet-aksesuar-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div class="bg-surface rounded-2xl shadow-xl p-6 w-full max-w-lg flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="font-headline font-bold text-lg text-on-surface">🛍️ Aksesuar Dükkanı</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--ink-soft,#6b7785);">⭐ <span id="pet-aksesuar-bakiye">0</span> puan</div>
+          </div>
+          <div id="pet-aksesuar-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;"></div>
+          <div class="flex gap-2 justify-end mt-1">
+            <button onclick="document.getElementById('pet-aksesuar-modal').classList.add('hidden')"
+              class="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">Kapat</button>
           </div>
         </div>
       </div>
@@ -2589,6 +2610,19 @@ async function kalanPuanHesapla(ogrenciId) {
 }
 
 // ── EVCİL HAYVAN — ORTAK FONKSİYONLAR ───────────────────────────
+const PET_SEVIYELERI = [
+  { esik: 0,    ad: 'Yavru',     boyut: 32, cerceve: '#94a3b8' },
+  { esik: 100,  ad: 'Genç',      boyut: 38, cerceve: '#4fa8dd' },
+  { esik: 300,  ad: 'Ergen',     boyut: 44, cerceve: '#3fbf6b' },
+  { esik: 600,  ad: 'Yetişkin',  boyut: 50, cerceve: '#feb223' },
+  { esik: 1000, ad: 'Usta',      boyut: 58, cerceve: '#c9a3ff' },
+];
+function petSeviyeBul(pet_puan) {
+  let idx = 0;
+  for (let i = 0; i < PET_SEVIYELERI.length; i++) if ((pet_puan || 0) >= PET_SEVIYELERI[i].esik) idx = i;
+  return { ...PET_SEVIYELERI[idx], index: idx };
+}
+
 async function petOgretmenAyarlariGetir(ogretmenId) {
   const varsayilan = { acikma_suresi_sa:8, kirlenme_suresi_sa:12, sevilme_suresi_sa:6,
     puan_doyurma:10, puan_temizleme:10, puan_sevme:15, basari_esigi:90,
@@ -2619,7 +2653,7 @@ async function petPanelYukle() {
   if (!kart || state.rol !== 'ogrenci') return;
 
   const { data: ogr } = await sb.from('ogrenciler')
-    .select('pet_tur,pet_isim,pet_puan,pet_son_doyurma,pet_son_temizleme,pet_son_sevme,pet_son_etkilesim,ekstra_mama_hakki,pet_terk_edildi,cinsiyet,ogretmen_id')
+    .select('pet_tur,pet_isim,pet_puan,pet_son_doyurma,pet_son_temizleme,pet_son_sevme,pet_son_etkilesim,ekstra_mama_hakki,pet_terk_edildi,cinsiyet,ogretmen_id,pet_takili_aksesuar_id')
     .eq('ogrenci_id', state.user.ogrenci_id).single();
   if (!ogr) return;
   Object.assign(state.user, ogr);
@@ -2637,6 +2671,7 @@ async function petPanelYukle() {
   state._petGecikmis = gecikmis || 0;
 
   if (!ogr.pet_tur || ogr.pet_tur === 'yok') {
+    state._petOncekiSeviyeIndex = null;
     kart.style.background = 'linear-gradient(135deg,#3fbf6b,#00661d)'; kart.style.color = '#fff';
     kart.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -2659,19 +2694,32 @@ async function petPanelYukle() {
   const temizleAktif = kalanTemizleme <= 0;
   const sevAktif     = kalanSevme <= 0;
 
+  const seviye = petSeviyeBul(ogr.pet_puan);
+  if (state._petOncekiSeviyeIndex != null && seviye.index > state._petOncekiSeviyeIndex) {
+    showToast(`🎉 ${ogr.pet_isim || 'Dostun'} artık seninle birlikte büyüyor: ${seviye.ad} seviyesine ulaştı!`);
+  }
+  state._petOncekiSeviyeIndex = seviye.index;
+
+  const takiliEmoji = ogr.pet_takili_aksesuar_id
+    ? (await petAksesuarKatalogYukle()).find(a => a.aksesuar_id === ogr.pet_takili_aksesuar_id)?.emoji : null;
+
   kart.style.background = 'linear-gradient(135deg,#00661d,#013a10)'; kart.style.color = '#fff';
   kart.innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-      <div class="pet-avatar" onclick="petMotivasyonGoster()">${emoji}${state._petGecikmis > 0 ? `<span class="pet-gecikme-badge">${state._petGecikmis}</span>` : ''}</div>
+      <div class="pet-avatar" onclick="petMotivasyonGoster()" style="width:${seviye.boyut + 26}px;height:${seviye.boyut + 26}px;font-size:${seviye.boyut}px;border:2.5px solid ${seviye.cerceve};position:relative;">${emoji}${state._petGecikmis > 0 ? `<span class="pet-gecikme-badge">${state._petGecikmis}</span>` : ''}${takiliEmoji ? `<span class="pet-aksesuar-overlay">${takiliEmoji}</span>` : ''}</div>
       <div style="flex:1;min-width:90px;">
         <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.05em;">Evcil Hayvanın</div>
         <div style="font-family:Manrope;font-size:17px;font-weight:800;">${ogr.pet_isim || '—'}</div>
+        <span class="pet-seviye-badge">Lv.${seviye.index + 1} ${seviye.ad}</span>
       </div>
       <div style="display:flex;gap:8px;">
         <button id="pet-btn-doyurma" class="pet-action-btn ${doyurAktif ? 'is-active' : ''}" onclick="petDoyur()" title="Doyur">🥣${ogr.ekstra_mama_hakki > 0 ? `<span class="pet-ekstra-badge">✨×${ogr.ekstra_mama_hakki}</span>` : ''}</button>
         <button id="pet-btn-temizleme" class="pet-action-btn ${temizleAktif ? 'is-active' : ''}" onclick="petTemizle()" title="Temizle">💩</button>
         <button id="pet-btn-sevme" class="pet-action-btn ${sevAktif ? 'is-active' : ''}" onclick="petSev()" title="Sev">❤️</button>
       </div>
+    </div>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end;">
+      <button onclick="petAksesuarDukkaniAc()" class="btn" style="background:rgba(255,255,255,.18);color:#fff;font-size:12px;padding:6px 12px;">🛍️ Aksesuar Dükkanı</button>
     </div>
     <div id="pet-konusma-balonu" class="pet-balloon hidden"></div>`;
 }
@@ -2766,6 +2814,71 @@ async function petSahiplen() {
   if (error) { showToast('❌ ' + error.message); return; }
   document.getElementById('pet-secim-modal').classList.add('hidden');
   showToast(`✅ ${isim} artık senin dostun!`);
+  petPanelYukle();
+}
+
+// ── EVCİL HAYVAN — AKSESUAR DÜKKANI ─────────────────────────────
+async function petAksesuarKatalogYukle() {
+  if (!state._petAksesuarKatalogCache) {
+    const { data } = await sb.from('pet_aksesuar_katalogu').select('*').eq('aktif', true).order('fiyat');
+    state._petAksesuarKatalogCache = data || [];
+  }
+  return state._petAksesuarKatalogCache;
+}
+
+async function petAksesuarDukkaniAc() {
+  const modal = document.getElementById('pet-aksesuar-modal');
+  const grid = document.getElementById('pet-aksesuar-grid');
+  document.getElementById('pet-aksesuar-bakiye').textContent = state.user.pet_puan || 0;
+  grid.innerHTML = '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:16px 0;"><div class="spinner"></div></div>';
+  modal.classList.remove('hidden');
+
+  const [katalog, { data: sahipler }] = await Promise.all([
+    petAksesuarKatalogYukle(),
+    sb.from('ogrenci_pet_aksesuarlari').select('aksesuar_id').eq('ogrenci_id', state.user.ogrenci_id)
+  ]);
+  const sahipSet = new Set((sahipler || []).map(s => s.aksesuar_id));
+  const bakiye = state.user.pet_puan || 0;
+
+  grid.innerHTML = katalog.map(a => {
+    const sahip  = sahipSet.has(a.aksesuar_id);
+    const takili = state.user.pet_takili_aksesuar_id === a.aksesuar_id;
+    const yeterli = bakiye >= a.fiyat;
+    return `
+      <div class="aksesuar-kart ${sahip ? 'sahip' : ''} ${takili ? 'takili' : ''}">
+        <span class="emoji">${a.emoji}</span>
+        <span class="ad">${a.ad}</span>
+        ${sahip
+          ? `<button onclick="${takili ? 'petAksesuarCikar()' : `petAksesuarTak('${a.aksesuar_id}')`}" class="btn" style="font-size:10.5px;padding:4px 9px;background:${takili ? '#feb223' : '#00661d'};color:${takili ? '#141d22' : '#fff'};">${takili ? 'Çıkar' : 'Tak'}</button>`
+          : `<span class="fiyat">⭐ ${a.fiyat}</span>
+             <button ${yeterli ? '' : 'disabled'} onclick="petAksesuarSatinAl('${a.aksesuar_id}')" class="btn" style="font-size:10.5px;padding:4px 9px;${yeterli ? '' : 'opacity:.4;'}">Satın Al</button>`}
+      </div>`;
+  }).join('');
+}
+
+async function petAksesuarSatinAl(aksesuarId) {
+  const { data, error } = await sb.rpc('pet_aksesuar_satin_al', { p_ogrenci_id: state.user.ogrenci_id, p_aksesuar_id: aksesuarId });
+  const sonuc = Array.isArray(data) ? data[0] : data;
+  if (error || !sonuc?.basarili) { showToast('❌ ' + (sonuc?.mesaj || error?.message)); return; }
+  showToast('✅ ' + sonuc.mesaj);
+  const { data: ogr } = await sb.from('ogrenciler').select('pet_puan').eq('ogrenci_id', state.user.ogrenci_id).single();
+  if (ogr) state.user.pet_puan = ogr.pet_puan;
+  petAksesuarDukkaniAc();
+  petPanelYukle();
+}
+
+async function petAksesuarTak(aksesuarId) {
+  const { error } = await sb.from('ogrenciler').update({ pet_takili_aksesuar_id: aksesuarId }).eq('ogrenci_id', state.user.ogrenci_id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  state.user.pet_takili_aksesuar_id = aksesuarId;
+  petAksesuarDukkaniAc();
+  petPanelYukle();
+}
+async function petAksesuarCikar() {
+  const { error } = await sb.from('ogrenciler').update({ pet_takili_aksesuar_id: null }).eq('ogrenci_id', state.user.ogrenci_id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  state.user.pet_takili_aksesuar_id = null;
+  petAksesuarDukkaniAc();
   petPanelYukle();
 }
 

@@ -897,11 +897,11 @@ tailwind.config = {
         <p style="font-size:13.5px;opacity:.8;margin:4px 0 0;position:relative;" id="ogr-welcome-sinif">—</p>
       </div>
 
-      <!-- Hiper Puan Bakiyesi -->
+      <!-- Adaptix Puan Bakiyesi -->
       <div class="card-2xl" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#6b3fa0,#43265f);color:#fff;display:flex;align-items:center;justify-content:space-between;">
         <div>
-          <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.05em;">Hiper Puan Bakiyen</div>
-          <div style="font-family:Manrope;font-size:28px;font-weight:800;" id="ogr-hiper-puan-bakiye">—</div>
+          <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.05em;">Adaptix Puan Bakiyen</div>
+          <div style="font-family:Manrope;font-size:28px;font-weight:800;" id="ogr-adaptix-puan-bakiye">—</div>
         </div>
         <button onclick="ogrTab('odul-dukkani')" class="btn" style="background:rgba(255,255,255,.18);color:#fff;">🎁 Dükkana Git</button>
       </div>
@@ -2514,7 +2514,7 @@ async function odevDenemeSenkronla(odev) {
   }
 }
 
-// ── HİPER PUAN — ORTAK FONKSİYONLAR ─────────────────────────────
+// ── ADAPTIX PUAN — ORTAK FONKSİYONLAR ─────────────────────────────
 function puanHesaplaOdev(dogru, toplam) {
   const top = Number(toplam) || 0, d = Number(dogru) || 0;
   if (top <= 0) return 10;
@@ -6112,7 +6112,7 @@ async function loadOgrenciPanel() {
   document.getElementById('ogr-welcome-sinif').textContent = state.user.sinif || '—';
 
   kalanPuanHesapla(state.user.ogrenci_id).then(r => {
-    const el = document.getElementById('ogr-hiper-puan-bakiye');
+    const el = document.getElementById('ogr-adaptix-puan-bakiye');
     if (el) el.textContent = r.kalan;
   });
 
@@ -6712,7 +6712,7 @@ async function loadVeliPanel() {
     .eq('ogrenci_id', u.ogrenci_id);
   _veliDersQ = _veliDersQ.order('tarih', { ascending: false });
 
-  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }, hiperPuan, { data: alinanOduller }] = await Promise.all([
+  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }, adaptixPuan, { data: alinanOduller }] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id).order('verilis_tarihi', { ascending: false }),
     _veliDersQ,
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
@@ -6801,8 +6801,8 @@ async function loadVeliPanel() {
 
   document.getElementById('veli-tab-ozet').innerHTML = `
     <div class="card-2xl" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#6b3fa0,#43265f);color:#fff;display:flex;align-items:center;justify-content:space-between;">
-      <div><div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;">Hiper Puan Bakiyesi</div>
-      <div style="font-family:Manrope;font-size:26px;font-weight:800;">${hiperPuan.kalan}</div></div>
+      <div><div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;">Adaptix Puan Bakiyesi</div>
+      <div style="font-family:Manrope;font-size:26px;font-weight:800;">${adaptixPuan.kalan}</div></div>
       <div style="font-size:36px;">⭐</div>
     </div>
     ${(alinanOduller||[]).length ? `

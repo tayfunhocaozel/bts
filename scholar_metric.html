@@ -1432,6 +1432,13 @@ function odevGecikti(o) {
     && o?.verilis_tarihi && o.verilis_tarihi < bugunISO();
 }
 
+// Bekleyen ödev listelerinin ekran sırası: önce gecikmişler (en acil),
+// sonra herkes verilis_tarihi'ne göre ARTAN (bugün → yarın → ...).
+function odevSirala(a, b) {
+  return (odevGecikti(b) ? 1 : 0) - (odevGecikti(a) ? 1 : 0)
+    || String(a?.verilis_tarihi || '').localeCompare(String(b?.verilis_tarihi || ''));
+}
+
 function odevTarihGoster(iso) {
   if (!iso) return '';
   const d = new Date(iso + 'T00:00:00');
@@ -1861,7 +1868,7 @@ async function loadDashboard() {
   if (!bekleyen.length) {
     el.innerHTML = '<div class="text-tertiary text-sm font-semibold py-2">🎉 Bekleyen ödev yok!</div>';
   } else {
-    const siraliBekleyen = [...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0));
+    const siraliBekleyen = [...bekleyen].sort(odevSirala);
     el.innerHTML =
       (gecikmisSayisi > 0 ? `<div class="text-xs font-bold text-error mb-2">⚠️ ${gecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>` : '') +
       siraliBekleyen.slice(0,5).map(o => `
@@ -3310,7 +3317,7 @@ function renderOgrGirOdevListesi() {
           style="background:#e6f4ea;color:#075e2e;border:1px solid #b7ddc4;">📲 Veliyi Tek Mesajla Uyar</button>
       </div>` : ''}
       <div class="divide-y divide-outline-variant/20">
-        ${[...bekleyenler].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o => `
+        ${[...bekleyenler].sort(odevSirala).map(o => `
           <div class="py-3">
             <div class="flex items-start justify-between gap-2 mb-2">
               <div class="flex-1 min-w-0">
@@ -3495,7 +3502,7 @@ async function acBekleyenModal() {
   state.ogrenciler.forEach(o => { ogrMap[o.ogrenci_id] = o.ad_soyad; });
 
   const gecikmisSayisi = odevler.filter(odevGecikti).length;
-  const siraliOdevler = [...odevler].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0));
+  const siraliOdevler = [...odevler].sort(odevSirala);
   const uyariHTML = gecikmisSayisi > 0
     ? `<div class="mx-4 mt-3 mb-1 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold">⚠️ ${gecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>`
     : '';
@@ -6148,7 +6155,7 @@ async function loadOgrenciPanel() {
   const belEl = document.getElementById('bekleyen-toggle-liste');
   belEl.innerHTML = bekleyen.length ? `
     <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
-      ${[...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o => `
+      ${[...bekleyen].sort(odevSirala).map(o => `
         <div class="px-4 py-3 border-b border-outline-variant/15 last:border-0">
           <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
           <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
@@ -6175,7 +6182,7 @@ async function loadOgrenciPanel() {
           <span class="text-xs font-bold bg-error/10 text-error px-2 py-0.5 rounded-full">${bekleyen.length}</span>
         </div>
         ${ogrBekGecikmis > 0 ? `<div class="mx-5 mt-4 px-3 py-2 rounded-lg bg-error/10 text-error text-xs font-bold">⚠️ ${ogrBekGecikmis} ödevinin süresi geçti</div>` : ''}
-        ${[...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o => {
+        ${[...bekleyen].sort(odevSirala).map(o => {
           const oid = o.odev_id || o.id || '';
           return `
           <div class="border-b border-outline-variant/15 last:border-0">
@@ -6837,7 +6844,7 @@ async function loadVeliPanel() {
     </div>` : ''}
     <div class="bg-surface-container-lowest rounded-xl p-4 shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
       <div class="text-xs font-bold text-outline uppercase tracking-wider mb-3">📈 Son 5 Ödev Sonucu</div>
-      ${tamamlanan.slice(-5).reverse().map(o => {
+      ${tamamlanan.slice(0, 5).map(o => {
         const d=Number(o.dogru)||0, top=Number(o.toplam)||(d+(Number(o.yanlis)||0)+(Number(o.bos)||0));
         const pct=top>0?Math.round(d/top*100):0;
         const col=pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
@@ -6857,7 +6864,7 @@ async function loadVeliPanel() {
         <span class="font-headline font-bold text-error text-sm">⏳ Bekleyen</span>
         <span class="text-xs font-bold bg-error/10 text-error px-2 py-0.5 rounded-full">${bekleyen.length}</span>
       </div>
-      ${[...bekleyen].sort((a,b) => (odevGecikti(b)?1:0) - (odevGecikti(a)?1:0)).map(o=>`
+      ${[...bekleyen].sort(odevSirala).map(o=>`
         <div class="px-5 py-3 border-b border-outline-variant/10 last:border-0 flex items-start gap-3">
           <div class="w-2 h-2 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
           <div><div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>

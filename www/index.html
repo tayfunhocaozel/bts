@@ -264,6 +264,23 @@ tailwind.config = {
   @keyframes adaDot { 0%,60%,100%{opacity:.2;transform:scale(.9)} 30%{opacity:1;transform:scale(1.1)} }
   #ada-mesajlar::-webkit-scrollbar { width: 4px; }
   #ada-mesajlar::-webkit-scrollbar-thumb { background: #cce5ff; border-radius: 4px; }
+
+  /* ── Evcil Hayvan ─────────────────────────────────────────── */
+  .pet-action-btn { opacity:.4; pointer-events:none; transition:opacity .2s, transform .15s; cursor:pointer; border:none; background:rgba(255,255,255,.16); color:#fff; width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; position:relative; }
+  .pet-action-btn.is-active { opacity:1; pointer-events:auto; }
+  .pet-action-btn.is-active:active { transform:scale(.9); }
+  .pet-gecikme-badge { position:absolute; top:-5px; right:-5px; background:#ba1a1a; color:#fff; border-radius:999px; font-size:10px; padding:1px 5px; font-weight:700; line-height:1.4; }
+  .pet-ekstra-badge { position:absolute; top:-7px; right:-9px; background:#feb223; color:#141d22; border-radius:999px; font-size:9px; padding:1px 4px; font-weight:700; white-space:nowrap; }
+  .pet-avatar { width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center; font-size:30px; cursor:pointer; flex-shrink:0; }
+  .pet-secim-kart { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 4px; border-radius:12px; border:1.5px solid var(--outline-variant,#e2e8ec); cursor:pointer; transition:border-color .15s, background .15s; background:transparent; }
+  .pet-secim-kart:hover { border-color:var(--primary,#005d8d); background:rgba(0,93,141,.06); }
+  .pet-secim-kart.secili { border-color:var(--primary,#005d8d); background:rgba(0,93,141,.1); }
+  .pet-secim-kart .emoji { font-size:26px; }
+  .pet-secim-kart .ad { font-size:10.5px; font-weight:600; text-align:center; line-height:1.2; }
+  .floating-puan-badge { position:fixed; font-weight:800; color:#feb223; font-size:15px; pointer-events:none; animation:floatUpFade 1.1s ease-out forwards; z-index:60; }
+  @keyframes floatUpFade { 0% { opacity:1; transform:translateY(0); } 100% { opacity:0; transform:translateY(-40px); } }
+  .pet-balloon { position:absolute; top:-8px; left:50%; transform:translate(-50%,-100%); background:#fff; color:#141d22; border-radius:12px; padding:9px 13px; box-shadow:0 4px 16px rgba(0,29,49,.18); font-size:12.5px; font-weight:600; white-space:normal; width:220px; z-index:20; text-align:center; }
+  .pet-balloon::after { content:''; position:absolute; bottom:-6px; left:50%; transform:translateX(-50%); width:12px; height:12px; background:#fff; rotate:45deg; }
 </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen">
@@ -605,6 +622,16 @@ tailwind.config = {
           <div><label class="lbl">Okul</label><input type="text" id="yeni-okul" placeholder="Okul adı" class="field"/></div>
           <div><label class="lbl">Okul No</label><input type="number" id="yeni-okulno" placeholder="145" class="field"/></div>
         </div>
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label class="lbl">Cinsiyet <span style="font-weight:400;">(opsiyonel — pet kataloğu filtrelemek için)</span></label>
+            <select id="yeni-cinsiyet" class="field">
+              <option value="">Belirtilmedi</option>
+              <option value="kiz">Kız</option>
+              <option value="erkek">Erkek</option>
+            </select>
+          </div>
+        </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <label class="lbl" style="margin:0;">Veliler *</label>
@@ -879,6 +906,28 @@ tailwind.config = {
         <button onclick="ogrTab('odul-dukkani')" class="btn" style="background:rgba(255,255,255,.18);color:#fff;">🎁 Dükkana Git</button>
       </div>
 
+      <!-- Evcil Hayvan -->
+      <div id="pet-panel-kart" class="card-2xl" style="padding:16px 20px;margin-bottom:16px;position:relative;">
+        <div style="display:flex;justify-content:center;padding:12px 0;"><div class="spinner"></div></div>
+      </div>
+      <div id="pet-secim-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div class="bg-surface rounded-2xl shadow-xl p-6 w-full max-w-lg flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+          <div class="font-headline font-bold text-lg text-on-surface">🐾 Bir Dost Edin</div>
+          <div>
+            <label class="text-xs font-semibold text-outline uppercase tracking-wider">İsim (en fazla 15 karakter)</label>
+            <input id="pet-secim-isim" type="text" maxlength="15" placeholder="Pamuk"
+              class="w-full mt-1 border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          <div id="pet-secim-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;max-height:320px;overflow-y-auto;"></div>
+          <div class="flex gap-2 justify-end mt-1">
+            <button onclick="document.getElementById('pet-secim-modal').classList.add('hidden')"
+              class="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">İptal</button>
+            <button onclick="petSahiplen()"
+              class="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/80 transition-colors">🐾 Sahiplen</button>
+          </div>
+        </div>
+      </div>
+
       <!-- LGS Geri Sayım (sadece 8. Sınıf) — JS controls with classList.hidden -->
       <div id="lgs-countdown-card" class="hidden card-2xl" style="padding:22px 24px;background:linear-gradient(135deg,#f57c00,#e96b00);color:#fff;border:none;margin-bottom:16px;position:relative;overflow:hidden;">
         <div style="position:absolute;right:-16px;bottom:-22px;opacity:.16;font-size:100px;" class="material-symbols-outlined">flag</div>
@@ -1118,6 +1167,37 @@ tailwind.config = {
         </select>
       </div>
       <div id="puan-yonetimi-content"></div>
+    </div>
+
+    <!-- ── PET AYARLARI (öğretmen) ───────────────────────────── -->
+    <div id="page-pet-ayarlari" class="page">
+      <div class="card-2xl" style="padding:22px 24px;max-width:520px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">pets</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Evcil Hayvan Ayarları</h2>
+        </div>
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div><label class="lbl">Acıkma Süresi (sa)</label><input type="number" min="1" id="pet-ayar-acikma" class="field"/></div>
+          <div><label class="lbl">Kirlenme Süresi (sa)</label><input type="number" min="1" id="pet-ayar-kirlenme" class="field"/></div>
+          <div><label class="lbl">Sevilme Süresi (sa)</label><input type="number" min="1" id="pet-ayar-sevilme" class="field"/></div>
+        </div>
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div><label class="lbl">Doyurma Puanı</label><input type="number" min="0" id="pet-ayar-puan-doyurma" class="field"/></div>
+          <div><label class="lbl">Temizleme Puanı</label><input type="number" min="0" id="pet-ayar-puan-temizleme" class="field"/></div>
+          <div><label class="lbl">Sevme Puanı</label><input type="number" min="0" id="pet-ayar-puan-sevme" class="field"/></div>
+        </div>
+        <div>
+          <label class="lbl">Başarı Ödül Eşiği (%) — bu oranın üzeri ekstra mama hakkı kazandırır</label>
+          <input type="number" min="1" max="100" id="pet-ayar-basari-esigi" class="field"/>
+        </div>
+        <div>
+          <label class="lbl">Günün Motivasyon Cümlesi</label>
+          <input type="text" id="pet-ayar-motivasyon" class="field" placeholder="Harika gidiyorsun, devam et!"/>
+        </div>
+        <button onclick="petAyarlariKaydet()" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px;">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
+        </button>
+      </div>
     </div>
 
     <!-- ── AdaptiX PANELİ ─────────────────────────────────────── -->
@@ -1643,6 +1723,7 @@ function buildNav() {
     { id: 'ada',          icon: 'smart_toy',      label: 'Ada' },
     { id: 'odul-dukkani',  icon: 'redeem', label: 'Ödül Dükkanı' },
     { id: 'puan-yonetimi', icon: 'stars',  label: 'Puan Yönetimi' },
+    { id: 'pet-ayarlari',  icon: 'pets',   label: 'Pet Ayarları' },
   ] : state.rol === 'adaptix' ? [
     { id: 'adaptix', icon: 'admin_panel_settings', label: 'Platform Yönetimi' },
   ] : state.rol === 'ogrenci' ? [
@@ -1682,6 +1763,7 @@ const PAGE_TITLES = {
   'ada':          ['Ada',           'Yapay zeka destekli öğrenci koçu'],
   'odul-dukkani':  ['Ödül Dükkanı', 'Ödül kataloğu ve talep yönetimi'],
   'puan-yonetimi': ['Puan Yönetimi', 'Öğrenci puan geçmişi ve manuel puan'],
+  'pet-ayarlari':  ['Pet Ayarları', 'Evcil hayvan süre ve puan ayarları'],
   'ogrenci-panel':['Öğrenci Paneli','Ödevler, dersler ve başarı'],
   'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
   'adaptix':      ['Platform Yönetimi', 'Öğretmenler, faturalar ve genel bakış'],
@@ -1700,6 +1782,7 @@ function goPage(id) {
   if (id === 'ada') adaSayfaAcildi();
   if (id === 'odul-dukkani')  loadOdulDukkani();
   if (id === 'puan-yonetimi') loadPuanYonetimi();
+  if (id === 'pet-ayarlari')  loadPetAyarlari();
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
   const hdrSub   = document.getElementById('hdr-sub');
@@ -2498,6 +2581,217 @@ async function kalanPuanHesapla(ogrenciId) {
   return { kazanilan, bloke, kalan: kazanilan - bloke };
 }
 
+// ── EVCİL HAYVAN — ORTAK FONKSİYONLAR ───────────────────────────
+async function petOgretmenAyarlariGetir(ogretmenId) {
+  const varsayilan = { acikma_suresi_sa:8, kirlenme_suresi_sa:12, sevilme_suresi_sa:6,
+    puan_doyurma:10, puan_temizleme:10, puan_sevme:15, basari_esigi:90,
+    gunun_motivasyonu:'Harika gidiyorsun, devam et!' };
+  if (!ogretmenId) return varsayilan;
+  const { data } = await sb.from('ogretmen_pet_ayarlari').select('*').eq('ogretmen_id', ogretmenId).maybeSingle();
+  return data || varsayilan;
+}
+
+function petKalanSaniye(sonISO, sureSaat) {
+  if (!sonISO) return 0;
+  const gecen = (Date.now() - new Date(sonISO).getTime()) / 1000;
+  return Math.max(0, (Number(sureSaat) || 0) * 3600 - gecen);
+}
+
+async function petKatalogYukle() {
+  if (!state._petKatalogCache) {
+    const { data } = await sb.from('pet_katalogu').select('*').order('ad');
+    state._petKatalogCache = data || [];
+  }
+  return state.user.cinsiyet
+    ? state._petKatalogCache.filter(p => p.cinsiyet_grubu === state.user.cinsiyet)
+    : state._petKatalogCache;
+}
+
+async function petPanelYukle() {
+  const kart = document.getElementById('pet-panel-kart');
+  if (!kart || state.rol !== 'ogrenci') return;
+
+  const { data: ogr } = await sb.from('ogrenciler')
+    .select('pet_tur,pet_isim,pet_puan,pet_son_doyurma,pet_son_temizleme,pet_son_sevme,pet_son_etkilesim,ekstra_mama_hakki,pet_terk_edildi,cinsiyet,ogretmen_id')
+    .eq('ogrenci_id', state.user.ogrenci_id).single();
+  if (!ogr) return;
+  Object.assign(state.user, ogr);
+
+  if (ogr.pet_terk_edildi) {
+    showToast(`💔 ${state.user.pet_isim || 'Dostun'} seni özledi ve başka bir yuva buldu. Yeni bir dost edinmek ister misin?`);
+    await sb.from('ogrenciler').update({ pet_isim: null, pet_terk_edildi: false }).eq('ogrenci_id', state.user.ogrenci_id);
+    ogr.pet_isim = null; ogr.pet_terk_edildi = false; state.user.pet_isim = null; state.user.pet_terk_edildi = false;
+  }
+
+  state._petAyar = await petOgretmenAyarlariGetir(ogr.ogretmen_id);
+
+  const { count: gecikmis } = await sb.from('odevler').select('*', { count: 'exact', head: true })
+    .eq('ogrenci_id', state.user.ogrenci_id).eq('durum', 'BEKLİYOR').lt('verilis_tarihi', bugunISO());
+  state._petGecikmis = gecikmis || 0;
+
+  if (!ogr.pet_tur || ogr.pet_tur === 'yok') {
+    kart.style.background = 'linear-gradient(135deg,#3fbf6b,#00661d)'; kart.style.color = '#fff';
+    kart.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.05em;">Evcil Hayvan</div>
+          <div style="font-size:13.5px;font-weight:600;margin-top:4px;">Henüz bir dostun yok — birini sahiplen!</div>
+        </div>
+        <button onclick="petSecimModalAc()" class="btn" style="background:rgba(255,255,255,.18);color:#fff;flex-shrink:0;">🐾 Sahiplen</button>
+      </div>`;
+    return;
+  }
+
+  const katalog = await petKatalogYukle();
+  const emoji = (state._petKatalogCache || []).find(p => p.pet_id === ogr.pet_tur)?.emoji || '🐾';
+
+  const kalanDoyurma   = petKalanSaniye(ogr.pet_son_doyurma,   state._petAyar.acikma_suresi_sa);
+  const kalanTemizleme = petKalanSaniye(ogr.pet_son_temizleme, state._petAyar.kirlenme_suresi_sa);
+  const kalanSevme     = petKalanSaniye(ogr.pet_son_sevme,     state._petAyar.sevilme_suresi_sa);
+  const doyurAktif   = kalanDoyurma <= 0 || ogr.ekstra_mama_hakki > 0;
+  const temizleAktif = kalanTemizleme <= 0;
+  const sevAktif     = kalanSevme <= 0;
+
+  kart.style.background = 'linear-gradient(135deg,#00661d,#013a10)'; kart.style.color = '#fff';
+  kart.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="pet-avatar" onclick="petMotivasyonGoster()">${emoji}${state._petGecikmis > 0 ? `<span class="pet-gecikme-badge">${state._petGecikmis}</span>` : ''}</div>
+      <div style="flex:1;min-width:90px;">
+        <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.05em;">Evcil Hayvanın</div>
+        <div style="font-family:Manrope;font-size:17px;font-weight:800;">${ogr.pet_isim || '—'}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="pet-btn-doyurma" class="pet-action-btn ${doyurAktif ? 'is-active' : ''}" onclick="petDoyur()" title="Doyur">🥣${ogr.ekstra_mama_hakki > 0 ? `<span class="pet-ekstra-badge">✨×${ogr.ekstra_mama_hakki}</span>` : ''}</button>
+        <button id="pet-btn-temizleme" class="pet-action-btn ${temizleAktif ? 'is-active' : ''}" onclick="petTemizle()" title="Temizle">💩</button>
+        <button id="pet-btn-sevme" class="pet-action-btn ${sevAktif ? 'is-active' : ''}" onclick="petSev()" title="Sev">❤️</button>
+      </div>
+    </div>
+    <div id="pet-konusma-balonu" class="pet-balloon hidden"></div>`;
+}
+
+function petBalonGoster(mesaj, gecikmeUyarisiMi) {
+  const balon = document.getElementById('pet-konusma-balonu');
+  if (!balon) return;
+  balon.innerHTML = mesaj + (gecikmeUyarisiMi
+    ? `<span onclick="event.stopPropagation();ogrTab('odevler');document.getElementById('pet-konusma-balonu').classList.add('hidden')" style="display:block;margin-top:6px;color:#005d8d;font-weight:800;cursor:pointer;text-decoration:underline;">Ödevlerimi Görüntüle</span>`
+    : '');
+  balon.classList.remove('hidden');
+  clearTimeout(balon._timer);
+  balon._timer = setTimeout(() => balon.classList.add('hidden'), gecikmeUyarisiMi ? 5000 : 6000);
+}
+function petMotivasyonGoster() {
+  petBalonGoster((state._petAyar && state._petAyar.gunun_motivasyonu) || 'Harika gidiyorsun, devam et!', false);
+}
+
+async function petAksiyonYap(tur) {
+  if (state._petGecikmis > 0) {
+    petBalonGoster(`Gecikmiş ${state._petGecikmis} ödevine öncelik vermeye ne dersin?`, true);
+    return;
+  }
+  const btn = document.getElementById('pet-btn-' + tur);
+  if (btn) btn.style.opacity = '.6';
+  const { data, error } = await sb.rpc('pet_ihtiyac_gider', { p_ogrenci_id: state.user.ogrenci_id, p_tur: tur });
+  const sonuc = Array.isArray(data) ? data[0] : data;
+  if (error || !sonuc?.basarili) { showToast('❌ ' + (sonuc?.mesaj || error?.message)); if (btn) btn.style.opacity = ''; return; }
+  showToast('✅ ' + sonuc.mesaj);
+  if (btn && sonuc.kazanilan_puan) ucanPuanGoster(btn, sonuc.kazanilan_puan);
+  petPanelYukle();
+}
+function petDoyur()   { petAksiyonYap('doyurma'); }
+function petTemizle() { petAksiyonYap('temizleme'); }
+function petSev()     { petAksiyonYap('sevme'); }
+
+function ucanPuanGoster(btnEl, puan) {
+  if (!btnEl) return;
+  const rozet = document.createElement('div');
+  rozet.className = 'floating-puan-badge';
+  rozet.textContent = `+${puan}`;
+  const rect = btnEl.getBoundingClientRect();
+  rozet.style.left = (rect.left + rect.width / 2 - 10) + 'px';
+  rozet.style.top = rect.top + 'px';
+  document.body.appendChild(rozet);
+  setTimeout(() => rozet.remove(), 1100);
+}
+
+async function guncellePetGecikmeRozeti() {
+  if (!state.user?.ogrenci_id || !state.user.pet_tur || state.user.pet_tur === 'yok') return;
+  const { count } = await sb.from('odevler').select('*', { count: 'exact', head: true })
+    .eq('ogrenci_id', state.user.ogrenci_id).eq('durum', 'BEKLİYOR').lt('verilis_tarihi', bugunISO());
+  state._petGecikmis = count || 0;
+  const avatar = document.querySelector('#pet-panel-kart .pet-avatar');
+  if (!avatar) return;
+  const mevcutBadge = avatar.querySelector('.pet-gecikme-badge');
+  if (state._petGecikmis > 0) {
+    if (mevcutBadge) mevcutBadge.textContent = state._petGecikmis;
+    else avatar.insertAdjacentHTML('beforeend', `<span class="pet-gecikme-badge">${state._petGecikmis}</span>`);
+  } else if (mevcutBadge) mevcutBadge.remove();
+}
+
+function petSecimModalAc() {
+  const modal = document.getElementById('pet-secim-modal');
+  document.getElementById('pet-secim-isim').value = '';
+  state._petSeciliId = null;
+  const grid = document.getElementById('pet-secim-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:16px 0;"><div class="spinner"></div></div>';
+  modal.classList.remove('hidden');
+  petKatalogYukle().then(katalog => {
+    grid.innerHTML = katalog.map(p => `
+      <div class="pet-secim-kart" data-pet-id="${p.pet_id}" onclick="petKatalogSec('${p.pet_id}')">
+        <span class="emoji">${p.emoji}</span><span class="ad">${p.ad}</span>
+      </div>`).join('');
+  });
+}
+function petKatalogSec(petId) {
+  state._petSeciliId = petId;
+  document.querySelectorAll('#pet-secim-grid .pet-secim-kart').forEach(el =>
+    el.classList.toggle('secili', el.dataset.petId === petId));
+}
+async function petSahiplen() {
+  const isim = document.getElementById('pet-secim-isim').value.trim();
+  if (!isim) { showToast('⚠️ İsim zorunlu'); return; }
+  if (isim.length > 15) { showToast('⚠️ İsim en fazla 15 karakter olabilir'); return; }
+  if (!state._petSeciliId) { showToast('⚠️ Bir hayvan seç'); return; }
+  const su_an = new Date().toISOString();
+  const { error } = await sb.from('ogrenciler').update({
+    pet_tur: state._petSeciliId, pet_isim: isim, pet_edinme_tarihi: su_an,
+    pet_son_doyurma: su_an, pet_son_temizleme: su_an, pet_son_sevme: su_an, pet_son_etkilesim: su_an
+  }).eq('ogrenci_id', state.user.ogrenci_id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  document.getElementById('pet-secim-modal').classList.add('hidden');
+  showToast(`✅ ${isim} artık senin dostun!`);
+  petPanelYukle();
+}
+
+// ── EVCİL HAYVAN — ÖĞRETMEN AYARLARI ────────────────────────────
+async function loadPetAyarlari() {
+  const ayar = await petOgretmenAyarlariGetir(state.ogretmen_id);
+  document.getElementById('pet-ayar-acikma').value        = ayar.acikma_suresi_sa;
+  document.getElementById('pet-ayar-kirlenme').value      = ayar.kirlenme_suresi_sa;
+  document.getElementById('pet-ayar-sevilme').value       = ayar.sevilme_suresi_sa;
+  document.getElementById('pet-ayar-puan-doyurma').value  = ayar.puan_doyurma;
+  document.getElementById('pet-ayar-puan-temizleme').value= ayar.puan_temizleme;
+  document.getElementById('pet-ayar-puan-sevme').value    = ayar.puan_sevme;
+  document.getElementById('pet-ayar-basari-esigi').value  = ayar.basari_esigi;
+  document.getElementById('pet-ayar-motivasyon').value    = ayar.gunun_motivasyonu;
+}
+async function petAyarlariKaydet() {
+  const payload = {
+    ogretmen_id:        state.ogretmen_id,
+    acikma_suresi_sa:   Number(document.getElementById('pet-ayar-acikma').value) || 8,
+    kirlenme_suresi_sa: Number(document.getElementById('pet-ayar-kirlenme').value) || 12,
+    sevilme_suresi_sa:  Number(document.getElementById('pet-ayar-sevilme').value) || 6,
+    puan_doyurma:       Number(document.getElementById('pet-ayar-puan-doyurma').value) || 0,
+    puan_temizleme:     Number(document.getElementById('pet-ayar-puan-temizleme').value) || 0,
+    puan_sevme:         Number(document.getElementById('pet-ayar-puan-sevme').value) || 0,
+    basari_esigi:       Number(document.getElementById('pet-ayar-basari-esigi').value) || 90,
+    gunun_motivasyonu:  document.getElementById('pet-ayar-motivasyon').value.trim() || 'Harika gidiyorsun, devam et!',
+  };
+  const { error } = await sb.from('ogretmen_pet_ayarlari').upsert(payload);
+  if (error) { showToast('❌ ' + error.message); return; }
+  state._petAyar = null;
+  showToast('✅ Pet ayarları güncellendi');
+}
+
 async function ogretmenBilgisiYukle(ogretmenId) {
   if (!ogretmenId) return;
   const { data } = await sb.from('ogretmenler').select('*').eq('ogretmen_id', ogretmenId).single();
@@ -2521,6 +2815,32 @@ async function odevTamamlandiPuanIsle(odev) {
     if (deneme) await puanEkleDeneme(deneme.deneme_id, odev.ogrenci_id, odev.ogretmen_id, deneme.net);
   }
   await puanEkleOdevTamamlandi(odev);
+  await petBasariBildirimIsle(odev);
+}
+
+// Ödev %90+ (öğretmen ayarlanabilir eşik) başarıyla tamamlandıysa ekstra mama hakkı;
+// gecikmiş ödev kalmadıysa "artık beslenebilir" bildirimi. Pet sahibi değilse atlanır.
+async function petBasariBildirimIsle(odev) {
+  const { data: ogr } = await sb.from('ogrenciler').select('pet_tur, pet_isim').eq('ogrenci_id', odev.ogrenci_id).single();
+  if (!ogr || !ogr.pet_tur || ogr.pet_tur === 'yok') return;
+
+  const top = Number(odev.toplam) || 0, dogru = Number(odev.dogru) || 0;
+  const basariYuzde = top > 0 ? Math.round(dogru / top * 100) : 0;
+  const ayar = await petOgretmenAyarlariGetir(odev.ogretmen_id);
+  const buOgrenciMi = state.user?.ogrenci_id === odev.ogrenci_id;
+
+  if (top > 0 && basariYuzde >= (ayar.basari_esigi || 90)) {
+    await sb.rpc('ekstra_mama_hakki_ekle', { p_ogrenci_id: odev.ogrenci_id, p_miktar: 1 });
+    if (buOgrenciMi) showToast(`🌟 Harika bir sonuç! ${ogr.pet_isim || 'Dostun'} için ekstra mama hakkı kazandın!`);
+  }
+
+  const { count: kalanGecikmis } = await sb.from('odevler').select('*', { count: 'exact', head: true })
+    .eq('ogrenci_id', odev.ogrenci_id).eq('durum', 'BEKLİYOR').lt('verilis_tarihi', bugunISO());
+
+  if (buOgrenciMi) {
+    await guncellePetGecikmeRozeti();
+    if (!kalanGecikmis) showToast(`🎉 Artık ${ogr.pet_isim || 'dostun'} beslenebilir!`);
+  }
 }
 
 function talepDurumBadgeStyle(durum) {
@@ -3382,6 +3702,7 @@ async function ogrenciDuzenle(id) {
   m.querySelector('#od-okul').value   = o.okul     || '';
   m.querySelector('#od-tc').value     = o.tc_no    || '';
   m.querySelector('#od-okulno').value = o.okul_no  || '';
+  m.querySelector('#od-cinsiyet').value = o.cinsiyet || '';
   m.classList.remove('hidden');
   m.querySelector('#od-ad').focus();
   const container = document.getElementById('od-veli-container');
@@ -3406,6 +3727,7 @@ async function ogrenciDuzenleKaydet() {
     okul:     m.querySelector('#od-okul').value.trim(),
     tc_no:    m.querySelector('#od-tc').value.trim(),
     okul_no:  m.querySelector('#od-okulno').value.trim(),
+    cinsiyet: m.querySelector('#od-cinsiyet').value || null,
   };
   m.classList.add('hidden');
   showToast('Kaydediliyor...');
@@ -3487,11 +3809,12 @@ async function ogrenciEkle() {
   const sube   = document.getElementById('yeni-sube').value.trim();
   const okul   = document.getElementById('yeni-okul').value.trim();
   const okulno = document.getElementById('yeni-okulno').value;
+  const cinsiyet = document.getElementById('yeni-cinsiyet').value || null;
 
   showToast('Kaydediliyor...');
 
   const { data: eklenen, error } = await sb.from('ogrenciler').insert({
-    ad_soyad: ad, sinif, sube, okul,
+    ad_soyad: ad, sinif, sube, okul, cinsiyet,
     tc_no: tc, okul_no: okulno, kayit_durumu: 'AKTİF', ogretmen_id: state.ogretmen_id
   }).select('ogrenci_id').single();
   if (error) { showToast('❌ ' + error.message); return; }
@@ -3506,6 +3829,7 @@ async function ogrenciEkle() {
   fillSelects();
   renderOgrenciler();
   ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('yeni-cinsiyet').value = '';
   document.getElementById('yeni-veli-container').innerHTML = veliSatirHTML('Anne', '', '');
 }
 
@@ -5784,6 +6108,12 @@ async function loadOgrenciPanel() {
     const el = document.getElementById('ogr-hiper-puan-bakiye');
     if (el) el.textContent = r.kalan;
   });
+
+  petPanelYukle();
+  clearInterval(state._petYenileInterval);
+  state._petYenileInterval = setInterval(() => {
+    if (document.getElementById('page-ogrenci-panel')?.classList.contains('active')) petPanelYukle();
+  }, 60000);
 
   // Motivasyon
   const [msg, kaynak] = gunlukMotivasyon(state.user.sinif, state.ogretmen?.brans);
@@ -8488,6 +8818,14 @@ function showToast(msg) {
           <label class="text-xs font-semibold text-outline uppercase tracking-wider">Okul No</label>
           <input id="od-okulno" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
         </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Cinsiyet (opsiyonel)</label>
+        <select id="od-cinsiyet" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+          <option value="">Belirtilmedi</option>
+          <option value="kiz">Kız</option>
+          <option value="erkek">Erkek</option>
+        </select>
       </div>
       <div class="flex flex-col gap-1">
         <div class="flex items-center justify-between">

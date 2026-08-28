@@ -6497,7 +6497,6 @@ async function loadOgrDersler() {
   let _derslerQuery = sb.from('dersler')
     .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
     .eq('ogrenci_id', state.user.ogrenci_id);
-  if (state.brans) _derslerQuery = _derslerQuery.eq('ders', state.brans);
   const { data: dersler } = await _derslerQuery.order('tarih', { ascending: false });
 
   if (!dersler || !dersler.length) {
@@ -6704,7 +6703,6 @@ async function loadVeliPanel() {
   let _veliDersQ = sb.from('dersler')
     .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
     .eq('ogrenci_id', u.ogrenci_id);
-  if (state.brans) _veliDersQ = _veliDersQ.eq('ders', state.brans);
   _veliDersQ = _veliDersQ.order('tarih', { ascending: false });
 
   const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }, hiperPuan, { data: alinanOduller }] = await Promise.all([

@@ -870,6 +870,15 @@ tailwind.config = {
         <p style="font-size:13.5px;opacity:.8;margin:4px 0 0;position:relative;" id="ogr-welcome-sinif">—</p>
       </div>
 
+      <!-- Hiper Puan Bakiyesi -->
+      <div class="card-2xl" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#6b3fa0,#43265f);color:#fff;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.05em;">Hiper Puan Bakiyen</div>
+          <div style="font-family:Manrope;font-size:28px;font-weight:800;" id="ogr-hiper-puan-bakiye">—</div>
+        </div>
+        <button onclick="ogrTab('odul-dukkani')" class="btn" style="background:rgba(255,255,255,.18);color:#fff;">🎁 Dükkana Git</button>
+      </div>
+
       <!-- LGS Geri Sayım (sadece 8. Sınıf) — JS controls with classList.hidden -->
       <div id="lgs-countdown-card" class="hidden card-2xl" style="padding:22px 24px;background:linear-gradient(135deg,#f57c00,#e96b00);color:#fff;border:none;margin-bottom:16px;position:relative;overflow:hidden;">
         <div style="position:absolute;right:-16px;bottom:-22px;opacity:.16;font-size:100px;" class="material-symbols-outlined">flag</div>
@@ -930,6 +939,8 @@ tailwind.config = {
         <button onclick="ogrTab('denemeler')" id="tab-denemeler" class="tab">Denemeler</button>
         <button onclick="ogrTab('dersler')" id="tab-dersler" class="tab">Derslerim</button>
         <button onclick="ogrTab('basari')" id="tab-basari" class="tab">Başarım</button>
+        <button onclick="ogrTab('odul-dukkani')" id="tab-odul-dukkani" class="tab">🎁 Ödül Dükkanı</button>
+        <button onclick="ogrTab('puan-gecmisim')" id="tab-puan-gecmisim" class="tab">⭐ Puan Geçmişim</button>
       </div>
 
       <div id="ogr-tab-odevler">
@@ -974,6 +985,12 @@ tailwind.config = {
       </div>
       <div id="ogr-tab-basari" class="hidden">
         <div id="ogr-basari-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
+      </div>
+      <div id="ogr-tab-odul-dukkani" class="hidden">
+        <div id="ogr-odul-dukkani-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
+      </div>
+      <div id="ogr-tab-puan-gecmisim" class="hidden">
+        <div id="ogr-puan-gecmisim-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -1065,6 +1082,42 @@ tailwind.config = {
           <span class="material-symbols-outlined" style="font-size:20px;">send</span>
         </button>
       </div>
+    </div>
+
+    <!-- ── ÖDÜL DÜKKANI (öğretmen) ────────────────────────────── -->
+    <div id="page-odul-dukkani" class="page">
+      <div class="card-2xl" style="padding:16px 18px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button id="odul-dukkan-toggle-btn" onclick="dukkanDurumuDegistir()" class="btn" style="font-weight:700;"></button>
+          <span style="font-size:12.5px;color:var(--ink-soft);">Dükkan kapalıyken öğrenciler ödül kataloğuna erişemez.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <label style="font-size:12.5px;font-weight:600;color:var(--ink-soft);">Deneme Puan Çarpanı</label>
+          <input type="number" id="deneme-carpani-input" class="field" style="width:80px;" step="0.5" min="0"
+                 onchange="denemePuanCarpaniKaydet(this.value)">
+        </div>
+        <button onclick="odulModalAc()" class="btn btn-primary"><span class="material-symbols-outlined" style="font-size:18px;vertical-align:-4px;">add</span> Ödül Ekle</button>
+      </div>
+
+      <div id="odul-katalog-grid" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:24px;">
+        <div style="display:flex;justify-content:center;padding:24px 0;grid-column:1/-1;"><div class="spinner"></div></div>
+      </div>
+
+      <h3 style="font-family:Manrope;font-weight:800;font-size:15px;margin:0 0 10px;">Bekleyen Talepler</h3>
+      <div id="odul-bekleyen-talepler"><div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div></div>
+
+      <h3 style="font-family:Manrope;font-weight:800;font-size:15px;margin:24px 0 10px;">Geçmiş Talepler</h3>
+      <div id="odul-gecmis-talepler"><div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- ── PUAN YÖNETİMİ (öğretmen) ──────────────────────────── -->
+    <div id="page-puan-yonetimi" class="page">
+      <div class="card-2xl" style="padding:16px 18px;margin-bottom:16px;">
+        <select id="puan-yonetimi-ogrenci" class="field" onchange="loadPuanYonetimiOgrenci(this.value)" style="max-width:280px;">
+          <option value="">— Öğrenci seçin —</option>
+        </select>
+      </div>
+      <div id="puan-yonetimi-content"></div>
     </div>
 
     <!-- ── AdaptiX PANELİ ─────────────────────────────────────── -->
@@ -1534,9 +1587,11 @@ async function initApp() {
     goPage('adaptix');
     loadAdaptixDashboard();
   } else if (state.rol === 'ogrenci') {
+    await ogretmenBilgisiYukle(state.user.ogretmen_id);
     goPage('ogrenci-panel');
     loadOgrenciPanel();
   } else {
+    await ogretmenBilgisiYukle(state.user.ogretmen_id);
     goPage('veli-panel');
     loadVeliPanel();
   }
@@ -1586,6 +1641,8 @@ function buildNav() {
     { id: 'ders-programi', icon: 'calendar_month', label: 'Ders Programı' },
     { id: 'rapor',        icon: 'analytics',      label: 'Rapor' },
     { id: 'ada',          icon: 'smart_toy',      label: 'Ada' },
+    { id: 'odul-dukkani',  icon: 'redeem', label: 'Ödül Dükkanı' },
+    { id: 'puan-yonetimi', icon: 'stars',  label: 'Puan Yönetimi' },
   ] : state.rol === 'adaptix' ? [
     { id: 'adaptix', icon: 'admin_panel_settings', label: 'Platform Yönetimi' },
   ] : state.rol === 'ogrenci' ? [
@@ -1623,6 +1680,8 @@ const PAGE_TITLES = {
   'ders-programi':['Ders Programı', 'Haftalık ders takvimi'],
   'rapor':        ['Rapor',         'Öğrenci performans raporu'],
   'ada':          ['Ada',           'Yapay zeka destekli öğrenci koçu'],
+  'odul-dukkani':  ['Ödül Dükkanı', 'Ödül kataloğu ve talep yönetimi'],
+  'puan-yonetimi': ['Puan Yönetimi', 'Öğrenci puan geçmişi ve manuel puan'],
   'ogrenci-panel':['Öğrenci Paneli','Ödevler, dersler ve başarı'],
   'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
   'adaptix':      ['Platform Yönetimi', 'Öğretmenler, faturalar ve genel bakış'],
@@ -1639,6 +1698,8 @@ function goPage(id) {
   if (id === 'ders-programi') loadHaftalikProgram();
   if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = yerelISO(new Date()); }
   if (id === 'ada') adaSayfaAcildi();
+  if (id === 'odul-dukkani')  loadOdulDukkani();
+  if (id === 'puan-yonetimi') loadPuanYonetimi();
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
   const hdrSub   = document.getElementById('hdr-sub');
@@ -2363,6 +2424,404 @@ async function odevDenemeSenkronla(odev) {
   }
 }
 
+// ── HİPER PUAN — ORTAK FONKSİYONLAR ─────────────────────────────
+function puanHesaplaOdev(dogru, toplam) {
+  const top = Number(toplam) || 0, d = Number(dogru) || 0;
+  if (top <= 0) return 10;
+  const pct = Math.round(d / top * 100);
+  if (pct >= 80) return 30;
+  if (pct >= 60) return 20;
+  return 10;
+}
+
+// Öğretmen tarafında state.kaynaklar (senkron), öğrenci tarafında DB fallback (async)
+async function odevKaynakDenemeMi(odev) {
+  if (!odev || !odev.kaynak) return false;
+  if (Array.isArray(state.kaynaklar) && state.kaynaklar.length) {
+    const k = state.kaynaklar.find(x => x.kaynak_adi === odev.kaynak);
+    if (k) return k.tur === 'Deneme';
+  }
+  const { data } = await sb.from('kaynaklar').select('tur').eq('kaynak_adi', odev.kaynak).maybeSingle();
+  return data?.tur === 'Deneme';
+}
+
+// kaynak_id+tur için ledger'daki mevcut net toplamla hedef arasındaki FARKI kaydeder.
+// fark=0 ise hiçbir şey yazmaz (tekillik garantisi); hedef=0 otomatik "ters kayıt" üretir (iptal senaryosu).
+async function _puanFarkiUygula(ogrenciId, ogretmenId, tur, kaynakId, hedefPuan, aciklama) {
+  const { data: satirlar } = await sb.from('puan_hareketleri')
+    .select('puan').eq('kaynak_id', kaynakId).eq('tur', tur).eq('ogrenci_id', ogrenciId);
+  const mevcut = (satirlar || []).reduce((s, r) => s + (r.puan || 0), 0);
+  const fark = hedefPuan - mevcut;
+  if (fark === 0) return;
+  await sb.from('puan_hareketleri').insert({ ogrenci_id: ogrenciId, ogretmen_id: ogretmenId, tur, kaynak_id: kaynakId, puan: fark, aciklama });
+}
+
+async function puanEkleOdevTamamlandi(odev) {
+  const isDeneme = await odevKaynakDenemeMi(odev);
+  if (isDeneme) {
+    await _puanFarkiUygula(odev.ogrenci_id, odev.ogretmen_id, 'odev', odev.odev_id, 0, 'Deneme kaynaklı ödev — puan deneme kaydı üzerinden veriliyor');
+    return;
+  }
+  const hedef = odev.durum === 'TAMAMLANDI' ? puanHesaplaOdev(odev.dogru, odev.toplam) : 0;
+  await _puanFarkiUygula(odev.ogrenci_id, odev.ogretmen_id, 'odev', odev.odev_id, hedef,
+    odev.durum === 'TAMAMLANDI' ? 'Ödev tamamlandı' : 'Ödev tamamlanma durumu geri alındı');
+}
+
+async function puanEkleDeneme(denemeId, ogrenciId, ogretmenId, net) {
+  let carpan = 2;
+  if (state.ogretmen?.ogretmen_id === ogretmenId && state.ogretmen.deneme_puan_carpani != null) {
+    carpan = Number(state.ogretmen.deneme_puan_carpani);
+  } else {
+    const { data } = await sb.from('ogretmenler').select('deneme_puan_carpani').eq('ogretmen_id', ogretmenId).single();
+    carpan = Number(data?.deneme_puan_carpani) || 2;
+  }
+  const hedef = Math.round(Math.max(Number(net) || 0, 0) * carpan);
+  await _puanFarkiUygula(ogrenciId, ogretmenId, 'deneme', denemeId, hedef, 'Deneme sonucu puanı');
+}
+
+async function puanIptalDeneme(denemeId, ogrenciId, ogretmenId) {
+  await _puanFarkiUygula(ogrenciId, ogretmenId, 'deneme', denemeId, 0, 'Deneme kaydı silindi — puan geri alındı');
+}
+
+async function puanManuelEkle(ogrenciId, ogretmenId, puan, aciklama) {
+  if (!aciklama || !aciklama.trim()) throw new Error('Açıklama zorunlu');
+  await sb.from('puan_hareketleri').insert({ ogrenci_id: ogrenciId, ogretmen_id: ogretmenId, tur: 'manuel', kaynak_id: null, puan: Math.round(Number(puan) || 0), aciklama: aciklama.trim() });
+}
+
+async function kalanPuanHesapla(ogrenciId) {
+  const [{ data: hareketler }, { data: talepler }] = await Promise.all([
+    sb.from('puan_hareketleri').select('puan').eq('ogrenci_id', ogrenciId),
+    sb.from('odul_talepleri').select('puan').eq('ogrenci_id', ogrenciId).in('durum', [0, 1]),
+  ]);
+  const kazanilan = (hareketler || []).reduce((s, r) => s + (r.puan || 0), 0);
+  const bloke     = (talepler   || []).reduce((s, r) => s + (r.puan || 0), 0);
+  return { kazanilan, bloke, kalan: kazanilan - bloke };
+}
+
+async function ogretmenBilgisiYukle(ogretmenId) {
+  if (!ogretmenId) return;
+  const { data } = await sb.from('ogretmenler').select('*').eq('ogretmen_id', ogretmenId).single();
+  if (data) { state.ogretmen = data; state.ogretmen_id = data.ogretmen_id; state.brans = data.brans; }
+}
+
+// TEK ORKESTRATÖR — odevDenemeSenkronla + puan tetiklemeyi birleştirir.
+// Tüm TAMAMLANDI enjeksiyon noktaları odevDenemeSenkronla'yı DOĞRUDAN değil, bunu çağırır.
+async function odevTamamlandiPuanIsle(odev) {
+  if (odev.durum !== 'TAMAMLANDI') {
+    // Silinecek deneme kaydı varsa puanını önce iptal et (sonra odevDenemeSenkronla kaydı siler)
+    const { data: eskiDeneme } = await sb.from('denemeler').select('deneme_id').eq('odev_id', odev.odev_id).maybeSingle();
+    if (eskiDeneme) await puanIptalDeneme(eskiDeneme.deneme_id, odev.ogrenci_id, odev.ogretmen_id);
+    await odevDenemeSenkronla(odev);
+    await puanEkleOdevTamamlandi(odev);
+    return;
+  }
+  await odevDenemeSenkronla(odev);
+  if (await odevKaynakDenemeMi(odev)) {
+    const { data: deneme } = await sb.from('denemeler').select('deneme_id, net').eq('odev_id', odev.odev_id).maybeSingle();
+    if (deneme) await puanEkleDeneme(deneme.deneme_id, odev.ogrenci_id, odev.ogretmen_id, deneme.net);
+  }
+  await puanEkleOdevTamamlandi(odev);
+}
+
+function talepDurumBadgeStyle(durum) {
+  return durum === 0 ? 'background:#feb223;color:#805600;'
+       : durum === 1 ? 'background:#008228;color:#ffffff;'
+       : 'background:#ffdad6;color:#ba1a1a;';
+}
+function talepDurumEtiket(durum) {
+  return durum === 0 ? '⏳ Bekliyor' : durum === 1 ? '✅ Onaylandı' : '❌ Reddedildi';
+}
+
+const ODUL_TEMALARI = {
+  lacivert: 'linear-gradient(135deg,#005d8d,#013149)', okyanus: 'linear-gradient(135deg,#0d76b1,#005d8d)',
+  gokyuzu:  'linear-gradient(135deg,#4fa8dd,#0d76b1)', zumrut:  'linear-gradient(135deg,#00661d,#013a10)',
+  yesil:    'linear-gradient(135deg,#008228,#00661d)', nane:    'linear-gradient(135deg,#3fbf6b,#008228)',
+  amber:    'linear-gradient(135deg,#feb223,#805600)', turuncu: 'linear-gradient(135deg,#f57c00,#e96b00)',
+  bal:      'linear-gradient(135deg,#ffcf6b,#f57c00)', mor:     'linear-gradient(135deg,#6b3fa0,#43265f)',
+  lila:     'linear-gradient(135deg,#a374d6,#6b3fa0)', mercan:  'linear-gradient(135deg,#ff8a80,#ba1a1a)',
+};
+
+// ── Öğretmen — dükkan/katalog/talep yönetimi ──
+async function dukkanDurumuDegistir() {
+  const yeni = !state.ogretmen.odul_dukkani_aktif;
+  const { error } = await sb.from('ogretmenler').update({ odul_dukkani_aktif: yeni }).eq('ogretmen_id', state.ogretmen_id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  state.ogretmen.odul_dukkani_aktif = yeni;
+  showToast(yeni ? '✅ Dükkan açıldı' : '🔒 Dükkan kapatıldı');
+  loadOdulDukkani();
+}
+async function denemePuanCarpaniKaydet(deger) {
+  const carpan = Number(deger) || 2;
+  const { error } = await sb.from('ogretmenler').update({ deneme_puan_carpani: carpan }).eq('ogretmen_id', state.ogretmen_id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  state.ogretmen.deneme_puan_carpani = carpan;
+  showToast('✅ Katsayı güncellendi');
+}
+async function odulEkleGuncelle(odulData) {
+  if (odulData.odul_id) return sb.from('odul_kataloglari').update(odulData).eq('odul_id', odulData.odul_id);
+  return sb.from('odul_kataloglari').insert({ ...odulData, ogretmen_id: state.ogretmen_id });
+}
+async function odulSil(odulId) {
+  if (!confirm('Bu ödülü silmek istediğinize emin misiniz?')) return;
+  const { error } = await sb.from('odul_kataloglari').delete().eq('odul_id', odulId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑️ Ödül silindi'); loadOdulDukkani();
+}
+async function odulTalepEt(odulId) {
+  const { data, error } = await sb.rpc('odul_talep_et', { p_odul_id: odulId, p_ogrenci_id: state.user.ogrenci_id });
+  const sonuc = Array.isArray(data) ? data[0] : data;
+  if (error || !sonuc?.basarili) { showToast('❌ ' + (sonuc?.mesaj || error?.message)); return; }
+  showToast('✅ ' + sonuc.mesaj); loadOgrOdulDukkani();
+}
+async function talepDurumGuncelle(talepId, durum) {
+  const { data, error } = await sb.rpc('talep_durum_guncelle', { p_talep_id: talepId, p_durum: durum });
+  const sonuc = Array.isArray(data) ? data[0] : data;
+  if (error || !sonuc?.basarili) { showToast('❌ ' + (sonuc?.mesaj || error?.message)); return; }
+  showToast('✅ ' + sonuc.mesaj); loadOdulDukkani();
+}
+async function talepSil(talepId, rol) {
+  const { data, error } = await sb.rpc('talep_sil', { p_talep_id: talepId, p_rol: rol });
+  const sonuc = Array.isArray(data) ? data[0] : data;
+  if (error || !sonuc?.basarili) { showToast('❌ ' + (sonuc?.mesaj || error?.message)); return; }
+  showToast('✅ ' + sonuc.mesaj);
+  rol === 'ogretmen' ? loadOdulDukkani() : loadOgrOdulDukkani();
+}
+async function odulAlanlariListele(odulId) {
+  const { data } = await sb.from('odul_talepleri').select('*, ogrenciler(ad_soyad)').eq('odul_id', odulId).eq('durum', 1).order('karar_tarihi', { ascending: false });
+  const liste = data || [];
+  const box = document.getElementById('odul-alanlar-liste');
+  if (box) {
+    box.innerHTML = liste.length ? liste.map(t => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--outline-variant,#e2e8ec);">
+        <span style="font-weight:600;">${t.ogrenciler?.ad_soyad || '—'}</span>
+        <span style="font-size:12px;color:#6b7785;">${t.karar_tarihi ? new Date(t.karar_tarihi).toLocaleDateString('tr-TR') : ''}</span>
+      </div>`).join('') : '<div class="text-sm text-outline text-center py-4">Henüz kimse bu ödülü almadı.</div>';
+  }
+  document.getElementById('odul-alanlar-modal')?.classList.remove('hidden');
+}
+
+function odulTemaSecenekleriHTML(secili) {
+  return Object.keys(ODUL_TEMALARI).map(k => `<option value="${k}"${k===secili?' selected':''}>${k}</option>`).join('');
+}
+
+function odulModalAc(odul) {
+  document.getElementById('odul-ekle-baslik').textContent = odul ? '✏️ Ödül Düzenle' : '🎁 Ödül Ekle';
+  document.getElementById('oe-odul-id').value   = odul?.odul_id || '';
+  document.getElementById('oe-baslik').value    = odul?.baslik || '';
+  document.getElementById('oe-aciklama').value  = odul?.aciklama || '';
+  document.getElementById('oe-puan').value      = odul?.puan ?? '';
+  document.getElementById('oe-stok').value      = odul?.stok ?? -1;
+  document.getElementById('oe-renk-tema').innerHTML = odulTemaSecenekleriHTML(odul?.renk_tema || 'lacivert');
+  document.getElementById('odul-ekle-modal').classList.remove('hidden');
+}
+
+async function odulModalKaydet() {
+  const baslik = document.getElementById('oe-baslik').value.trim();
+  const puan   = parseInt(document.getElementById('oe-puan').value) || 0;
+  if (!baslik) { showToast('⚠️ Başlık zorunlu'); return; }
+  if (puan <= 0) { showToast('⚠️ Puan 0\'dan büyük olmalı'); return; }
+  const odulId = document.getElementById('oe-odul-id').value;
+  const payload = {
+    baslik, aciklama: document.getElementById('oe-aciklama').value.trim(),
+    puan, stok: parseInt(document.getElementById('oe-stok').value) ?? -1,
+    renk_tema: document.getElementById('oe-renk-tema').value,
+  };
+  if (odulId) payload.odul_id = odulId;
+  document.getElementById('odul-ekle-modal').classList.add('hidden');
+  showToast('Kaydediliyor...');
+  const { error } = await odulEkleGuncelle(payload);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('✅ Ödül kaydedildi');
+  loadOdulDukkani();
+}
+
+function odulKartiHTML(o, { talepEt = false, bakiye = 0 } = {}) {
+  const yeterli = bakiye >= o.puan;
+  const bg = ODUL_TEMALARI[o.renk_tema] || ODUL_TEMALARI.lacivert;
+  const aksiyon = talepEt
+    ? `<button ${yeterli ? '' : 'disabled'} onclick="odulTalepEt('${o.odul_id}')" class="btn"
+         style="background:${yeterli ? '#fff' : 'rgba(255,255,255,.3)'};color:${yeterli ? '#005d8d' : '#fff'};opacity:${yeterli ? 1 : .55};">Talep Et</button>`
+    : `<div style="display:flex;gap:6px;">
+         <button onclick='odulModalAc(${JSON.stringify(o).replace(/'/g, "&#39;")})' class="btn" style="background:rgba(255,255,255,.2);color:#fff;padding:6px 10px;font-size:12px;">Düzenle</button>
+         <button onclick="odulSil('${o.odul_id}')" class="btn" style="background:rgba(255,255,255,.2);color:#fff;padding:6px 10px;font-size:12px;">Sil</button>
+       </div>`;
+  return `
+    <div style="border-radius:16px;padding:18px;color:#fff;background:${bg};position:relative;${o.aktif===false?'opacity:.5;':''}">
+      <div style="font-family:Manrope;font-weight:800;font-size:15px;">${o.baslik}</div>
+      <div style="font-size:12px;opacity:.85;margin:4px 0 10px;min-height:16px;">${o.aciklama||''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:Manrope;font-weight:800;font-size:20px;">⭐ ${o.puan}</span>
+        ${aksiyon}
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;">
+        ${o.stok>=0?`<span style="font-size:10.5px;opacity:.7;">Stok: ${o.stok}</span>`:'<span></span>'}
+        ${!talepEt?`<button onclick="odulAlanlariListele('${o.odul_id}')" style="font-size:10.5px;opacity:.85;text-decoration:underline;background:none;border:none;color:#fff;cursor:pointer;">Alanları gör</button>`:''}
+      </div>
+    </div>`;
+}
+
+// ── Öğretmen: Ödül Dükkanı sayfası ──
+async function loadOdulDukkani() {
+  document.getElementById('odul-dukkan-toggle-btn').textContent = state.ogretmen.odul_dukkani_aktif ? '🔓 Dükkan Açık' : '🔒 Dükkan Kapalı';
+  document.getElementById('odul-dukkan-toggle-btn').style.cssText = state.ogretmen.odul_dukkani_aktif
+    ? 'font-weight:700;background:#d6f3df;color:#00661d;' : 'font-weight:700;background:#ffdad6;color:#ba1a1a;';
+  document.getElementById('deneme-carpani-input').value = state.ogretmen.deneme_puan_carpani ?? 2;
+
+  const [{ data: kataloglar }, { data: talepler }] = await Promise.all([
+    sb.from('odul_kataloglari').select('*').eq('ogretmen_id', state.ogretmen_id).order('olusturma_tarihi', { ascending: false }),
+    sb.from('odul_talepleri').select('*, ogrenciler(ad_soyad), odul_kataloglari(baslik)').eq('ogretmen_id', state.ogretmen_id).order('talep_tarihi', { ascending: false }),
+  ]);
+  const grid = document.getElementById('odul-katalog-grid');
+  const liste = kataloglar || [];
+  grid.innerHTML = liste.length ? liste.map(o => odulKartiHTML(o)).join('') :
+    '<div class="text-sm text-outline text-center py-8" style="grid-column:1/-1;">Henüz ödül eklenmedi.</div>';
+
+  const tumTalepler = talepler || [];
+  const bekleyen = tumTalepler.filter(t => t.durum === 0);
+  const gecmis   = tumTalepler.filter(t => t.durum !== 0);
+
+  const talepSatiri = (t, aksiyonlar) => `
+    <div class="bg-surface-container-lowest rounded-xl p-3 mb-2 flex items-center justify-between gap-3">
+      <div>
+        <div style="font-weight:700;font-size:13.5px;">${t.ogrenciler?.ad_soyad || '—'}</div>
+        <div style="font-size:12px;color:#6b7785;">${t.odul_kataloglari?.baslik || '—'} · ⭐ ${t.puan}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge" style="${talepDurumBadgeStyle(t.durum)}">${talepDurumEtiket(t.durum)}</span>
+        ${aksiyonlar}
+      </div>
+    </div>`;
+
+  document.getElementById('odul-bekleyen-talepler').innerHTML = bekleyen.length ? bekleyen.map(t => talepSatiri(t, `
+      <button onclick="talepDurumGuncelle('${t.talep_id}',1)" class="btn" style="background:#008228;color:#fff;padding:6px 10px;font-size:12px;">Onayla</button>
+      <button onclick="talepDurumGuncelle('${t.talep_id}',2)" class="btn" style="background:#ba1a1a;color:#fff;padding:6px 10px;font-size:12px;">Reddet</button>
+    `)).join('') : '<div class="text-sm text-outline text-center py-4">Bekleyen talep yok.</div>';
+
+  document.getElementById('odul-gecmis-talepler').innerHTML = gecmis.length ? gecmis.slice(0, 30).map(t => talepSatiri(t, `
+      <button onclick="talepSil('${t.talep_id}','ogretmen')" class="btn btn-ghost" style="padding:6px 10px;font-size:12px;">Sil</button>
+    `)).join('') : '<div class="text-sm text-outline text-center py-4">Henüz karara bağlanmış talep yok.</div>';
+}
+
+// ── Öğretmen: Puan Yönetimi sayfası ──
+async function loadPuanYonetimi() {
+  const sel = document.getElementById('puan-yonetimi-ogrenci');
+  sel.innerHTML = '<option value="">— Öğrenci seçin —</option>' +
+    (state.ogrenciler || []).map(o => `<option value="${o.ogrenci_id}">${o.ad_soyad}</option>`).join('');
+  document.getElementById('puan-yonetimi-content').innerHTML = '';
+}
+
+async function loadPuanYonetimiOgrenci(ogrenciId) {
+  const box = document.getElementById('puan-yonetimi-content');
+  if (!ogrenciId) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div>';
+
+  const [{ kazanilan, bloke, kalan }, { data: hareketler }] = await Promise.all([
+    kalanPuanHesapla(ogrenciId),
+    sb.from('puan_hareketleri').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
+  ]);
+
+  const satirlar = (hareketler || []).map(h => `
+    <tr>
+      <td style="padding:8px;font-size:12.5px;">${new Date(h.tarih).toLocaleString('tr-TR')}</td>
+      <td style="padding:8px;font-size:12.5px;">${h.tur}</td>
+      <td style="padding:8px;font-size:12.5px;">${h.aciklama || ''}</td>
+      <td style="padding:8px;font-size:13px;font-weight:700;text-align:right;color:${h.puan>=0?'#00661d':'#ba1a1a'};">${h.puan>=0?'+':''}${h.puan}</td>
+    </tr>`).join('');
+
+  box.innerHTML = `
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center"><div class="font-headline text-xl font-extrabold">${kazanilan}</div><div class="text-xs text-outline mt-1">Toplam Kazanılan</div></div>
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center"><div class="font-headline text-xl font-extrabold">${bloke}</div><div class="text-xs text-outline mt-1">Bloke/Harcanan</div></div>
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center"><div class="font-headline text-xl font-extrabold" style="color:#005d8d;">${kalan}</div><div class="text-xs text-outline mt-1">Kullanılabilir</div></div>
+    </div>
+    <div class="card-2xl" style="padding:14px 16px;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:8px;">Manuel Puan Ekle/Çıkar</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="number" id="pm-puan" class="field" placeholder="Puan (+/-)" style="width:120px;">
+        <input type="text" id="pm-aciklama" class="field" placeholder="Açıklama (zorunlu)" style="flex:1;min-width:180px;">
+        <button onclick="puanYonetimiManuelKaydet('${ogrenciId}')" class="btn btn-primary">Ekle</button>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl p-3 overflow-x-auto">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="text-align:left;font-size:11px;color:#6b7785;text-transform:uppercase;">
+          <th style="padding:8px;">Tarih</th><th style="padding:8px;">Tür</th><th style="padding:8px;">Açıklama</th><th style="padding:8px;text-align:right;">Puan</th>
+        </tr></thead>
+        <tbody>${satirlar || '<tr><td colspan="4" style="padding:16px;text-align:center;color:#6b7785;">Henüz puan hareketi yok.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+}
+
+async function puanYonetimiManuelKaydet(ogrenciId) {
+  const puan = Number(document.getElementById('pm-puan').value);
+  const aciklama = document.getElementById('pm-aciklama').value.trim();
+  if (!puan) { showToast('⚠️ Puan girin'); return; }
+  if (!aciklama) { showToast('⚠️ Açıklama zorunlu'); return; }
+  try {
+    await puanManuelEkle(ogrenciId, state.ogretmen_id, puan, aciklama);
+    showToast('✅ Puan kaydedildi');
+    loadPuanYonetimiOgrenci(ogrenciId);
+  } catch (e) { showToast('❌ ' + e.message); }
+}
+
+// ── Öğrenci: Ödül Dükkanı sekmesi ──
+async function loadOgrOdulDukkani() {
+  const el = document.getElementById('ogr-odul-dukkani-content');
+  if (state.ogretmen && state.ogretmen.odul_dukkani_aktif === false) {
+    el.innerHTML = '<div class="bg-surface-container-lowest rounded-xl p-8 text-center text-sm text-outline">🔒 Öğretmeniniz ödül dükkanını şu anda kapattı. Daha sonra tekrar kontrol edin.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div>';
+  const [{ data: kataloglar }, { kalan }] = await Promise.all([
+    sb.from('odul_kataloglari').select('*').eq('ogretmen_id', state.user.ogretmen_id).eq('aktif', true).order('puan'),
+    kalanPuanHesapla(state.user.ogrenci_id),
+  ]);
+  const liste = kataloglar || [];
+  el.innerHTML = `
+    <div style="text-align:right;font-size:12.5px;color:#6b7785;margin-bottom:10px;">Bakiyen: <strong style="color:#005d8d;">⭐ ${kalan}</strong></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;">
+      ${liste.length ? liste.map(o => odulKartiHTML(o, { talepEt: true, bakiye: kalan })).join('') :
+        '<div class="text-sm text-outline text-center py-8" style="grid-column:1/-1;">Şu anda ödül kataloğunda ürün yok.</div>'}
+    </div>`;
+}
+
+// ── Öğrenci: Puan Geçmişim sekmesi ──
+async function loadOgrPuanGecmisim() {
+  const el = document.getElementById('ogr-puan-gecmisim-content');
+  el.innerHTML = '<div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div>';
+  const [{ kazanilan, bloke, kalan }, { data: hareketler }, { data: talepler }] = await Promise.all([
+    kalanPuanHesapla(state.user.ogrenci_id),
+    sb.from('puan_hareketleri').select('*').eq('ogrenci_id', state.user.ogrenci_id).order('tarih', { ascending: false }),
+    sb.from('odul_talepleri').select('*, odul_kataloglari(baslik)').eq('ogrenci_id', state.user.ogrenci_id).order('talep_tarihi', { ascending: false }),
+  ]);
+
+  const hareketSatirlari = (hareketler || []).map(h => `
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:13px;">
+      <span>${h.aciklama || h.tur}</span>
+      <span style="font-weight:700;color:${h.puan>=0?'#00661d':'#ba1a1a'};">${h.puan>=0?'+':''}${h.puan}</span>
+    </div>`).join('');
+
+  const talepSatirlari = (talepler || []).map(t => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+      <div><div style="font-weight:600;font-size:13px;">${t.odul_kataloglari?.baslik || '—'}</div><div style="font-size:11.5px;color:#6b7785;">⭐ ${t.puan}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge" style="${talepDurumBadgeStyle(t.durum)}">${talepDurumEtiket(t.durum)}</span>
+        ${[0,2].includes(t.durum) ? `<button onclick="talepSil('${t.talep_id}','ogrenci')" class="btn btn-ghost" style="padding:4px 8px;font-size:11px;">Sil</button>` : ''}
+      </div>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center"><div class="font-headline text-xl font-extrabold">${kazanilan}</div><div class="text-xs text-outline mt-1">Kazanılan</div></div>
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center"><div class="font-headline text-xl font-extrabold">${bloke}</div><div class="text-xs text-outline mt-1">Bloke</div></div>
+      <div class="bg-surface-container-lowest rounded-xl p-4 text-center"><div class="font-headline text-xl font-extrabold" style="color:#005d8d;">${kalan}</div><div class="text-xs text-outline mt-1">Kalan</div></div>
+    </div>
+    <h3 style="font-family:Manrope;font-weight:800;font-size:14px;margin:0 0 8px;">Taleplerim</h3>
+    <div class="bg-surface-container-lowest rounded-xl p-3 mb-5">${talepSatirlari || '<div class="text-sm text-outline text-center py-3">Henüz talep yok.</div>'}</div>
+    <h3 style="font-family:Manrope;font-weight:800;font-size:14px;margin:0 0 8px;">Puan Hareketleri</h3>
+    <div class="bg-surface-container-lowest rounded-xl p-3">${hareketSatirlari || '<div class="text-sm text-outline text-center py-3">Henüz puan hareketi yok.</div>'}</div>`;
+}
+
 // İçerik + durum + sonuç birlikte düzenlenebilen ortak form (hem bekleyen hem tamamlanan satırlarda kullanılır)
 function odevDuzenleFormHTML(o) {
   const baz = odevKonuBaz(o);
@@ -2472,7 +2931,7 @@ async function odevDuzenleKaydet(id) {
   showToast('Kaydediliyor...');
   const { error } = await sb.from('odevler').update(update).eq('odev_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
-  await odevDenemeSenkronla({ ...state._ogrGirOdevMap[id], ...update, odev_id: id });
+  await odevTamamlandiPuanIsle({ ...state._ogrGirOdevMap[id], ...update, odev_id: id });
   showToast('✅ Ödev güncellendi');
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
@@ -2622,6 +3081,8 @@ async function durumDegistir(odevId, yeniDurum) {
   showToast('Güncelleniyor...');
   const { error } = await sb.from('odevler').update({ durum: yeniDurum }).eq('odev_id', odevId);
   if (error) { showToast('❌ ' + error.message); return; }
+  const { data: guncelOdev } = await sb.from('odevler').select('*').eq('odev_id', odevId).single();
+  if (guncelOdev) await odevTamamlandiPuanIsle(guncelOdev);
   showToast('✅ Durum güncellendi');
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
@@ -2822,7 +3283,7 @@ async function bekleyenModalDybKaydet(id) {
     durum: 'TAMAMLANDI', dogru: d, yanlis: y, bos: b, toplam: t
   }).eq('odev_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
-  await odevDenemeSenkronla({ ...state._bmOdevMap?.[id], dogru: d, yanlis: y, bos: b, toplam: t, durum: 'TAMAMLANDI', odev_id: id });
+  await odevTamamlandiPuanIsle({ ...state._bmOdevMap?.[id], dogru: d, yanlis: y, bos: b, toplam: t, durum: 'TAMAMLANDI', odev_id: id });
   document.getElementById('bm-row-' + id)?.remove();
   bmSayacGuncelle();
   const pct = t > 0 ? Math.round(d / t * 100) : 0;
@@ -2866,7 +3327,7 @@ async function sonucModalKaydet() {
     dogru, yanlis, bos, toplam, durum: 'TAMAMLANDI'
   }).eq('odev_id', odevId);
   if (error) { showToast('❌ ' + error.message); return; }
-  await odevDenemeSenkronla({ ...state._ogrGirOdevMap[odevId], dogru, yanlis, bos, toplam, durum: 'TAMAMLANDI', odev_id: odevId });
+  await odevTamamlandiPuanIsle({ ...state._ogrGirOdevMap[odevId], dogru, yanlis, bos, toplam, durum: 'TAMAMLANDI', odev_id: odevId });
   showToast(`✅ Sonuç kaydedildi (%${Math.round(dogru/(dogru+yanlis+bos||1)*100)})`);
   const ogrenciId = document.getElementById('odev-ogrenci').value;
   if (ogrenciId) loadBekleyenOdevlerForOgrenci(ogrenciId);
@@ -2968,6 +3429,8 @@ async function ogrenciSil() {
   if (!confirm(`"${ad}" adlı öğrenciyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
   m.classList.add('hidden');
   showToast('Siliniyor...');
+  await sb.from('odul_talepleri').delete().eq('ogrenci_id', id);
+  await sb.from('puan_hareketleri').delete().eq('ogrenci_id', id);
   await sb.from('ders_programi').delete().eq('ogrenci_id', id);
   await sb.from('ogrn_kaynak').delete().eq('ogrenci_id', id);
   await sb.from('denemeler').delete().eq('ogrenci_id', id);
@@ -3678,13 +4141,15 @@ async function denemeEkle() {
   const pct = top > 0 ? parseFloat((net / top * 100).toFixed(2)) : 0;
 
   showToast('Kaydediliyor...');
+  const denemeId = crypto.randomUUID();
   const { error } = await sb.from('denemeler').insert({
-    deneme_id: crypto.randomUUID(),
+    deneme_id: denemeId,
     ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih, deneme_adi: adi,
     dogru: d, yanlis: y, bos: b, toplam_soru: top,
     net, basari_yuzdesi: pct
   });
   if (error) { showToast('❌ ' + error.message); return; }
+  await puanEkleDeneme(denemeId, ogrenciId, state.ogretmen_id, net);
   showToast('✅ Deneme eklendi!');
   ['deneme-adi','deneme-dogru','deneme-yanlis','deneme-bos'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('deneme-tarih').value = '';
@@ -5221,7 +5686,7 @@ function hedefDuzenle() {
 
 // ── ÖĞRENCİ PANELİ ───────────────────────────────────────────
 function ogrTab(tab) {
-  ['odevler','denemeler','dersler','basari'].forEach(t => {
+  ['odevler','denemeler','dersler','basari','odul-dukkani','puan-gecmisim'].forEach(t => {
     document.getElementById('ogr-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('tab-' + t);
     btn.classList.toggle('active', t === tab);
@@ -5229,6 +5694,8 @@ function ogrTab(tab) {
   if (tab === 'basari')   loadOgrBasari();
   if (tab === 'dersler')  loadOgrDersler();
   if (tab === 'denemeler') loadOgrDenemeler();
+  if (tab === 'odul-dukkani')  loadOgrOdulDukkani();
+  if (tab === 'puan-gecmisim') loadOgrPuanGecmisim();
 }
 
 async function loadOgrDenemeler() {
@@ -5312,6 +5779,11 @@ function denemeTabloHTML(liste, trendId) {
 async function loadOgrenciPanel() {
   document.getElementById('ogr-welcome-ad').textContent    = state.user.ad_soyad || '—';
   document.getElementById('ogr-welcome-sinif').textContent = state.user.sinif || '—';
+
+  kalanPuanHesapla(state.user.ogrenci_id).then(r => {
+    const el = document.getElementById('ogr-hiper-puan-bakiye');
+    if (el) el.textContent = r.kalan;
+  });
 
   // Motivasyon
   const [msg, kaynak] = gunlukMotivasyon(state.user.sinif, state.ogretmen?.brans);
@@ -5622,17 +6094,21 @@ async function ogrOdevDuzenleKaydet(odevId) {
   const { error } = await sb.from('odevler').update(update)
     .eq('odev_id', odevId).eq('ogrenci_id', state.user.ogrenci_id);
   if (error) { showToast('❌ ' + error.message); return; }
+  const taban = (state._ogrPanelTumOdevler || []).find(o => o.odev_id === odevId);
+  if (taban) await odevTamamlandiPuanIsle({ ...taban, ...update, odev_id: odevId });
   showToast('✅ Kaydedildi');
   loadOgrenciPanel();
 }
 
 async function ogrTekrarVer(odevId) {
   if (!odevId) return;
+  const taban = (state._ogrPanelTumOdevler || []).find(o => o.odev_id === odevId);
   showToast('Güncelleniyor...');
   const { error } = await sb.from('odevler')
     .update({ durum: 'BEKLİYOR', dogru: null, yanlis: null, bos: null, toplam: null })
     .or(`odev_id.eq.${odevId},id.eq.${odevId}`);
   if (error) { showToast('❌ ' + error.message); return; }
+  if (taban) await odevTamamlandiPuanIsle({ ...taban, durum: 'BEKLİYOR', dogru: null, yanlis: null, bos: null, toplam: null, odev_id: odevId });
   showToast('✅ Ödev tekrar bekleyene alındı');
   loadOgrenciPanel();
 }
@@ -5678,6 +6154,8 @@ async function submitSonuc(odevId) {
   }
 
   if (err) { showToast('❌ ' + err.message); return; }
+  const taban = (state._ogrPanelTumOdevler || []).find(o => o.odev_id === odevId || o.id === odevId);
+  if (taban) await odevTamamlandiPuanIsle({ ...taban, dogru: d, yanlis: y, bos: b, toplam, durum: 'TAMAMLANDI', odev_id: taban.odev_id || odevId });
   showToast('✅ Sonuç kaydedildi! ' + (toplam>0?`%${Math.round(d/toplam*100)} başarı`:''));
   loadOgrenciPanel();
 }
@@ -5899,11 +6377,13 @@ async function loadVeliPanel() {
   if (state.brans) _veliDersQ = _veliDersQ.eq('ders', state.brans);
   _veliDersQ = _veliDersQ.order('tarih', { ascending: false });
 
-  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }] = await Promise.all([
+  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }, hiperPuan, { data: alinanOduller }] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id).order('verilis_tarihi', { ascending: false }),
     _veliDersQ,
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
     sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
+    kalanPuanHesapla(u.ogrenci_id),
+    sb.from('odul_talepleri').select('*, odul_kataloglari(baslik)').eq('ogrenci_id', u.ogrenci_id).eq('durum', 1).order('karar_tarihi', { ascending: false }),
   ]);
 
   const odevler    = tumOdevler || [];
@@ -5985,6 +6465,20 @@ async function loadVeliPanel() {
   const veliGecikmis = bekleyen.filter(odevGecikti);
 
   document.getElementById('veli-tab-ozet').innerHTML = `
+    <div class="card-2xl" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#6b3fa0,#43265f);color:#fff;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;">Hiper Puan Bakiyesi</div>
+      <div style="font-family:Manrope;font-size:26px;font-weight:800;">${hiperPuan.kalan}</div></div>
+      <div style="font-size:36px;">⭐</div>
+    </div>
+    ${(alinanOduller||[]).length ? `
+    <div class="bg-surface-container-lowest rounded-xl p-4 mb-4 shadow-[0_2px_8px_rgba(0,29,49,0.05)]">
+      <div class="text-xs font-bold text-outline uppercase tracking-wider mb-2">🎁 Ödül Geçmişi</div>
+      ${alinanOduller.map(t => `
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:13px;">
+          <span style="font-weight:600;">${t.odul_kataloglari?.baslik || '—'}</span>
+          <span style="color:#6b7785;">${t.karar_tarihi ? new Date(t.karar_tarihi).toLocaleDateString('tr-TR') : ''}</span>
+        </div>`).join('')}
+    </div>` : ''}
     ${veliGecikmis.length ? `
     <div class="bg-error-container/20 border border-error/20 rounded-xl p-4 mb-3 flex items-start gap-2">
       <span class="material-symbols-outlined text-error text-lg flex-shrink-0">warning</span>
@@ -8019,6 +8513,60 @@ function showToast(msg) {
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Ödül Ekle/Güncelle Modal -->
+<div id="odul-ekle-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div class="bg-surface rounded-2xl shadow-xl p-6 w-full max-w-md flex flex-col gap-4">
+    <div class="font-headline font-bold text-lg text-on-surface" id="odul-ekle-baslik">🎁 Ödül Ekle</div>
+    <input type="hidden" id="oe-odul-id">
+    <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Başlık *</label>
+        <input id="oe-baslik" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Açıklama</label>
+        <input id="oe-aciklama" type="text" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Puan *</label>
+          <input id="oe-puan" type="number" min="1" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Stok (-1 = sınırsız)</label>
+          <input id="oe-stok" type="number" min="-1" value="-1" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-outline uppercase tracking-wider">Renk Teması</label>
+        <select id="oe-renk-tema" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary"></select>
+      </div>
+    </div>
+    <div class="flex gap-2 justify-end mt-1">
+      <button onclick="document.getElementById('odul-ekle-modal').classList.add('hidden')"
+        class="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors">
+        İptal
+      </button>
+      <button onclick="odulModalKaydet()"
+        class="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-on-primary hover:bg-primary/80 transition-colors">
+        Kaydet
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Ödülü Alanlar Modal -->
+<div id="odul-alanlar-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+  <div class="bg-surface rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
+    <div class="font-headline font-bold text-lg text-on-surface">🏆 Bu Ödülü Alanlar</div>
+    <div id="odul-alanlar-liste"></div>
+    <button onclick="document.getElementById('odul-alanlar-modal').classList.add('hidden')"
+      class="px-4 py-2 rounded-xl text-sm font-semibold bg-surface-container-high text-on-surface-variant hover:bg-inverse-surface hover:text-on-primary transition-colors self-end">
+      Kapat
+    </button>
   </div>
 </div>
 

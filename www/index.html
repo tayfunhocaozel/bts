@@ -1401,6 +1401,33 @@ tailwind.config = {
   </div>
 </div>
 
+<!-- ── Soru Bankam: fotoğraf kırpma modalı ────────────────── -->
+<style>
+  #soru-crop-box .scb-h{width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #005d8d;box-shadow:0 1px 4px rgba(0,0,0,.4);touch-action:none;}
+</style>
+<div id="soru-crop-modal" style="display:none;position:fixed;inset:0;z-index:210;background:rgba(1,49,73,.55);align-items:center;justify-content:center;padding:12px;">
+  <div style="background:var(--surface);border-radius:18px;padding:16px;max-width:520px;width:100%;max-height:94vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 40px rgba(1,49,73,.3);">
+    <div style="font-family:Manrope;font-weight:800;font-size:15px;color:var(--ink);">✂️ Soruyu Kırp</div>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-top:-4px;">Çerçeveyi köşelerinden tutup yalnızca soruyu kapsayacak şekilde ayarla.</div>
+    <div id="soru-crop-stage" style="position:relative;width:100%;max-height:64vh;background:#0b1e2b;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;">
+      <img id="soru-crop-img" alt="" style="display:block;max-width:100%;max-height:64vh;pointer-events:none;"/>
+      <div id="soru-crop-box" style="position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.45);box-sizing:border-box;touch-action:none;cursor:move;">
+        <span class="scb-h" data-h="nw" style="position:absolute;left:-12px;top:-12px;"></span>
+        <span class="scb-h" data-h="ne" style="position:absolute;right:-12px;top:-12px;"></span>
+        <span class="scb-h" data-h="sw" style="position:absolute;left:-12px;bottom:-12px;"></span>
+        <span class="scb-h" data-h="se" style="position:absolute;right:-12px;bottom:-12px;"></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="soruCropKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">İptal</button>
+      <button onclick="soruCropAtla()" class="btn btn-ghost" style="flex:1;justify-content:center;">Kırpma</button>
+      <button onclick="soruCropUygula()" class="btn btn-primary" style="flex:1.5;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;">crop</span> Kırp ve Ekle
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -6371,16 +6398,123 @@ async function soruBankasiKazanimlariGetir() {
   return state._soruKazanimCache;
 }
 
-async function soruFotoSecildi(inputEl) {
+function soruFotoSecildi(inputEl) {
   const file = inputEl.files && inputEl.files[0];
   inputEl.value = '';
   if (!file) return;
+  soruCropAc(file);
+}
+
+// ── Kırpma adımı: öğrenci fotoğrafta yalnızca soruyu bırakacak şekilde çerçeveyi ayarlar ──
+let _soruCrop = null, _soruCropBound = false;
+
+function soruCropAc(file) {
+  const modal = document.getElementById('soru-crop-modal');
+  const img = document.getElementById('soru-crop-img');
+  if (_soruCrop && _soruCrop.url) { try { URL.revokeObjectURL(_soruCrop.url); } catch (e) {} }
+  const url = URL.createObjectURL(file);
+  _soruCrop = { file, url, box: null };
+  img.onload = () => soruCropKutuBaslat();
+  img.src = url;
+  modal.style.display = 'flex';
+  if (!_soruCropBound) { soruCropPointerBind(); _soruCropBound = true; }
+}
+
+function soruCropKutuBaslat() {
+  const stage = document.getElementById('soru-crop-stage');
+  const img = document.getElementById('soru-crop-img');
+  const sr = stage.getBoundingClientRect();
+  const ir = img.getBoundingClientRect();
+  const imgL = ir.left - sr.left, imgT = ir.top - sr.top, imgW = ir.width, imgH = ir.height;
+  const bw = imgW * 0.86, bh = imgH * 0.6;
+  _soruCrop.box = { x: imgL + (imgW - bw) / 2, y: imgT + (imgH - bh) / 2, w: bw, h: bh, imgL, imgT, imgW, imgH };
+  soruCropStil();
+}
+
+function soruCropStil() {
+  const box = document.getElementById('soru-crop-box');
+  const b = _soruCrop && _soruCrop.box;
+  if (!box || !b) return;
+  box.style.left = b.x + 'px'; box.style.top = b.y + 'px';
+  box.style.width = b.w + 'px'; box.style.height = b.h + 'px';
+}
+
+function soruCropPointerBind() {
+  const stage = document.getElementById('soru-crop-stage');
+  const box = document.getElementById('soru-crop-box');
+  let drag = null;
+  stage.addEventListener('pointerdown', e => {
+    const b = _soruCrop && _soruCrop.box; if (!b) return;
+    const handle = e.target.classList && e.target.classList.contains('scb-h') ? e.target.dataset.h : null;
+    if (!handle && e.target !== box) return;
+    e.preventDefault();
+    try { stage.setPointerCapture(e.pointerId); } catch (er) {}
+    drag = { handle, sx: e.clientX, sy: e.clientY, b0: { ...b } };
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const b = _soruCrop.box, b0 = drag.b0;
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    const L = b0.imgL, T = b0.imgT, R = b0.imgL + b0.imgW, B = b0.imgT + b0.imgH, minS = 36;
+    if (!drag.handle) {
+      b.x = Math.min(Math.max(b0.x + dx, L), R - b0.w);
+      b.y = Math.min(Math.max(b0.y + dy, T), B - b0.h);
+    } else {
+      let x1 = b0.x, y1 = b0.y, x2 = b0.x + b0.w, y2 = b0.y + b0.h;
+      if (drag.handle.includes('w')) x1 = Math.min(Math.max(b0.x + dx, L), x2 - minS);
+      if (drag.handle.includes('e')) x2 = Math.min(Math.max(b0.x + b0.w + dx, x1 + minS), R);
+      if (drag.handle.includes('n')) y1 = Math.min(Math.max(b0.y + dy, T), y2 - minS);
+      if (drag.handle.includes('s')) y2 = Math.min(Math.max(b0.y + b0.h + dy, y1 + minS), B);
+      b.x = x1; b.y = y1; b.w = x2 - x1; b.h = y2 - y1;
+    }
+    soruCropStil();
+  });
+  const bitir = () => { drag = null; };
+  stage.addEventListener('pointerup', bitir);
+  stage.addEventListener('pointercancel', bitir);
+}
+
+function soruCropKapat() {
+  const modal = document.getElementById('soru-crop-modal');
+  if (modal) modal.style.display = 'none';
+  if (_soruCrop && _soruCrop.url) { try { URL.revokeObjectURL(_soruCrop.url); } catch (e) {} }
+  _soruCrop = null;
+}
+
+function soruCropAtla() {
+  const f = _soruCrop && _soruCrop.file;
+  soruCropKapat();
+  if (f) soruYukleVeAnaliz(f);
+}
+
+function soruCropUygula() {
+  const img = document.getElementById('soru-crop-img');
+  const b = _soruCrop && _soruCrop.box;
+  const ff = _soruCrop && _soruCrop.file;
+  if (!img || !b) { soruCropAtla(); return; }
+  const scale = img.naturalWidth / b.imgW;
+  let sx = (b.x - b.imgL) * scale, sy = (b.y - b.imgT) * scale;
+  let sw = b.w * scale, sh = b.h * scale;
+  sx = Math.max(0, Math.min(sx, img.naturalWidth - 1));
+  sy = Math.max(0, Math.min(sy, img.naturalHeight - 1));
+  sw = Math.max(1, Math.min(sw, img.naturalWidth - sx));
+  sh = Math.max(1, Math.min(sh, img.naturalHeight - sy));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sw); canvas.height = Math.round(sh);
+  canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob(blob => {
+    soruCropKapat();
+    soruYukleVeAnaliz(blob || ff);
+  }, 'image/jpeg', 0.92);
+}
+
+async function soruYukleVeAnaliz(dosya) {
   const durumEl = document.getElementById('soru-ekle-durum');
   const setDurum = t => { if (durumEl) durumEl.innerHTML = t ? `<div class="text-xs text-outline py-2">${t}</div>` : ''; };
 
   try {
     setDurum('Fotoğraf hazırlanıyor…');
-    const foto = await kkmResimSikistir(file); // { mimeType, base64, dataUrl }
+    const foto = await kkmResimSikistir(dosya); // { mimeType, base64, dataUrl }
 
     setDurum('Yükleniyor…');
     const soruId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('sb-' + Date.now() + '-' + Math.random().toString(16).slice(2));

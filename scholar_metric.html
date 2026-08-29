@@ -6593,6 +6593,7 @@ async function loadRaporSoruBankasi(ogrenciId, ogr, kazData) {
 }
 
 function renderRaporSoruBankasi() {
+  _soruSecimAktif = false;
   const el = document.getElementById('rapor-soru-bankasi');
   const liste = state._raporSoruBankasi || [];
   if (!liste.length) { el.innerHTML = ''; return; }
@@ -6625,9 +6626,11 @@ function raporSoruKartHTML(s) {
     : s.durum === 'hata' ? '<span class="text-xs px-2 py-0.5 rounded-full bg-error-container text-error font-semibold">AI başarısız</span>'
     : s.durum === 'ai_bekliyor' ? '<span class="text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">analiz ediliyor</span>'
     : `<span class="text-xs px-2 py-0.5 rounded-full bg-secondary-container/60 text-secondary font-semibold">AI güven ${guven}</span>`;
+  const secili = state._soruSecili && state._soruSecili.has(s.soru_id);
   return `
-  <div class="border border-outline-variant/25 rounded-xl overflow-hidden">
+  <div class="border ${secili ? 'border-primary' : 'border-outline-variant/25'} rounded-xl overflow-hidden">
     <div class="flex gap-3 p-3">
+      ${_soruSecimAktif ? `<input type="checkbox" ${secili ? 'checked' : ''} onclick="soruSecTiktir('${s.soru_id}')" title="Teste ekle" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;cursor:pointer;">` : ''}
       <a href="${kkmEsc(s.fotograf_url)}" target="_blank" rel="noopener" class="flex-shrink-0">
         <img src="${kkmEsc(s.fotograf_url)}" style="width:96px;height:96px;object-fit:cover;border-radius:8px;background:var(--surface-container-low);"/>
       </a>
@@ -6713,8 +6716,13 @@ async function loadSoruBankasiOgretmen() {
   state._raporSoruBankasi = sbRes.data || [];
   state._raporSoruKazData = (kzRes.data || []).filter(k => k.kazanim_kodu);
   if (state._sbOgrFiltre == null) state._sbOgrFiltre = 'gozden';
+  state._sbOgrOgrenciId = '';
+  state._sbOgrKonu = '';
+  state._soruSecili = new Set();
   renderSoruBankasiOgretmen();
 }
+
+let _soruSecimAktif = false;
 
 function _soruGozdenMi(s) {
   return s.durum === 'ai_tamamlandi' || s.durum === 'hata' || s.durum === 'ai_bekliyor';
@@ -6726,6 +6734,7 @@ function renderSoruBankasiOgretmen() {
   const hepsi = state._raporSoruBankasi || [];
 
   if (!hepsi.length) {
+    _soruSecimAktif = false;
     el.innerHTML = `<div class="card-2xl" style="padding:44px 24px;text-align:center;color:var(--ink-soft);">
       <div style="font-size:40px;opacity:.35;margin-bottom:8px;">📸</div>
       <div style="font-size:14px;font-weight:600;color:var(--ink);">Henüz hiçbir öğrenci soru eklemedi</div>
@@ -6734,24 +6743,163 @@ function renderSoruBankasiOgretmen() {
     return;
   }
 
+  const ogrId = state._sbOgrOgrenciId || '';
+  const konuF = state._sbOgrKonu || '';
+  if (!state._soruSecili) state._soruSecili = new Set();
+  _soruSecimAktif = !!ogrId; // test seçimi yalnızca bir öğrenci filtrelendiğinde
+
+  // Öğrenci ve konu seçenekleri
+  const ogrenciler = (state.ogrenciler || []).filter(o =>
+    hepsi.some(s => s.ogrenci_id === o.ogrenci_id));
+  const ogrOpts = `<option value="">— Öğrenci seçin (test için) —</option>` +
+    ogrenciler.map(o => `<option value="${kkmEsc(o.ogrenci_id)}" ${o.ogrenci_id === ogrId ? 'selected' : ''}>${kkmEsc(o.ad_soyad)}${o.sinif ? ' (' + kkmEsc(o.sinif) + ')' : ''}</option>`).join('');
+  const konularBu = [...new Set(hepsi.filter(s => !ogrId || s.ogrenci_id === ogrId).map(s => s.konu).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const konuOpts = `<option value="">Tüm konular</option>` +
+    konularBu.map(k => `<option ${k === konuF ? 'selected' : ''}>${kkmEsc(k)}</option>`).join('');
+
+  // Liste: gözden/tümü sekmesi + öğrenci + konu
   const gozden = hepsi.filter(_soruGozdenMi);
-  const filtre = state._sbOgrFiltre || 'gozden';
-  const liste = filtre === 'gozden' ? gozden : hepsi;
-  const btn = (val, lbl) => `<button onclick="soruBankasiOgrFiltre('${val}')" class="tab ${filtre === val ? 'active' : ''}">${lbl}</button>`;
+  const sekme = state._sbOgrFiltre || 'gozden';
+  let liste = sekme === 'gozden' ? gozden : hepsi;
+  if (ogrId) liste = liste.filter(s => s.ogrenci_id === ogrId);
+  if (konuF) liste = liste.filter(s => s.konu === konuF);
+
+  const secSay = [...state._soruSecili].filter(id => hepsi.some(s => s.soru_id === id && (!ogrId || s.ogrenci_id === ogrId))).length;
+  const btn = (val, lbl) => `<button onclick="soruBankasiOgrFiltre('${val}')" class="tab ${sekme === val ? 'active' : ''}">${lbl}</button>`;
 
   el.innerHTML = `
+    <div class="card-2xl" style="padding:14px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <select onchange="sbOgrOgrenciSec(this.value)" class="field" style="flex:1;min-width:200px;">${ogrOpts}</select>
+      <select onchange="sbOgrKonuSec(this.value)" class="field" style="flex:1;min-width:160px;" ${konularBu.length ? '' : 'disabled'}>${konuOpts}</select>
+    </div>
+    ${ogrId ? `
+    <div class="card-2xl" style="padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#eef6fb;">
+      <span style="font-size:13px;font-weight:700;color:var(--ink);">🧪 Teste eklenecek: ${secSay}</span>
+      <button onclick="soruTestSecTumu()" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;">Görünenleri seç</button>
+      <button onclick="soruTestSecTemizle()" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;">Temizle</button>
+      <button onclick="soruTestOlustur()" class="btn btn-primary" style="margin-left:auto;${secSay ? '' : 'opacity:.5;pointer-events:none;'}">
+        <span class="material-symbols-outlined" style="font-size:18px;">description</span> Test Oluştur (${secSay})
+      </button>
+    </div>` : ''}
     <div class="tabbar" style="margin-bottom:16px;">
       ${btn('gozden', `Onay Bekleyen (${gozden.length})`)}
       ${btn('tumu', `Tümü (${hepsi.length})`)}
     </div>
     ${!liste.length
-      ? `<div class="card-2xl" style="padding:32px;text-align:center;color:var(--ink-soft);font-size:14px;">Onay bekleyen soru yok — hepsi işlenmiş 👍</div>`
+      ? `<div class="card-2xl" style="padding:32px;text-align:center;color:var(--ink-soft);font-size:14px;">${sekme === 'gozden' ? 'Onay bekleyen soru yok 👍' : 'Bu filtreyle soru yok.'}</div>`
       : `<div class="flex flex-col gap-3">${liste.map(raporSoruKartHTML).join('')}</div>`}`;
 }
 
 function soruBankasiOgrFiltre(v) {
   state._sbOgrFiltre = v;
   renderSoruBankasiOgretmen();
+}
+
+function sbOgrOgrenciSec(id) {
+  state._sbOgrOgrenciId = id || '';
+  state._sbOgrKonu = '';
+  state._soruSecili = new Set();
+  renderSoruBankasiOgretmen();
+}
+
+function sbOgrKonuSec(v) {
+  state._sbOgrKonu = v || '';
+  renderSoruBankasiOgretmen();
+}
+
+function soruSecTiktir(soruId) {
+  if (!state._soruSecili) state._soruSecili = new Set();
+  if (state._soruSecili.has(soruId)) state._soruSecili.delete(soruId);
+  else state._soruSecili.add(soruId);
+  renderSoruBankasiOgretmen();
+}
+
+// O an ekranda görünen (filtrelenmiş) sorular
+function _soruGorunenListe() {
+  const hepsi = state._raporSoruBankasi || [];
+  const ogrId = state._sbOgrOgrenciId || '';
+  const konuF = state._sbOgrKonu || '';
+  const sekme = state._sbOgrFiltre || 'gozden';
+  let liste = sekme === 'gozden' ? hepsi.filter(_soruGozdenMi) : hepsi;
+  if (ogrId) liste = liste.filter(s => s.ogrenci_id === ogrId);
+  if (konuF) liste = liste.filter(s => s.konu === konuF);
+  return liste;
+}
+
+function soruTestSecTumu() {
+  if (!state._soruSecili) state._soruSecili = new Set();
+  _soruGorunenListe().forEach(s => state._soruSecili.add(s.soru_id));
+  renderSoruBankasiOgretmen();
+}
+
+function soruTestSecTemizle() {
+  state._soruSecili = new Set();
+  renderSoruBankasiOgretmen();
+}
+
+function soruTestOlustur() {
+  const secili = state._soruSecili || new Set();
+  const ogrId = state._sbOgrOgrenciId || '';
+  const sorular = (state._raporSoruBankasi || [])
+    .filter(s => secili.has(s.soru_id) && (!ogrId || s.ogrenci_id === ogrId))
+    .sort((a, b) => (a.konu || '').localeCompare(b.konu || '', 'tr') || (a.olusturma_tarihi || '').localeCompare(b.olusturma_tarihi || ''));
+  if (!sorular.length) { showToast('⚠️ Önce soru seçin'); return; }
+
+  const E = kkmEsc;
+  const ogrAd = (state._soruOgrenciAdMap && state._soruOgrenciAdMap[sorular[0].ogrenci_id]) || '';
+  const bugun = new Date().toLocaleDateString('tr-TR');
+
+  const sorularHTML = sorular.map((s, i) => `
+    <div class="q">
+      <div class="qh"><span class="qn">${i + 1}.</span>${s.konu ? `<span class="qk">${E(s.konu)}</span>` : ''}</div>
+      <img src="${E(s.fotograf_url)}" alt="Soru ${i + 1}"/>
+    </div>`).join('');
+
+  const anahtarHTML = `
+    <div class="key">
+      <h3>Cevap Anahtarı</h3>
+      <div class="keygrid">
+        ${sorular.map((s, i) => `<span><b>${i + 1}.</b> ${s.dogru_cevap ? E(s.dogru_cevap) : '—'}</span>`).join('')}
+      </div>
+      <p class="keynote">"—" işaretli sorularda doğru şık fotoğraftan okunamadı; öğretmen elle işaretlemeli.</p>
+    </div>`;
+
+  const doc = `<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<title>Tekrar Testi${ogrAd ? ' - ' + E(ogrAd) : ''}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:system-ui,'Segoe UI',Roboto,Arial,sans-serif;margin:22px;color:#111;}
+  .actions{margin-bottom:14px;}
+  .actions button{font-size:13px;padding:8px 16px;border:none;border-radius:8px;background:#005d8d;color:#fff;cursor:pointer;}
+  .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #005d8d;padding-bottom:8px;margin-bottom:18px;}
+  .top h1{font-size:18px;margin:0;color:#005d8d;}
+  .top .meta{font-size:12px;color:#555;text-align:right;line-height:1.5;}
+  .top .meta b{color:#111;}
+  .q{margin:0 0 20px;break-inside:avoid;page-break-inside:avoid;}
+  .qh{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .qn{color:#005d8d;}
+  .qk{font-weight:600;color:#005d8d;font-size:10.5px;background:#e8f4fb;padding:1px 7px;border-radius:10px;}
+  .q img{max-width:100%;max-height:430px;border:1px solid #cfd8e0;border-radius:6px;display:block;}
+  .key{margin-top:26px;border-top:1px dashed #999;padding-top:12px;page-break-before:always;}
+  .key h3{font-size:14px;color:#005d8d;margin:0 0 10px;}
+  .keygrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;font-size:12px;}
+  .keygrid span{border:1px solid #ddd;border-radius:5px;padding:4px 6px;text-align:center;}
+  .keynote{font-size:10.5px;color:#777;margin-top:10px;}
+  @media print{ .actions{display:none;} @page{size:A4 portrait;margin:12mm;} }
+</style></head><body>
+  <div class="actions"><button onclick="window.print()">🖨️ Yazdır / PDF olarak kaydet</button></div>
+  <div class="top">
+    <h1>Tekrar Testi</h1>
+    <div class="meta">${ogrAd ? `<b>${E(ogrAd)}</b><br>` : ''}${sorular.length} soru &middot; ${bugun}</div>
+  </div>
+  ${sorularHTML}
+  ${anahtarHTML}
+  <script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},500)});<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { showToast('⚠️ Pop-up engellendi — bu site için pop-up iznini açın'); return; }
+  w.document.open(); w.document.write(doc); w.document.close();
 }
 
 async function loadOgrDenemeler() {

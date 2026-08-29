@@ -19,7 +19,8 @@
 > - **Öğretmen arayüzü:** (a) Sol menüde **"Soru Bankası"** sayfası — tüm öğrencilerin kayıtları, "Onay Bekleyen / Tümü" filtresi, kartta öğrenci adı. (b) Rapor sayfasında `#rapor-soru-bankasi` bölümü — o öğrencinin kayıtları, kronik rozeti (aynı konuda 5+ soru). Her iki görünüm ortak kart (`raporSoruKartHTML`) ve **Düzelt & Kaydet / Onayla / Sil** aksiyonlarını kullanır.
 > - Görsel sıkıştırma mevcut `kkmResimSikistir` (1600px / JPEG 0.85) ile ortak; **EXIF orientation düzeltmesi eklenmedi** (sonraki iyileştirme).
 > - **Kırpma adımı** (631b018): fotoğraf seçildikten sonra `#soru-crop-modal` — köşe tutamaçlı çerçeve (pointer events, dokunmatik+fare) ile öğrenci yalnızca soruyu bırakacak şekilde kırpar; "Kırpma" ile tam foto da eklenebilir. Kırpılan bölge doğal çözünürlükte canvas'a çizilip sıkıştırma/analiz akışına girer (`soruFotoSecildi → soruCropAc → soruCropUygula → soruYukleVeAnaliz`).
-> - **Kapsam dışı bırakıldı:** V4.1 PDF/test oluşturma, V4.2 veli görünümü, V4.3 unutma eğrisi, V4.4 `konu_uyarilari` çapraz besleme.
+> - **V4.1 (PDF/test oluşturma) — eklendi:** Öğretmen "Soru Bankası" sayfasında öğrenci + konu filtresi seçer, kartlardaki checkbox'larla soru işaretler, **"Test Oluştur"** ile yeni sekmede yazdırılabilir bir "Tekrar Testi" açılır (numaralı soru fotoğrafları + ayrı sayfada cevap anahtarı; `dogru_cevap` boşsa "—"). `window.open` + `window.print()`, ek kütüphane yok. Yalnızca öğretmen rolünde (§7.1). Çıktı bir sonraki sekmede oluşturulur, öğrenci paneline hiç girmez.
+> - **Hâlâ kapsam dışı:** V4.2 veli görünümü, V4.3 unutma eğrisi, V4.4 `konu_uyarilari` çapraz besleme.
 >
 > Aşağısı orijinal plan metnidir, tarihsel referans için bırakıldı.
 

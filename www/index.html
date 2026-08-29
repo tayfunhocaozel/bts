@@ -897,6 +897,8 @@ tailwind.config = {
 
     <!-- ── ÖĞRENCİ PANELI -->
     <div id="page-ogrenci-panel" class="page">
+      <!-- ── Panel görünümü: Ödevlerim / Denemeler / Derslerim (sol menü: "Panel") -->
+      <div id="ogr-view-panel">
       <!-- Hero Banner -->
       <div class="card-2xl" style="padding:24px 26px;background:linear-gradient(135deg,#005d8d,#013149);color:#fff;border:none;position:relative;overflow:hidden;margin-bottom:16px;">
         <div style="position:absolute;right:-30px;top:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(245,124,0,.28),transparent 65%);"></div>
@@ -1008,9 +1010,6 @@ tailwind.config = {
         <button onclick="ogrTab('odevler')" id="tab-odevler" class="tab active">Ödevlerim</button>
         <button onclick="ogrTab('denemeler')" id="tab-denemeler" class="tab">Denemeler</button>
         <button onclick="ogrTab('dersler')" id="tab-dersler" class="tab">Derslerim</button>
-        <button onclick="ogrTab('basari')" id="tab-basari" class="tab">Başarım</button>
-        <button onclick="ogrTab('odul-dukkani')" id="tab-odul-dukkani" class="tab">🎁 Ödül Dükkanı</button>
-        <button onclick="ogrTab('puan-gecmisim')" id="tab-puan-gecmisim" class="tab">⭐ Puan Geçmişim</button>
       </div>
 
       <div id="ogr-tab-odevler">
@@ -1053,6 +1052,9 @@ tailwind.config = {
       <div id="ogr-tab-dersler" class="hidden">
         <div id="ogr-dersler-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
       </div>
+      </div><!-- /#ogr-view-panel -->
+
+      <!-- ── Sol menü modülleri: Başarım / Ödül Dükkanı / Puan Geçmişim -->
       <div id="ogr-tab-basari" class="hidden">
         <div id="ogr-basari-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
       </div>
@@ -1088,16 +1090,9 @@ tailwind.config = {
         </div>
       </div>
 
-      <!-- Aylık Özet -->
-      <div id="veli-aylik-ozet" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
-
-      <!-- Tabs -->
-      <div class="tabbar" style="margin-bottom:16px;">
-        <button onclick="veliTab('ozet')" id="vtab-ozet" class="tab active">Özet</button>
-        <button onclick="veliTab('odevler')" id="vtab-odevler" class="tab">Ödevler</button>
-        <button onclick="veliTab('dersler')" id="vtab-dersler" class="tab">Dersler</button>
-        <button onclick="veliTab('denemeler')" id="vtab-denemeler" class="tab">Denemeler</button>
-        <button onclick="veliTab('basari')" id="vtab-basari" class="tab">Başarı</button>
+      <!-- Aylık Özet (sadece "Özet" görünümünde) — diğer bölümler sol menüde -->
+      <div id="veli-ozet-only">
+        <div id="veli-aylik-ozet" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
       </div>
 
       <div id="veli-tab-ozet"></div>
@@ -1755,9 +1750,16 @@ function buildNav() {
   ] : state.rol === 'adaptix' ? [
     { id: 'adaptix', icon: 'admin_panel_settings', label: 'Platform Yönetimi' },
   ] : state.rol === 'ogrenci' ? [
-    { id: 'ogrenci-panel', icon: 'dashboard', label: 'Panel' },
+    { id: 'ogrenci-panel',         icon: 'dashboard',    label: 'Panel' },
+    { id: 'ogrenci-basari',        icon: 'military_tech', label: 'Başarım' },
+    { id: 'ogrenci-odul-dukkani',  icon: 'redeem',       label: '🎁 Ödül Dükkanı' },
+    { id: 'ogrenci-puan-gecmisim', icon: 'stars',        label: '⭐ Puan Geçmişim' },
   ] : [
-    { id: 'veli-panel', icon: 'dashboard', label: 'Rapor' },
+    { id: 'veli-panel',     icon: 'dashboard',    label: 'Özet' },
+    { id: 'veli-odevler',   icon: 'assignment',   label: 'Ödevler' },
+    { id: 'veli-dersler',   icon: 'menu_book',    label: 'Dersler' },
+    { id: 'veli-denemeler', icon: 'quiz',         label: 'Denemeler' },
+    { id: 'veli-basari',    icon: 'military_tech', label: 'Başarı' },
   ];
 
   const sidebarNav = document.getElementById('sidebarNav');
@@ -1792,19 +1794,39 @@ const PAGE_TITLES = {
   'odul-dukkani':  ['Ödül Dükkanı', 'Ödül kataloğu ve talep yönetimi'],
   'puan-yonetimi': ['Puan Yönetimi', 'Öğrenci puan geçmişi ve manuel puan'],
   'pet-ayarlari':  ['Pet Ayarları', 'Evcil hayvan süre ve puan ayarları'],
-  'ogrenci-panel':['Öğrenci Paneli','Ödevler, dersler ve başarı'],
+  'ogrenci-panel':['Öğrenci Paneli','Ödevler, denemeler ve dersler'],
+  'ogrenci-basari':['Başarım',      'Kazanım ve başarı takibin'],
+  'ogrenci-odul-dukkani':['Ödül Dükkanı','Puanınla ödül talep et'],
+  'ogrenci-puan-gecmisim':['Puan Geçmişim','Kazandığın ve harcadığın puanlar'],
   'veli-panel':   ['Veli Paneli',   'Çocuğunuzun gelişim özeti'],
+  'veli-odevler': ['Ödevler',       'Çocuğunuzun ödev durumu'],
+  'veli-dersler': ['Dersler',       'İşlenen konular ve ders görüşleri'],
+  'veli-denemeler':['Denemeler',    'TYT/LGS deneme sonuçları'],
+  'veli-basari':  ['Başarı',        'Kazanım bazlı başarı analizi'],
   'adaptix':      ['Platform Yönetimi', 'Öğretmenler, faturalar ve genel bakış'],
 };
+// Öğrenci / veli panelinde sol menüden açılan alt modüller
+const OGR_SUB_PAGES  = { 'ogrenci-basari':'basari', 'ogrenci-odul-dukkani':'odul-dukkani', 'ogrenci-puan-gecmisim':'puan-gecmisim' };
+const VELI_SUB_PAGES = { 'veli-odevler':'odevler', 'veli-dersler':'dersler', 'veli-denemeler':'denemeler', 'veli-basari':'basari' };
+
 function goPage(id) {
   if (id === 'ada' && state.rol !== 'ogretmen') return;
   if (state.rol === 'adaptix' && id !== 'adaptix') return;
+
+  let realId = id;
+  if (id === 'ogrenci-panel' || id in OGR_SUB_PAGES) realId = 'ogrenci-panel';
+  else if (id === 'veli-panel' || id in VELI_SUB_PAGES) realId = 'veli-panel';
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === id);
   });
-  const page = document.getElementById('page-' + id);
+  const page = document.getElementById('page-' + realId);
   if (page) page.classList.add('active');
+
+  if (realId === 'ogrenci-panel') ogrShowSection(id === 'ogrenci-panel' ? 'panel' : OGR_SUB_PAGES[id]);
+  if (realId === 'veli-panel')    veliTab(id === 'veli-panel' ? 'ozet' : VELI_SUB_PAGES[id]);
+
   if (id === 'ders-programi') loadHaftalikProgram();
   if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = yerelISO(new Date()); }
   if (id === 'ada') adaSayfaAcildi();
@@ -6130,16 +6152,31 @@ function hedefDuzenle() {
 
 // ── ÖĞRENCİ PANELİ ───────────────────────────────────────────
 function ogrTab(tab) {
-  ['odevler','denemeler','dersler','basari','odul-dukkani','puan-gecmisim'].forEach(t => {
+  // Sol menüye taşınan modüller — goPage üzerinden yönlendir
+  if (tab === 'basari')        return goPage('ogrenci-basari');
+  if (tab === 'odul-dukkani')  return goPage('ogrenci-odul-dukkani');
+  if (tab === 'puan-gecmisim') return goPage('ogrenci-puan-gecmisim');
+  ['odevler','denemeler','dersler'].forEach(t => {
     document.getElementById('ogr-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('tab-' + t);
-    btn.classList.toggle('active', t === tab);
+    if (btn) btn.classList.toggle('active', t === tab);
   });
-  if (tab === 'basari')   loadOgrBasari();
-  if (tab === 'dersler')  loadOgrDersler();
+  if (tab === 'dersler')   loadOgrDersler();
   if (tab === 'denemeler') loadOgrDenemeler();
-  if (tab === 'odul-dukkani')  loadOgrOdulDukkani();
-  if (tab === 'puan-gecmisim') loadOgrPuanGecmisim();
+}
+
+// Öğrenci paneli: "Panel" görünümü ile sol menü modülleri arası geçiş
+function ogrShowSection(section) {
+  const map = { 'basari':'ogr-tab-basari', 'odul-dukkani':'ogr-tab-odul-dukkani', 'puan-gecmisim':'ogr-tab-puan-gecmisim' };
+  const wrap = document.getElementById('ogr-view-panel');
+  if (wrap) wrap.classList.toggle('hidden', section !== 'panel');
+  Object.entries(map).forEach(([k, elId]) => {
+    const el = document.getElementById(elId);
+    if (el) el.classList.toggle('hidden', k !== section);
+  });
+  if (section === 'basari')        loadOgrBasari();
+  if (section === 'odul-dukkani')  loadOgrOdulDukkani();
+  if (section === 'puan-gecmisim') loadOgrPuanGecmisim();
 }
 
 async function loadOgrDenemeler() {
@@ -6802,8 +6839,10 @@ function veliTab(tab) {
   ['ozet','odevler','dersler','denemeler','basari'].forEach(t => {
     document.getElementById('veli-tab-' + t).classList.toggle('hidden', t !== tab);
     const btn = document.getElementById('vtab-' + t);
-    btn.classList.toggle('active', t === tab);
+    if (btn) btn.classList.toggle('active', t === tab);
   });
+  const ozetOnly = document.getElementById('veli-ozet-only');
+  if (ozetOnly) ozetOnly.classList.toggle('hidden', tab !== 'ozet');
 }
 
 async function loadVeliPanel() {

@@ -6551,6 +6551,7 @@ async function soruYukleVeAnaliz(dosya) {
       guncelle = {
         ders: data.ders || null, konu: data.konu || null, kazanim_kodu: data.kazanim_kodu || null,
         ai_guven_skoru: skor, ipucu: data.ipucu || null, dogru_cevap: data.dogru_cevap || null,
+        soru_metni: data.soru_metni || null,
         durum: otoOnay ? 'ogretmen_onayladi' : 'ai_tamamlandi'
       };
     } catch (e) {
@@ -6638,6 +6639,7 @@ function raporSoruKartHTML(s) {
         <div class="flex items-center gap-2 flex-wrap mb-1">
           ${(state._soruOgrenciAdMap && state._soruOgrenciAdMap[s.ogrenci_id]) ? `<span class="text-xs font-bold text-primary">${kkmEsc(state._soruOgrenciAdMap[s.ogrenci_id])}</span>` : ''}
           ${etiket}
+          ${_soruSecimAktif ? (s.soru_metni ? '<span class="text-xs text-tertiary font-semibold">📝 metin var</span>' : '<span class="text-xs text-outline">metin yok</span>') : ''}
           <span class="text-xs text-outline">📅 ${s.olusturma_tarihi ? new Date(s.olusturma_tarihi).toLocaleDateString('tr-TR') : ''}</span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
@@ -6764,7 +6766,9 @@ function renderSoruBankasiOgretmen() {
   if (ogrId) liste = liste.filter(s => s.ogrenci_id === ogrId);
   if (konuF) liste = liste.filter(s => s.konu === konuF);
 
-  const secSay = [...state._soruSecili].filter(id => hepsi.some(s => s.soru_id === id && (!ogrId || s.ogrenci_id === ogrId))).length;
+  const secliSorular = (state._raporSoruBankasi || []).filter(s => state._soruSecili.has(s.soru_id) && (!ogrId || s.ogrenci_id === ogrId));
+  const secSay = secliSorular.length;
+  const metinsizSay = secliSorular.filter(s => !s.soru_metni).length;
   const btn = (val, lbl) => `<button onclick="soruBankasiOgrFiltre('${val}')" class="tab ${sekme === val ? 'active' : ''}">${lbl}</button>`;
 
   el.innerHTML = `
@@ -6773,12 +6777,19 @@ function renderSoruBankasiOgretmen() {
       <select onchange="sbOgrKonuSec(this.value)" class="field" style="flex:1;min-width:160px;" ${konularBu.length ? '' : 'disabled'}>${konuOpts}</select>
     </div>
     ${ogrId ? `
-    <div class="card-2xl" style="padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#eef6fb;">
-      <span style="font-size:13px;font-weight:700;color:var(--ink);">🧪 Teste eklenecek: ${secSay}</span>
+    <div class="card-2xl" style="padding:12px 16px;margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#eef6fb;">
+      <span style="font-size:13px;font-weight:700;color:var(--ink);">Seçili: ${secSay}${metinsizSay ? ` · ${metinsizSay} metinsiz` : ''}</span>
       <button onclick="soruTestSecTumu()" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;">Görünenleri seç</button>
       <button onclick="soruTestSecTemizle()" class="btn btn-ghost" style="padding:5px 10px;font-size:12px;">Temizle</button>
+      <div style="flex-basis:100%;height:0;"></div>
+      ${metinsizSay ? `<button onclick="soruSeciliMetinCikar()" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;border:1px solid var(--line);">
+        <span class="material-symbols-outlined" style="font-size:17px;">document_scanner</span> Metni Çıkar (${metinsizSay})
+      </button>` : ''}
+      <button onclick="soruMdOlustur()" class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px;border:1px solid var(--line);${secSay ? '' : 'opacity:.5;pointer-events:none;'}">
+        <span class="material-symbols-outlined" style="font-size:17px;">description</span> MD Oluştur (${secSay})
+      </button>
       <button onclick="soruTestOlustur()" class="btn btn-primary" style="margin-left:auto;${secSay ? '' : 'opacity:.5;pointer-events:none;'}">
-        <span class="material-symbols-outlined" style="font-size:18px;">description</span> Test Oluştur (${secSay})
+        <span class="material-symbols-outlined" style="font-size:18px;">quiz</span> Test Oluştur (${secSay})
       </button>
     </div>` : ''}
     <div class="tabbar" style="margin-bottom:16px;">
@@ -6900,6 +6911,95 @@ function soruTestOlustur() {
   const w = window.open('', '_blank');
   if (!w) { showToast('⚠️ Pop-up engellendi — bu site için pop-up iznini açın'); return; }
   w.document.open(); w.document.write(doc); w.document.close();
+}
+
+// ── Soru Bankası: seçili sorulardan öğrenciye özel MD dosyası (ikiz soru üretimi için) ──
+function _urlToBase64(url) {
+  return fetch(url).then(r => r.blob()).then(blob => new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve({ mimeType: blob.type || 'image/jpeg', data: String(fr.result).split(',')[1] });
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  }));
+}
+
+async function soruSeciliMetinCikar() {
+  const secili = state._soruSecili || new Set();
+  const ogrId = state._sbOgrOgrenciId || '';
+  const hedef = (state._raporSoruBankasi || [])
+    .filter(s => secili.has(s.soru_id) && (!ogrId || s.ogrenci_id === ogrId) && !s.soru_metni);
+  if (!hedef.length) { showToast('Seçili soruların metni zaten çıkarılmış'); return; }
+  if (!confirm(`${hedef.length} sorunun metni yapay zekâ ile fotoğraftan çıkarılacak. Devam edilsin mi?`)) return;
+
+  const kazanimlar = state._raporSoruKazData || [];
+  let ok = 0, hata = 0;
+  for (let i = 0; i < hedef.length; i++) {
+    const s = hedef[i];
+    showToast(`Metin çıkarılıyor… ${i + 1}/${hedef.length}`);
+    try {
+      const foto = await _urlToBase64(s.fotograf_url);
+      const ogr = (state.ogrenciler || []).find(o => o.ogrenci_id === s.ogrenci_id);
+      const { data, error } = await sb.functions.invoke('soru-analiz', {
+        body: { foto, sinif: ogr?.sinif || '', kazanimlar }
+      });
+      if (error || (data && data.error) || !data || !data.soru_metni) throw new Error('metin alınamadı');
+      await sb.from('yanlis_defteri').update({ soru_metni: data.soru_metni }).eq('soru_id', s.soru_id);
+      const row = (state._raporSoruBankasi || []).find(x => x.soru_id === s.soru_id);
+      if (row) row.soru_metni = data.soru_metni;
+      ok++;
+    } catch (e) { hata++; }
+  }
+  renderSoruBankasiOgretmen();
+  showToast(`✅ ${ok} soru metni çıkarıldı${hata ? ` · ${hata} başarısız` : ''}`);
+}
+
+function _trSlug(s) {
+  return String(s || '').toLocaleLowerCase('tr')
+    .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'ogrenci';
+}
+
+function soruMdOlustur() {
+  const secili = state._soruSecili || new Set();
+  const ogrId = state._sbOgrOgrenciId || '';
+  const sorular = (state._raporSoruBankasi || [])
+    .filter(s => secili.has(s.soru_id) && (!ogrId || s.ogrenci_id === ogrId))
+    .sort((a, b) => (a.konu || '').localeCompare(b.konu || '', 'tr') || (a.olusturma_tarihi || '').localeCompare(b.olusturma_tarihi || ''));
+  if (!sorular.length) { showToast('⚠️ Önce soru seçin'); return; }
+
+  const ogr = (state.ogrenciler || []).find(o => o.ogrenci_id === sorular[0].ogrenci_id);
+  const ogrAd = ogr?.ad_soyad || (state._soruOgrenciAdMap && state._soruOgrenciAdMap[sorular[0].ogrenci_id]) || 'Öğrenci';
+  const kazMap = {};
+  (state._raporSoruKazData || []).forEach(k => { kazMap[k.kazanim_kodu] = k.kazanim_aciklamasi || ''; });
+  const eksik = sorular.filter(s => !s.soru_metni).length;
+  const bugun = new Date().toLocaleDateString('tr-TR');
+
+  let md = `# Soru Bankası — ${ogrAd}\n\n`;
+  md += `- Sınıf: ${ogr?.sinif || '—'}\n`;
+  md += `- Tarih: ${bugun}\n`;
+  md += `- Soru sayısı: ${sorular.length}\n`;
+  if (eksik) md += `- ⚠️ ${eksik} soruda metin çıkarılmamış (yalnızca fotoğraf bağlantısı var)\n`;
+  md += `\n> Bu dosya, öğrencinin çözemediği sorulardan oluşur. Amaç: her soru için aynı kazanıma yönelik **ikiz (paralel) sorular** üretmek.\n`;
+
+  let sonKonu = null, no = 0;
+  for (const s of sorular) {
+    const konu = s.konu || 'Konu belirtilmemiş';
+    if (konu !== sonKonu) { md += `\n## ${konu}\n`; sonKonu = konu; }
+    no++;
+    md += `\n### ${no}. Soru\n`;
+    if (s.kazanim_kodu) md += `**Kazanım:** ${s.kazanim_kodu}${kazMap[s.kazanim_kodu] ? ' — ' + kazMap[s.kazanim_kodu] : ''}\n\n`;
+    md += (s.soru_metni ? s.soru_metni.trim() : '_(Metin çıkarılmadı — fotoğrafa bakınız)_') + `\n\n`;
+    md += `- **Doğru cevap:** ${s.dogru_cevap || '—'}\n`;
+    md += `- **Fotoğraf:** ${s.fotograf_url}\n`;
+  }
+
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `soru-bankasi-${_trSlug(ogrAd)}-${new Date().toISOString().slice(0, 10)}.md`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 2000);
+  showToast(eksik ? `📄 MD indirildi — ${eksik} soruda metin yok, "Metni Çıkar" ile tamamlayabilirsin` : '📄 MD indirildi');
 }
 
 async function loadOgrDenemeler() {

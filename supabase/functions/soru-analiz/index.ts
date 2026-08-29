@@ -28,6 +28,10 @@ const SISTEM_PROMPT =
   "4. Öğrenciye soruyu çözmesi için CEVABI VERMEDEN kısa (en fazla 2 cümle) bir ipucu yaz (ipucu).\n" +
   "5. Fotoğrafta sorunun net doğru şıkkı (A-E) açıkça görünüyorsa dogru_cevap alanına yaz; " +
   "emin değilsen boş bırak.\n" +
+  "6. Sorunun TAM metnini yaz (soru_metni): soru kökü ve varsa A-E şıkları. Matematiksel " +
+  "ifadeleri düz metinde okunabilir yaz (örn. x^2, kök(3), 1/2, ∴). Şıkları 'A) ... B) ...' " +
+  "biçiminde ayrı satırlara koy. Soruda şekil/grafik/tablo varsa yerine [ŞEKİL: kısa açıklama] " +
+  "yaz. Fotoğrafta birden çok soru varsa yalnızca ana/ilk soruyu al. Metni aynen çıkar, yorum ekleme.\n" +
   "Emin olmadığın alanları boş/null bırak, uydurma.";
 
 const SCHEMA = {
@@ -39,6 +43,7 @@ const SCHEMA = {
     ai_guven_skoru: { type: "NUMBER" },
     ipucu: { type: "STRING" },
     dogru_cevap: { type: "STRING" },
+    soru_metni: { type: "STRING" },
   },
   required: ["konu", "kazanim_kodu", "ai_guven_skoru"],
 };
@@ -95,7 +100,7 @@ Deno.serve(async (req) => {
     const geminiBody = {
       contents: [{ role: "user", parts }],
       generationConfig: {
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
         responseMimeType: "application/json",
         responseSchema: SCHEMA,
       },

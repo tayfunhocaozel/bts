@@ -892,6 +892,7 @@ tailwind.config = {
         </select>
       </div>
       <div id="rapor-content"></div>
+      <div id="rapor-soru-bankasi" class="print-hide"></div>
       <div id="rapor-print-view" style="display:none;"></div>
     </div>
 
@@ -1054,7 +1055,10 @@ tailwind.config = {
       </div>
       </div><!-- /#ogr-view-panel -->
 
-      <!-- ── Sol menü modülleri: Başarım / Ödül Dükkanı / Puan Geçmişim -->
+      <!-- ── Sol menü modülleri: Soru Bankam / Başarım / Ödül Dükkanı / Puan Geçmişim -->
+      <div id="ogr-tab-soru-bankasi" class="hidden">
+        <div id="ogr-soru-bankasi-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
+      </div>
       <div id="ogr-tab-basari" class="hidden">
         <div id="ogr-basari-content"><div style="display:flex;justify-content:center;padding:48px 0;"><div class="spinner"></div></div></div>
       </div>
@@ -1750,10 +1754,11 @@ function buildNav() {
   ] : state.rol === 'adaptix' ? [
     { id: 'adaptix', icon: 'admin_panel_settings', label: 'Platform Yönetimi' },
   ] : state.rol === 'ogrenci' ? [
-    { id: 'ogrenci-panel',         icon: 'dashboard',    label: 'Panel' },
-    { id: 'ogrenci-basari',        icon: 'military_tech', label: 'Başarım' },
-    { id: 'ogrenci-odul-dukkani',  icon: 'redeem',       label: '🎁 Ödül Dükkanı' },
-    { id: 'ogrenci-puan-gecmisim', icon: 'stars',        label: '⭐ Puan Geçmişim' },
+    { id: 'ogrenci-panel',         icon: 'dashboard',      label: 'Panel' },
+    { id: 'ogrenci-soru-bankasi',  icon: 'photo_library',  label: '📸 Soru Bankam' },
+    { id: 'ogrenci-basari',        icon: 'military_tech',   label: 'Başarım' },
+    { id: 'ogrenci-odul-dukkani',  icon: 'redeem',         label: '🎁 Ödül Dükkanı' },
+    { id: 'ogrenci-puan-gecmisim', icon: 'stars',          label: '⭐ Puan Geçmişim' },
   ] : [
     { id: 'veli-panel',     icon: 'dashboard',    label: 'Özet' },
     { id: 'veli-odevler',   icon: 'assignment',   label: 'Ödevler' },
@@ -1795,6 +1800,7 @@ const PAGE_TITLES = {
   'puan-yonetimi': ['Puan Yönetimi', 'Öğrenci puan geçmişi ve manuel puan'],
   'pet-ayarlari':  ['Pet Ayarları', 'Evcil hayvan süre ve puan ayarları'],
   'ogrenci-panel':['Öğrenci Paneli','Ödevler, denemeler ve dersler'],
+  'ogrenci-soru-bankasi':['Soru Bankam','Çözemediğin soruların arşivi'],
   'ogrenci-basari':['Başarım',      'Kazanım ve başarı takibin'],
   'ogrenci-odul-dukkani':['Ödül Dükkanı','Puanınla ödül talep et'],
   'ogrenci-puan-gecmisim':['Puan Geçmişim','Kazandığın ve harcadığın puanlar'],
@@ -1806,7 +1812,7 @@ const PAGE_TITLES = {
   'adaptix':      ['Platform Yönetimi', 'Öğretmenler, faturalar ve genel bakış'],
 };
 // Öğrenci / veli panelinde sol menüden açılan alt modüller
-const OGR_SUB_PAGES  = { 'ogrenci-basari':'basari', 'ogrenci-odul-dukkani':'odul-dukkani', 'ogrenci-puan-gecmisim':'puan-gecmisim' };
+const OGR_SUB_PAGES  = { 'ogrenci-soru-bankasi':'soru-bankasi', 'ogrenci-basari':'basari', 'ogrenci-odul-dukkani':'odul-dukkani', 'ogrenci-puan-gecmisim':'puan-gecmisim' };
 const VELI_SUB_PAGES = { 'veli-odevler':'odevler', 'veli-dersler':'dersler', 'veli-denemeler':'denemeler', 'veli-basari':'basari' };
 
 function goPage(id) {
@@ -5180,6 +5186,9 @@ async function loadRapor() {
     </div>
   </div>`;
 
+  // Öğrencinin Soru Bankası (Yanlış Defteri) — öğretmen onay/düzeltme arayüzü
+  loadRaporSoruBankasi(ogrenciId, ogr, kazData);
+
   // Print görünümünü render et
   window._raporRenderArgs = {
     ogr, dersOturumSayisi, dersSatir, derslerRaw: dersler,
@@ -6219,16 +6228,310 @@ function ogrTab(tab) {
 
 // Öğrenci paneli: "Panel" görünümü ile sol menü modülleri arası geçiş
 function ogrShowSection(section) {
-  const map = { 'basari':'ogr-tab-basari', 'odul-dukkani':'ogr-tab-odul-dukkani', 'puan-gecmisim':'ogr-tab-puan-gecmisim' };
+  const map = { 'soru-bankasi':'ogr-tab-soru-bankasi', 'basari':'ogr-tab-basari', 'odul-dukkani':'ogr-tab-odul-dukkani', 'puan-gecmisim':'ogr-tab-puan-gecmisim' };
   const wrap = document.getElementById('ogr-view-panel');
   if (wrap) wrap.classList.toggle('hidden', section !== 'panel');
   Object.entries(map).forEach(([k, elId]) => {
     const el = document.getElementById(elId);
     if (el) el.classList.toggle('hidden', k !== section);
   });
+  if (section === 'soru-bankasi')  loadSoruBankasi();
   if (section === 'basari')        loadOgrBasari();
   if (section === 'odul-dukkani')  loadOgrOdulDukkani();
   if (section === 'puan-gecmisim') loadOgrPuanGecmisim();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SORU BANKAM (Yanlış Defteri) — BTS V4
+// Öğrenci çözemediği soruyu fotoğraflar → Storage (public) → soru-analiz
+// edge function (Gemini) ders/konu/kazanım/ipucu üretir → yanlis_defteri.
+// ai_guven_skoru >= SORU_GUVEN_ESIK ise otomatik onaylı; altındakiler
+// öğretmenin Rapor sayfasındaki onay/düzeltme arayüzüne düşer.
+// ═══════════════════════════════════════════════════════════════
+const SORU_GUVEN_ESIK = 0.8;
+
+async function loadSoruBankasi() {
+  const el = document.getElementById('ogr-soru-bankasi-content');
+  el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+  const { data, error } = await sb.from('yanlis_defteri').select('*')
+    .eq('ogrenci_id', state.user.ogrenci_id)
+    .order('olusturma_tarihi', { ascending: false });
+  if (error) { el.innerHTML = `<div class="text-sm text-error text-center py-8">Liste yüklenemedi: ${kkmEsc(error.message)}</div>`; return; }
+  state._soruBankasi = data || [];
+  if (state._soruBankasiFiltre == null) state._soruBankasiFiltre = '';
+  renderSoruBankasi();
+}
+
+function renderSoruBankasi() {
+  const el = document.getElementById('ogr-soru-bankasi-content');
+  const tumu = state._soruBankasi || [];
+  const konular = [...new Set(tumu.map(s => s.konu).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const f = state._soruBankasiFiltre || '';
+  const liste = f ? tumu.filter(s => s.konu === f) : tumu;
+
+  const cip = (label, val) => `<button data-k="${kkmEsc(val)}" onclick="soruBankasiFiltre(this.dataset.k)"
+    class="text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${val === f ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'}">${kkmEsc(label)}</button>`;
+
+  el.innerHTML = `
+    <button onclick="document.getElementById('soru-foto-input').click()" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:14px;">
+      <span class="material-symbols-outlined" style="font-size:18px;">add_a_photo</span> Soru Ekle
+    </button>
+    <input type="file" id="soru-foto-input" accept="image/*" capture="environment" style="display:none;" onchange="soruFotoSecildi(this)"/>
+    <div id="soru-ekle-durum"></div>
+    ${tumu.length ? `<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px;">
+      ${cip('Tümü (' + tumu.length + ')', '')}
+      ${konular.map(k => cip(k + ' (' + tumu.filter(s => s.konu === k).length + ')', k)).join('')}
+    </div>` : ''}
+    ${!liste.length
+      ? `<div class="bg-surface-container-lowest rounded-xl p-8 text-center text-sm text-outline">${tumu.length ? 'Bu konuda soru yok.' : 'Henüz soru eklemedin. Çözemediğin bir soruyu fotoğraflayıp buraya ekle.'}</div>`
+      : `<div class="flex flex-col gap-3">${liste.map(soruKartHTML).join('')}</div>`}`;
+}
+
+function soruKartHTML(s) {
+  const bekliyor = s.durum === 'ai_bekliyor';
+  const hata     = s.durum === 'hata';
+  const onayli   = s.durum === 'ogretmen_onayladi' || s.durum === 'ogretmen_duzeltti';
+  const dusukGuven = !bekliyor && !hata && !onayli && (s.ai_guven_skoru == null || s.ai_guven_skoru < SORU_GUVEN_ESIK);
+  const tarih = s.olusturma_tarihi ? new Date(s.olusturma_tarihi).toLocaleDateString('tr-TR') : '';
+
+  let rozet = '';
+  if (bekliyor)        rozet = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-container text-outline">⏳ Analiz ediliyor…</span>';
+  else if (hata)       rozet = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-error-container text-error">⚠️ Öğretmenin konuyu ekleyecek</span>';
+  else if (onayli)     rozet = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary">✅ Öğretmen onaylı</span>';
+  else if (dusukGuven) rozet = '<span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary-container/60 text-secondary">🤖 AI önerisi — öğretmen onayı bekliyor</span>';
+
+  return `
+  <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
+    <a href="${kkmEsc(s.fotograf_url)}" target="_blank" rel="noopener" style="display:block;">
+      <img src="${kkmEsc(s.fotograf_url)}" alt="Soru" style="width:100%;max-height:240px;object-fit:contain;background:var(--surface-container-low);"/>
+    </a>
+    <div class="p-4">
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        ${s.konu ? `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-primary">${kkmEsc(s.konu)}</span>` : ''}
+        ${s.kazanim_kodu ? `<span class="text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">${kkmEsc(s.kazanim_kodu)}</span>` : ''}
+        ${rozet}
+      </div>
+      ${s.ipucu ? `<details class="group mb-1">
+        <summary class="cursor-pointer list-none flex items-center gap-1 text-xs font-semibold text-primary py-1">
+          <span class="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span> İpucunu göster
+        </summary>
+        <p class="text-sm text-on-surface-variant mt-1 leading-relaxed">${kkmEsc(s.ipucu)}</p>
+      </details>` : ''}
+      <div class="flex items-center justify-between mt-2 gap-2">
+        <span class="text-xs text-outline">📅 ${tarih}${s.tekrar_sayisi ? ` · 🔁 ${s.tekrar_sayisi}` : ''}</span>
+        <button onclick="soruTekrarEt('${s.soru_id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary flex-shrink-0">🔁 Tekrar Ettim</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function soruBankasiFiltre(konu) {
+  state._soruBankasiFiltre = konu || '';
+  renderSoruBankasi();
+}
+
+async function soruTekrarEt(soruId) {
+  const s = (state._soruBankasi || []).find(x => x.soru_id === soruId);
+  if (!s) return;
+  const yeni = (s.tekrar_sayisi || 0) + 1;
+  s.tekrar_sayisi = yeni;
+  s.son_tekrar_tarihi = yerelISO(new Date());
+  renderSoruBankasi();
+  await sb.from('yanlis_defteri').update({ tekrar_sayisi: yeni, son_tekrar_tarihi: s.son_tekrar_tarihi }).eq('soru_id', soruId);
+  showToast('🔁 Tekrar kaydedildi');
+}
+
+// Öğrencinin sınıfına ait kazanım listesi — bir kez çekilip önbelleğe alınır
+async function soruBankasiKazanimlariGetir() {
+  if (state._soruKazanimCache) return state._soruKazanimCache;
+  const sinifNo = (state.user.sinif || '').replace(/\D/g, '');
+  let q = sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi');
+  if (sinifNo) q = q.ilike('sinif', `%${sinifNo}%`);
+  const { data } = await q;
+  state._soruKazanimCache = (data || []).filter(k => k.kazanim_kodu);
+  return state._soruKazanimCache;
+}
+
+async function soruFotoSecildi(inputEl) {
+  const file = inputEl.files && inputEl.files[0];
+  inputEl.value = '';
+  if (!file) return;
+  const durumEl = document.getElementById('soru-ekle-durum');
+  const setDurum = t => { if (durumEl) durumEl.innerHTML = t ? `<div class="text-xs text-outline py-2">${t}</div>` : ''; };
+
+  try {
+    setDurum('Fotoğraf hazırlanıyor…');
+    const foto = await kkmResimSikistir(file); // { mimeType, base64, dataUrl }
+
+    setDurum('Yükleniyor…');
+    const soruId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('sb-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+    const yol = `${state.user.ogrenci_id}/${soruId}.jpg`;
+    const blob = await (await fetch(foto.dataUrl)).blob();
+    const { error: upErr } = await sb.storage.from('soru-fotograflari').upload(yol, blob, { contentType: 'image/jpeg', upsert: true });
+    if (upErr) throw new Error('Yükleme başarısız: ' + upErr.message);
+    const fotoUrl = sb.storage.from('soru-fotograflari').getPublicUrl(yol).data.publicUrl;
+
+    const { data: yeniKayit, error: insErr } = await sb.from('yanlis_defteri').insert({
+      soru_id: soruId, ogrenci_id: state.user.ogrenci_id, fotograf_url: fotoUrl, durum: 'ai_bekliyor'
+    }).select().single();
+    if (insErr) throw new Error('Kayıt açılamadı: ' + insErr.message);
+
+    state._soruBankasi = [yeniKayit, ...(state._soruBankasi || [])];
+    state._soruBankasiFiltre = '';
+    renderSoruBankasi();
+    setDurum('Yapay zekâ soruyu inceliyor… (birkaç saniye)');
+
+    const kazanimlar = await soruBankasiKazanimlariGetir();
+    let guncelle;
+    try {
+      const { data, error } = await sb.functions.invoke('soru-analiz', {
+        body: { foto: { mimeType: foto.mimeType, data: foto.base64 }, sinif: state.user.sinif || '', kazanimlar }
+      });
+      if (error) {
+        let msg = error.message || 'analiz hatası';
+        try { if (error.context?.json) { const eb = await error.context.json(); msg = eb?.error || msg; } } catch (e) {}
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
+      const skor = (typeof data.ai_guven_skoru === 'number') ? data.ai_guven_skoru : null;
+      const otoOnay = skor != null && skor >= SORU_GUVEN_ESIK;
+      guncelle = {
+        ders: data.ders || null, konu: data.konu || null, kazanim_kodu: data.kazanim_kodu || null,
+        ai_guven_skoru: skor, ipucu: data.ipucu || null, dogru_cevap: data.dogru_cevap || null,
+        durum: otoOnay ? 'ogretmen_onayladi' : 'ai_tamamlandi'
+      };
+    } catch (e) {
+      guncelle = { durum: 'hata' };
+      showToast('⚠️ Soru eklendi ama AI analizi başarısız — öğretmenin konuyu ekleyecek');
+    }
+
+    const { data: sonKayit } = await sb.from('yanlis_defteri').update(guncelle).eq('soru_id', soruId).select().single();
+    if (sonKayit) {
+      state._soruBankasi = (state._soruBankasi || []).map(x => x.soru_id === soruId ? sonKayit : x);
+      renderSoruBankasi();
+    }
+    setDurum('');
+    if (guncelle.durum !== 'hata') showToast('✅ Soru bankana eklendi');
+  } catch (err) {
+    setDurum('');
+    showToast('❌ ' + err.message);
+  }
+}
+
+// ── Öğretmen: Rapor sayfasında öğrencinin Soru Bankası — onay / düzeltme ──
+async function loadRaporSoruBankasi(ogrenciId, ogr, kazData) {
+  const el = document.getElementById('rapor-soru-bankasi');
+  if (!el) return;
+  el.innerHTML = '';
+  if (!ogrenciId || state.rol !== 'ogretmen') return;
+  const { data } = await sb.from('yanlis_defteri').select('*').eq('ogrenci_id', ogrenciId).order('olusturma_tarihi', { ascending: false });
+  state._raporSoruBankasi = data || [];
+  state._raporSoruKazData = (kazData && kazData.length) ? kazData : [];
+  if (!state._raporSoruKazData.length) {
+    const sinifNo = (ogr?.sinif || '').replace(/\D/g, '');
+    if (sinifNo) {
+      const { data: kz } = await sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi').ilike('sinif', `%${sinifNo}%`);
+      state._raporSoruKazData = kz || [];
+    }
+  }
+  if (!state._raporSoruBankasi.length) return;
+  renderRaporSoruBankasi();
+}
+
+function renderRaporSoruBankasi() {
+  const el = document.getElementById('rapor-soru-bankasi');
+  const liste = state._raporSoruBankasi || [];
+  if (!liste.length) { el.innerHTML = ''; return; }
+  const gozden = liste.filter(s => s.durum === 'ai_tamamlandi' || s.durum === 'hata');
+  const konuSay = {};
+  liste.forEach(s => { if (s.konu) konuSay[s.konu] = (konuSay[s.konu] || 0) + 1; });
+  const kronik = Object.entries(konuSay).filter(([, n]) => n >= 5).map(([k]) => k);
+
+  el.innerHTML = `
+  <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] mt-5 border border-outline-variant/20 overflow-hidden">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-xl">photo_library</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Soru Bankası (Yanlış Defteri)</h2>
+      <span class="ml-auto text-xs text-outline">${liste.length} soru</span>
+    </div>
+    <div class="p-4 flex flex-col gap-3">
+      ${kronik.length ? `<div class="text-xs bg-error-container/40 text-error rounded-lg px-3 py-2">⚠️ Kronik: <b>${kronik.map(kkmEsc).join(', ')}</b> konusunda 5+ soru birikmiş.</div>` : ''}
+      ${gozden.length ? `<div class="text-xs font-semibold text-secondary">${gozden.length} kayıt gözden geçirilmeyi bekliyor</div>` : ''}
+      ${liste.map(raporSoruKartHTML).join('')}
+    </div>
+  </div>`;
+}
+
+function raporSoruKartHTML(s) {
+  const kazOpts = state._raporSoruKazData || [];
+  const konular = [...new Set(kazOpts.map(k => k.konu).filter(Boolean))];
+  const onayli = s.durum === 'ogretmen_onayladi' || s.durum === 'ogretmen_duzeltti';
+  const guven = s.ai_guven_skoru != null ? '%' + Math.round(s.ai_guven_skoru * 100) : '—';
+  const etiket = onayli ? '<span class="text-xs px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary font-semibold">✅ Onaylı</span>'
+    : s.durum === 'hata' ? '<span class="text-xs px-2 py-0.5 rounded-full bg-error-container text-error font-semibold">AI başarısız</span>'
+    : s.durum === 'ai_bekliyor' ? '<span class="text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">analiz ediliyor</span>'
+    : `<span class="text-xs px-2 py-0.5 rounded-full bg-secondary-container/60 text-secondary font-semibold">AI güven ${guven}</span>`;
+  return `
+  <div class="border border-outline-variant/25 rounded-xl overflow-hidden">
+    <div class="flex gap-3 p-3">
+      <a href="${kkmEsc(s.fotograf_url)}" target="_blank" rel="noopener" class="flex-shrink-0">
+        <img src="${kkmEsc(s.fotograf_url)}" style="width:96px;height:96px;object-fit:cover;border-radius:8px;background:var(--surface-container-low);"/>
+      </a>
+      <div class="flex-1 min-w-0 text-sm">
+        <div class="flex items-center gap-2 flex-wrap mb-1">
+          ${etiket}
+          <span class="text-xs text-outline">📅 ${s.olusturma_tarihi ? new Date(s.olusturma_tarihi).toLocaleDateString('tr-TR') : ''}</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+          <select id="rsb-konu-${s.soru_id}" class="text-xs px-2 py-1.5 rounded-lg bg-surface-container-low border-none">
+            <option value="">— Konu —</option>
+            ${konular.map(k => `<option ${k === s.konu ? 'selected' : ''}>${kkmEsc(k)}</option>`).join('')}
+          </select>
+          <select id="rsb-kaz-${s.soru_id}" class="text-xs px-2 py-1.5 rounded-lg bg-surface-container-low border-none">
+            <option value="">— Kazanım —</option>
+            ${kazOpts.map(k => `<option value="${kkmEsc(k.kazanim_kodu)}" ${k.kazanim_kodu === s.kazanim_kodu ? 'selected' : ''}>${kkmEsc(k.kazanim_kodu)} · ${kkmEsc((k.kazanim_aciklamasi || '').slice(0, 40))}</option>`).join('')}
+          </select>
+        </div>
+        ${s.ipucu ? `<div class="text-xs text-outline mt-1.5">💡 ${kkmEsc(s.ipucu)}</div>` : ''}
+        <div class="flex gap-2 mt-2 flex-wrap">
+          <button onclick="raporSoruKaydet('${s.soru_id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-on-primary">Düzelt &amp; Kaydet</button>
+          ${!onayli ? `<button onclick="raporSoruOnayla('${s.soru_id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-tertiary/15 text-tertiary">Onayla</button>` : ''}
+          <button onclick="raporSoruSil('${s.soru_id}')" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-error">Sil</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function raporSoruOnayla(soruId) {
+  const { error } = await sb.from('yanlis_defteri').update({ durum: 'ogretmen_onayladi' }).eq('soru_id', soruId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  const s = (state._raporSoruBankasi || []).find(x => x.soru_id === soruId);
+  if (s) s.durum = 'ogretmen_onayladi';
+  renderRaporSoruBankasi();
+  showToast('✅ Onaylandı');
+}
+
+async function raporSoruKaydet(soruId) {
+  const konu = document.getElementById('rsb-konu-' + soruId)?.value || null;
+  const kaz  = document.getElementById('rsb-kaz-' + soruId)?.value || null;
+  const { error } = await sb.from('yanlis_defteri').update({ konu, kazanim_kodu: kaz, durum: 'ogretmen_duzeltti' }).eq('soru_id', soruId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  const s = (state._raporSoruBankasi || []).find(x => x.soru_id === soruId);
+  if (s) { s.konu = konu; s.kazanim_kodu = kaz; s.durum = 'ogretmen_duzeltti'; }
+  renderRaporSoruBankasi();
+  showToast('✅ Kaydedildi');
+}
+
+async function raporSoruSil(soruId) {
+  if (!confirm('Bu soruyu öğrencinin bankasından silmek istiyor musunuz?')) return;
+  const s = (state._raporSoruBankasi || []).find(x => x.soru_id === soruId);
+  const { error } = await sb.from('yanlis_defteri').delete().eq('soru_id', soruId);
+  if (error) { showToast('❌ ' + error.message); return; }
+  if (s) { try { await sb.storage.from('soru-fotograflari').remove([`${s.ogrenci_id}/${soruId}.jpg`]); } catch (e) {} }
+  state._raporSoruBankasi = (state._raporSoruBankasi || []).filter(x => x.soru_id !== soruId);
+  renderRaporSoruBankasi();
+  showToast('🗑️ Silindi');
 }
 
 async function loadOgrDenemeler() {

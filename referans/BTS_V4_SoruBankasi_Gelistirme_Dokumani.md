@@ -16,7 +16,7 @@
 > - **Onay akışı:** `ai_guven_skoru >= 0.8` → otomatik `ogretmen_onayladi`; altı → `ai_tamamlandi` ("🤖 AI önerisi — öğretmen onayı bekliyor" rozeti) ama öğrenciye yine de görünür. AI hatası → `hata`, soru yine eklenir, konu boş kalır (§8-S3).
 > - **Günlük limit:** eklenmedi (§8-S2 → limitsiz).
 > - **Öğrenci arayüzü:** Sol menüde **"📸 Soru Bankam"** (öğrenci paneli sol menüye taşındığı için sekme çubuğuna değil sol menüye eklendi — §1 yerleşimi bu yönde güncel). Foto ekle → yükleme → AI analizi → kart listesi, konu filtre çipleri, "İpucunu göster" (varsayılan gizli), "🔁 Tekrar Ettim" (`tekrar_sayisi` / `son_tekrar_tarihi`).
-> - **Öğretmen arayüzü:** Rapor sayfasına `#rapor-soru-bankasi` bölümü — foto, AI güven skoru, konu + kazanım düzeltme dropdown'ları, **Düzelt & Kaydet / Onayla / Sil**. Kronik rozeti: aynı konuda 5+ soru.
+> - **Öğretmen arayüzü:** (a) Sol menüde **"Soru Bankası"** sayfası — tüm öğrencilerin kayıtları, "Onay Bekleyen / Tümü" filtresi, kartta öğrenci adı. (b) Rapor sayfasında `#rapor-soru-bankasi` bölümü — o öğrencinin kayıtları, kronik rozeti (aynı konuda 5+ soru). Her iki görünüm ortak kart (`raporSoruKartHTML`) ve **Düzelt & Kaydet / Onayla / Sil** aksiyonlarını kullanır.
 > - Görsel sıkıştırma mevcut `kkmResimSikistir` (1600px / JPEG 0.85) ile ortak; **EXIF orientation düzeltmesi eklenmedi** (sonraki iyileştirme).
 > - **Kapsam dışı bırakıldı:** V4.1 PDF/test oluşturma, V4.2 veli görünümü, V4.3 unutma eğrisi, V4.4 `konu_uyarilari` çapraz besleme.
 >

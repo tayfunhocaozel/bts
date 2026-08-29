@@ -896,6 +896,22 @@ tailwind.config = {
       <div id="rapor-print-view" style="display:none;"></div>
     </div>
 
+    <!-- ── SORU BANKASI (öğretmen: tüm öğrencilerin yanlış defteri) -->
+    <div id="page-soru-bankasi" class="page">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2 style="font-family:Manrope;font-size:20px;font-weight:800;margin:0;color:var(--ink);">Soru Bankası</h2>
+          <p style="font-size:13px;color:var(--ink-soft);margin:3px 0 0;">Öğrencilerin fotoğrafladığı sorular — konu/kazanım onayı</p>
+        </div>
+        <button onclick="loadSoruBankasiOgretmen()" class="btn btn-ghost">
+          <span class="material-symbols-outlined" style="font-size:18px;">refresh</span> Yenile
+        </button>
+      </div>
+      <div id="soru-bankasi-ogretmen-content">
+        <div style="display:flex;justify-content:center;padding:64px 0;"><div class="spinner"></div></div>
+      </div>
+    </div>
+
     <!-- ── ÖĞRENCİ PANELI -->
     <div id="page-ogrenci-panel" class="page">
       <!-- ── Panel görünümü: Ödevlerim / Denemeler / Derslerim (sol menü: "Panel") -->
@@ -1747,6 +1763,7 @@ function buildNav() {
     { id: 'denemeler',    icon: 'quiz',           label: 'Denemeler' },
     { id: 'ders-programi', icon: 'calendar_month', label: 'Ders Programı' },
     { id: 'rapor',        icon: 'analytics',      label: 'Rapor' },
+    { id: 'soru-bankasi', icon: 'photo_library',  label: 'Soru Bankası' },
     { id: 'ada',          icon: 'smart_toy',      label: 'Ada' },
     { id: 'odul-dukkani',  icon: 'redeem', label: 'Ödül Dükkanı' },
     { id: 'puan-yonetimi', icon: 'stars',  label: 'Puan Yönetimi' },
@@ -1795,6 +1812,7 @@ const PAGE_TITLES = {
   'denemeler':    ['Denemeler',     'TYT/LGS deneme sonuçları'],
   'ders-programi':['Ders Programı', 'Haftalık ders takvimi'],
   'rapor':        ['Rapor',         'Öğrenci performans raporu'],
+  'soru-bankasi': ['Soru Bankası',  'Öğrencilerin yanlış defteri — onay ve düzeltme'],
   'ada':          ['Ada',           'Yapay zeka destekli öğrenci koçu'],
   'odul-dukkani':  ['Ödül Dükkanı', 'Ödül kataloğu ve talep yönetimi'],
   'puan-yonetimi': ['Puan Yönetimi', 'Öğrenci puan geçmişi ve manuel puan'],
@@ -1839,6 +1857,7 @@ function goPage(id) {
   if (id === 'odul-dukkani')  loadOdulDukkani();
   if (id === 'puan-yonetimi') loadPuanYonetimi();
   if (id === 'pet-ayarlari')  loadPetAyarlari();
+  if (id === 'soru-bankasi')  loadSoruBankasiOgretmen();
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
   const hdrSub   = document.getElementById('hdr-sub');
@@ -6426,6 +6445,7 @@ async function loadRaporSoruBankasi(ogrenciId, ogr, kazData) {
   if (!ogrenciId || state.rol !== 'ogretmen') return;
   const { data } = await sb.from('yanlis_defteri').select('*').eq('ogrenci_id', ogrenciId).order('olusturma_tarihi', { ascending: false });
   state._raporSoruBankasi = data || [];
+  state._soruOgrenciAdMap = null; // Rapor tek öğrenci — kartta isim gösterme
   state._raporSoruKazData = (kazData && kazData.length) ? kazData : [];
   if (!state._raporSoruKazData.length) {
     const sinifNo = (ogr?.sinif || '').replace(/\D/g, '');
@@ -6479,6 +6499,7 @@ function raporSoruKartHTML(s) {
       </a>
       <div class="flex-1 min-w-0 text-sm">
         <div class="flex items-center gap-2 flex-wrap mb-1">
+          ${(state._soruOgrenciAdMap && state._soruOgrenciAdMap[s.ogrenci_id]) ? `<span class="text-xs font-bold text-primary">${kkmEsc(state._soruOgrenciAdMap[s.ogrenci_id])}</span>` : ''}
           ${etiket}
           <span class="text-xs text-outline">📅 ${s.olusturma_tarihi ? new Date(s.olusturma_tarihi).toLocaleDateString('tr-TR') : ''}</span>
         </div>
@@ -6508,7 +6529,7 @@ async function raporSoruOnayla(soruId) {
   if (error) { showToast('❌ ' + error.message); return; }
   const s = (state._raporSoruBankasi || []).find(x => x.soru_id === soruId);
   if (s) s.durum = 'ogretmen_onayladi';
-  renderRaporSoruBankasi();
+  _soruBankasiYenidenCiz();
   showToast('✅ Onaylandı');
 }
 
@@ -6519,7 +6540,7 @@ async function raporSoruKaydet(soruId) {
   if (error) { showToast('❌ ' + error.message); return; }
   const s = (state._raporSoruBankasi || []).find(x => x.soru_id === soruId);
   if (s) { s.konu = konu; s.kazanim_kodu = kaz; s.durum = 'ogretmen_duzeltti'; }
-  renderRaporSoruBankasi();
+  _soruBankasiYenidenCiz();
   showToast('✅ Kaydedildi');
 }
 
@@ -6530,8 +6551,73 @@ async function raporSoruSil(soruId) {
   if (error) { showToast('❌ ' + error.message); return; }
   if (s) { try { await sb.storage.from('soru-fotograflari').remove([`${s.ogrenci_id}/${soruId}.jpg`]); } catch (e) {} }
   state._raporSoruBankasi = (state._raporSoruBankasi || []).filter(x => x.soru_id !== soruId);
-  renderRaporSoruBankasi();
+  _soruBankasiYenidenCiz();
   showToast('🗑️ Silindi');
+}
+
+function _soruBankasiYenidenCiz() {
+  if (document.getElementById('page-soru-bankasi')?.classList.contains('active')) renderSoruBankasiOgretmen();
+  else renderRaporSoruBankasi();
+}
+
+// ── Öğretmen: sol menü "Soru Bankası" — tüm öğrencilerin yanlış defteri ──
+async function loadSoruBankasiOgretmen() {
+  const el = document.getElementById('soru-bankasi-ogretmen-content');
+  if (!el) return;
+  el.innerHTML = '<div class="flex justify-center py-16"><div class="spinner"></div></div>';
+
+  const ogrIds = (state.ogrenciler || []).map(o => o.ogrenci_id);
+  state._soruOgrenciAdMap = {};
+  (state.ogrenciler || []).forEach(o => { state._soruOgrenciAdMap[o.ogrenci_id] = o.ad_soyad; });
+
+  const [sbRes, kzRes] = await Promise.all([
+    ogrIds.length
+      ? sb.from('yanlis_defteri').select('*').in('ogrenci_id', ogrIds).order('olusturma_tarihi', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi').eq('ders', state.brans || 'İlköğretim Matematik')
+  ]);
+  state._raporSoruBankasi = sbRes.data || [];
+  state._raporSoruKazData = (kzRes.data || []).filter(k => k.kazanim_kodu);
+  if (state._sbOgrFiltre == null) state._sbOgrFiltre = 'gozden';
+  renderSoruBankasiOgretmen();
+}
+
+function _soruGozdenMi(s) {
+  return s.durum === 'ai_tamamlandi' || s.durum === 'hata' || s.durum === 'ai_bekliyor';
+}
+
+function renderSoruBankasiOgretmen() {
+  const el = document.getElementById('soru-bankasi-ogretmen-content');
+  if (!el) return;
+  const hepsi = state._raporSoruBankasi || [];
+
+  if (!hepsi.length) {
+    el.innerHTML = `<div class="card-2xl" style="padding:44px 24px;text-align:center;color:var(--ink-soft);">
+      <div style="font-size:40px;opacity:.35;margin-bottom:8px;">📸</div>
+      <div style="font-size:14px;font-weight:600;color:var(--ink);">Henüz hiçbir öğrenci soru eklemedi</div>
+      <div style="font-size:12.5px;margin-top:4px;">Öğrenciler "Soru Bankam" bölümünden çözemedikleri soruları fotoğraflayınca burada listelenir ve konu/kazanım onayına düşer.</div>
+    </div>`;
+    return;
+  }
+
+  const gozden = hepsi.filter(_soruGozdenMi);
+  const filtre = state._sbOgrFiltre || 'gozden';
+  const liste = filtre === 'gozden' ? gozden : hepsi;
+  const btn = (val, lbl) => `<button onclick="soruBankasiOgrFiltre('${val}')" class="tab ${filtre === val ? 'active' : ''}">${lbl}</button>`;
+
+  el.innerHTML = `
+    <div class="tabbar" style="margin-bottom:16px;">
+      ${btn('gozden', `Onay Bekleyen (${gozden.length})`)}
+      ${btn('tumu', `Tümü (${hepsi.length})`)}
+    </div>
+    ${!liste.length
+      ? `<div class="card-2xl" style="padding:32px;text-align:center;color:var(--ink-soft);font-size:14px;">Onay bekleyen soru yok — hepsi işlenmiş 👍</div>`
+      : `<div class="flex flex-col gap-3">${liste.map(raporSoruKartHTML).join('')}</div>`}`;
+}
+
+function soruBankasiOgrFiltre(v) {
+  state._sbOgrFiltre = v;
+  renderSoruBankasiOgretmen();
 }
 
 async function loadOgrDenemeler() {

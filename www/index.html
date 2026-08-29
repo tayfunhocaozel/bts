@@ -4371,41 +4371,93 @@ async function kkmKaydet() {
   }
 }
 
-// Öğrencinin kamera ile eklenmiş (kaynak_konulari'ı olan) kaynaklarındaki otomatik ilerlemesini
-// hesaplar: kaynak_konulari satır sayısı + odevler'de TAMAMLANDI işaretli kaynak_konu_id'ler.
-// ataOgrenciSecildi() (Kaynaklar sayfası) ve loadRapor() (Rapor sayfası) tarafından ortak kullanılır.
+// İçindekiler OCR'ında konu olmayan satırlar (cevap anahtarı, önsöz, kaynakça...) —
+// ilerleme paydasını şişirmesin diye elenir.
+const KAYNAK_KONU_DISI = /cevap\s*anahtar|test\s*anahtar|çindekiler|ön\s*söz|önsöz|kaynak[çc]a|kaynaklar/i;
+
+// Öğrencinin kamera ile eklenmiş (kaynak_konulari / kaynak_cevap_anahtari'ı olan)
+// kaynaklarındaki otomatik ilerlemesini hesaplar:
+//  - Cevap anahtarı olan kaynakta birim "test" (payda = test sayısı, pay = TAMAMLANDI ödevlerde farklı test_no)
+//  - Değilse birim "konu" (payda = konu satırı, pay = TAMAMLANDI ödevlerde farklı kaynak_konu_id)
+// ataOgrenciSecildi() (Kaynaklar), loadRapor() (Rapor), loadOgrBasari() (Öğrenci) ve
+// loadVeliPanel() (Veli) tarafından ortak kullanılır.
 // ogrnKaynakRows verilirse (çağıran zaten çekmişse) tekrar sorgu atılmaz.
 async function kaynakIlerlemeleriGetir(ogrenciId, ogrnKaynakRows) {
   const kaynaklar = ogrnKaynakRows || (await sb.from('ogrn_kaynak').select('*').eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id)).data || [];
   if (!kaynaklar.length) return [];
 
-  // ogrn_kaynak kaynak_id tutmuyor, kaynak_adi'ndan state.kaynaklar üzerinden çözülüyor
+  // ogrn_kaynak kaynak_id tutmuyor; kaynak_adi'ndan çözülüyor. Öğrenci/veli oturumunda
+  // state.kaynaklar dolu olmayabilir — o zaman katalog doğrudan çekilir.
+  let katalog = state.kaynaklar;
+  if (!katalog || !katalog.length) {
+    const adlar = [...new Set(kaynaklar.map(k => k.kaynak_adi).filter(Boolean))];
+    katalog = adlar.length ? ((await sb.from('kaynaklar').select('kaynak_id, kaynak_adi').in('kaynak_adi', adlar)).data || []) : [];
+  }
   const kaynakIdMap = {};
   kaynaklar.forEach(k => {
-    const kr = state.kaynaklar.find(x => x.kaynak_adi === k.kaynak_adi);
+    const kr = katalog.find(x => x.kaynak_adi === k.kaynak_adi);
     if (kr) kaynakIdMap[k.kayit_id] = kr.kaynak_id;
   });
   const kaynakIds = [...new Set(Object.values(kaynakIdMap))];
   if (!kaynakIds.length) return [];
 
-  const konuSayilari = {}, tamamlananSet = {};
-  const [{ data: konular }, { data: tamamlananlar }] = await Promise.all([
-    sb.from('kaynak_konulari').select('id, kaynak_id').in('kaynak_id', kaynakIds),
-    sb.from('odevler').select('kaynak_id, kaynak_konu_id').eq('ogrenci_id', ogrenciId).eq('durum', 'TAMAMLANDI').not('kaynak_konu_id', 'is', null)
+  const konuSayilari = {}, testSayilari = {}, bitenKonu = {}, bitenTest = {};
+  const [{ data: konular }, { data: testler }, { data: tamamlananlar }] = await Promise.all([
+    sb.from('kaynak_konulari').select('kaynak_id, konu_adi').in('kaynak_id', kaynakIds),
+    sb.from('kaynak_cevap_anahtari').select('kaynak_id, test_no').in('kaynak_id', kaynakIds),
+    sb.from('odevler').select('kaynak_id, kaynak_konu_id, test_no').eq('ogrenci_id', ogrenciId).eq('durum', 'TAMAMLANDI')
   ]);
-  (konular || []).forEach(kk => { konuSayilari[kk.kaynak_id] = (konuSayilari[kk.kaynak_id] || 0) + 1; });
+  (konular || []).forEach(kk => {
+    if (KAYNAK_KONU_DISI.test(kk.konu_adi || '')) return;
+    konuSayilari[kk.kaynak_id] = (konuSayilari[kk.kaynak_id] || 0) + 1;
+  });
+  (testler || []).forEach(t => { testSayilari[t.kaynak_id] = (testSayilari[t.kaynak_id] || 0) + 1; });
   (tamamlananlar || []).forEach(o => {
-    if (!tamamlananSet[o.kaynak_id]) tamamlananSet[o.kaynak_id] = new Set();
-    tamamlananSet[o.kaynak_id].add(o.kaynak_konu_id);
+    if (o.kaynak_konu_id) (bitenKonu[o.kaynak_id] = bitenKonu[o.kaynak_id] || new Set()).add(o.kaynak_konu_id);
+    if (o.test_no != null) (bitenTest[o.kaynak_id] = bitenTest[o.kaynak_id] || new Set()).add(o.test_no);
   });
 
   return kaynaklar.map(k => {
     const kaynakId = kaynakIdMap[k.kayit_id];
-    const toplam = kaynakId ? (konuSayilari[kaynakId] || 0) : 0;
+    if (!kaynakId) return null;
+    const testli = (testSayilari[kaynakId] || 0) > 0;
+    const toplam = testli ? testSayilari[kaynakId] : (konuSayilari[kaynakId] || 0);
     if (!toplam) return null;
-    const islenen = tamamlananSet[kaynakId] ? tamamlananSet[kaynakId].size : 0;
-    return { kayit_id: k.kayit_id, kaynak_adi: k.kaynak_adi, toplam, islenen, pct: Math.round(islenen/toplam*100) };
+    const islenen = testli
+      ? (bitenTest[kaynakId] ? bitenTest[kaynakId].size : 0)
+      : (bitenKonu[kaynakId] ? bitenKonu[kaynakId].size : 0);
+    return {
+      kayit_id: k.kayit_id, kaynak_adi: k.kaynak_adi,
+      birim: testli ? 'test' : 'konu',
+      toplam, islenen, pct: Math.round(islenen / toplam * 100)
+    };
   }).filter(Boolean);
+}
+
+// kaynakIlerlemeleriGetir() çıktısını kart olarak basar (öğrenci ve veli "Başarı" bölümü).
+function kaynakIlerlemeHTML(liste) {
+  if (!liste || !liste.length) return '';
+  return `
+    <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mt-4 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-outline-variant/20 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-base">menu_book</span>
+        <span class="font-headline font-bold text-sm text-on-surface">Kaynak Bazlı İlerleme</span>
+      </div>
+      <div class="p-5 flex flex-col gap-3">
+        ${liste.map(k => {
+          const col = k.pct>=80?'#00661d':k.pct>=60?'#005d8d':'#805600';
+          return `<div>
+            <div class="flex justify-between text-xs font-semibold mb-1">
+              <span class="text-on-surface">${k.kaynak_adi||'—'}</span>
+              <span style="color:${col}">${k.islenen}/${k.toplam} ${k.birim||'konu'} (%${k.pct})</span>
+            </div>
+            <div class="h-2.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all" style="width:${k.pct}%;background:${col}"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
 }
 
 async function ataOgrenciSecildi() {
@@ -4960,7 +5012,7 @@ async function loadRapor() {
         return `<div>
           <div class="flex justify-between text-xs font-semibold mb-1">
             <span class="text-on-surface">${k.kaynak_adi||'—'}</span>
-            <span style="color:${col}">${k.islenen}/${k.toplam} konu (%${k.pct})</span>
+            <span style="color:${col}">${k.islenen}/${k.toplam} ${k.birim||'konu'} (%${k.pct})</span>
           </div>
           <div class="h-2.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
             <div class="h-full rounded-full transition-all" style="width:${k.pct}%;background:${col}"></div>
@@ -6719,9 +6771,10 @@ async function loadOgrBasari() {
   const el = document.getElementById('ogr-basari-content');
   el.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
 
-  const [raporRes, kazRes] = await Promise.all([
+  const [raporRes, kazRes, kaynakIler] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','TAMAMLANDI').order('verilis_tarihi', { ascending: false }),
-    sb.from('kazanimlar').select('*').ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`)
+    sb.from('kazanimlar').select('*').ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`),
+    kaynakIlerlemeleriGetir(state.user.ogrenci_id)
   ]);
 
   const odevler = raporRes.data || [];
@@ -6797,6 +6850,7 @@ async function loadOgrBasari() {
   });
 
   html += `</div>
+    ${kaynakIlerlemeHTML(kaynakIler)}
     <!-- Konu Zaman Serisi (Öğrenci) -->
     <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mt-4 overflow-hidden">
       <div class="px-5 py-3.5 border-b border-outline-variant/20 flex items-center gap-2">
@@ -6864,13 +6918,14 @@ async function loadVeliPanel() {
     .eq('ogrenci_id', u.ogrenci_id);
   _veliDersQ = _veliDersQ.order('tarih', { ascending: false });
 
-  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }, adaptixPuan, { data: alinanOduller }] = await Promise.all([
+  const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }, adaptixPuan, { data: alinanOduller }, veliKaynakIler] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id).order('verilis_tarihi', { ascending: false }),
     _veliDersQ,
     sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
     sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
     kalanPuanHesapla(u.ogrenci_id),
     sb.from('odul_talepleri').select('*, odul_kataloglari(baslik)').eq('ogrenci_id', u.ogrenci_id).eq('durum', 1).order('karar_tarihi', { ascending: false }),
+    kaynakIlerlemeleriGetir(u.ogrenci_id),
   ]);
 
   const odevler    = tumOdevler || [];
@@ -7125,6 +7180,7 @@ async function loadVeliPanel() {
             ${r?`<div class="ml-9 mt-1 text-xs text-outline">✅${r.dogru} ❌${r.yanlis} ⬜${r.bos} / ${r.toplam} soru</div>`:`<div class="ml-9 mt-1 text-xs text-outline/50">Ödev henüz tamamlanmadı</div>`}
           </div>`;}).join('')}
       </div>
+      ${kaynakIlerlemeHTML(veliKaynakIler)}
       <!-- Veli Zaman Serisi -->
       <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] mt-4 overflow-hidden">
         <div class="px-5 py-3.5 border-b border-outline-variant/20 flex items-center gap-2">

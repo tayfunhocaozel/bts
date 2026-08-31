@@ -489,11 +489,11 @@ tailwind.config = {
         <div id="sinif-dagilim"></div>
       </div>
 
-      <!-- Bekleyen Ödevler -->
+      <!-- Geciken Ödevler -->
       <div class="card-2xl" style="padding:22px 24px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
           <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">schedule</span>
-          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Bekleyen Ödevler</h2>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Geciken Ödevler</h2>
         </div>
         <div id="bekleyen-odevler"></div>
       </div>
@@ -1955,28 +1955,26 @@ async function loadDashboard() {
   const benzersiz = new Set((dersler||[]).map(d => d.kayit_id)).size;
   document.getElementById('stat-ders').textContent = benzersiz || (dersler||[]).length;
 
-  // Bekleyen liste
+  // Geciken liste (yalnızca günü geçtiği halde işlenmemiş ödevler)
   const ogrMap = {};
   state.ogrenciler.forEach(o => ogrMap[o.ogrenci_id] = o.ad_soyad);
   const el = document.getElementById('bekleyen-odevler');
-  const gecikmisSayisi = bekleyen.filter(odevGecikti).length;
-  if (!bekleyen.length) {
-    el.innerHTML = '<div class="text-tertiary text-sm font-semibold py-2">🎉 Bekleyen ödev yok!</div>';
+  const gecikenler = bekleyen.filter(odevGecikti);
+  if (!gecikenler.length) {
+    el.innerHTML = '<div class="text-tertiary text-sm font-semibold py-2">🎉 Geciken ödev yok!</div>';
   } else {
-    const siraliBekleyen = [...bekleyen].sort(odevSirala);
+    const siraliGeciken = [...gecikenler].sort(odevSirala);
     el.innerHTML =
-      (gecikmisSayisi > 0 ? `<div class="text-xs font-bold text-error mb-2">⚠️ ${gecikmisSayisi} ödev günü geçtiği halde işlenmedi</div>` : '') +
-      siraliBekleyen.slice(0,5).map(o => `
+      `<div class="text-xs font-bold text-error mb-2">⚠️ ${gecikenler.length} ödev günü geçtiği halde işlenmedi</div>` +
+      siraliGeciken.slice(0,5).map(o => `
       <div class="flex items-center justify-between py-3 border-b border-outline-variant/20 last:border-0">
         <div>
           <div class="text-sm font-semibold text-on-surface">${ogrMap[o.ogrenci_id]||o.ogrenci_id}</div>
           <div class="text-xs text-outline mt-0.5">${o.gun||'—'} — ${o.konu||'—'}</div>
         </div>
-        ${odevGecikti(o)
-          ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-error/10 text-error">⚠️ Gecikti</span>`
-          : `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-secondary-container/40 text-on-secondary-container">Bekliyor</span>`}
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-error/10 text-error">⚠️ Gecikti</span>
       </div>`).join('') +
-      (bekleyen.length > 5 ? `<div class="text-xs text-outline pt-2">+${bekleyen.length-5} daha...</div>` : '');
+      (gecikenler.length > 5 ? `<div class="text-xs text-outline pt-2">+${gecikenler.length-5} daha...</div>` : '');
   }
 }
 

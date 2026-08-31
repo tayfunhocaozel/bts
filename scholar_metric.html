@@ -1342,8 +1342,8 @@ tailwind.config = {
       </div>
       <div id="aom-sifre-grup">
         <label class="lbl">Şifre *</label>
-        <input type="password" id="aom-sifre" class="field" placeholder="••••••••"/>
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">Öğretmen bu şifreyle sisteme giriş yapar.</div>
+        <input type="password" id="aom-sifre" class="field" placeholder="En az 8 karakter" minlength="8"/>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">Öğretmen bu şifreyle sisteme giriş yapar. En az 8 karakter.</div>
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:22px;">
@@ -1377,7 +1377,7 @@ tailwind.config = {
     </div>
     <div>
       <label class="lbl">Yeni Şifre *</label>
-      <input type="password" id="asm-sifre" class="field" placeholder="En az 6 karakter" minlength="6"/>
+      <input type="password" id="asm-sifre" class="field" placeholder="En az 8 karakter" minlength="8"/>
       <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">Mevcut şifre gösterilemez; yeni şifre belirleyin.</div>
     </div>
     <div style="display:flex;gap:10px;margin-top:22px;">
@@ -1651,59 +1651,39 @@ async function doLogin() {
   try {
     if (activeRole === 'ogretmen') {
       const sifre = document.getElementById('ogr-sifre').value;
-      const hash = await hashSifre(sifre);
-      const { data: kullanicilar, error: kulErr } = await sb.from('kullanicilar')
-        .select('id, rol, deger').eq('sifre_hash', hash).limit(1);
-      if (kulErr || !kullanicilar || kullanicilar.length === 0) { showError('Şifre hatalı'); return; }
-      const kullanici = kullanicilar[0];
+      const { data, error } = await sb.functions.invoke('auth-login', { body: { rol: 'ogretmen', sifre } });
+      if (error || !data || data.error) { showError((data && data.error) || 'Şifre hatalı'); return; }
 
-      if (kullanici.rol === 'adaptix') {
+      if (data.rol === 'adaptix') {
         state.rol  = 'adaptix';
-        state.user = { ad: 'AdaptiX', rol: 'adaptix' };
+        state.user = data.user || { ad: 'AdaptiX', rol: 'adaptix' };
+        try { localStorage.setItem('adaptix_admin_token', data.token || ''); } catch(e) {}
         initApp();
         return;
       }
 
-      // ogretmen rolü — deger alanı ogretmen_id taşır
-      const ogretmenId = kullanici.deger;
-      let ogretmenQuery = sb.from('ogretmenler').select('*');
-      if (ogretmenId) {
-        ogretmenQuery = ogretmenQuery.eq('ogretmen_id', ogretmenId);
-      } else {
-        ogretmenQuery = ogretmenQuery.eq('durum', 'aktif');
-      }
-      const { data: ogretmen } = await ogretmenQuery.single();
+      const ogretmen = data.ogretmen || {};
       state.rol = 'ogretmen';
-      state.ogretmen_id = ogretmen?.ogretmen_id || '';
+      state.ogretmen_id = ogretmen.ogretmen_id || '';
       state.ogretmen = { ...ogretmen };
-      state.brans = ogretmen?.brans || 'İlköğretim Matematik';
-      state.user = { ad: ogretmen?.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
+      state.brans = ogretmen.brans || 'İlköğretim Matematik';
+      state.user = { ad: ogretmen.ad_soyad || 'Öğretmen', rol: 'ogretmen', ogretmen_id: state.ogretmen_id };
       localStorage.setItem('adaptix_ogretmen_id', state.ogretmen_id);
-      localStorage.setItem('adaptix_ogretmen_adi', ogretmen?.ad_soyad || '');
+      localStorage.setItem('adaptix_ogretmen_adi', ogretmen.ad_soyad || '');
 
     } else if (activeRole === 'ogrenci') {
       const tc = document.getElementById('ogrenci-tc').value.trim();
-      const { data: tumOgr, error: tumErr } = await sb.from('ogrenciler').select('ogrenci_id, tc_no, ad_soyad');
-      if (tumErr) { showError('Bağlantı hatası: ' + tumErr.message); return; }
-      const ogrenci = (tumOgr||[]).find(o => String(o.tc_no||'').trim() === tc);
-      if (!ogrenci) { showError(`TC kimlik numarası bulunamadı`); return; }
-      const { data: fullData } = await sb.from('ogrenciler').select('*').eq('ogrenci_id', ogrenci.ogrenci_id).limit(1);
-      const ogrenciFull = (fullData||[])[0] || ogrenci;
+      const { data, error } = await sb.functions.invoke('auth-login', { body: { rol: 'ogrenci', tc } });
+      if (error || !data || data.error) { showError((data && data.error) || 'TC kimlik numarası bulunamadı'); return; }
       state.rol = 'ogrenci';
-      state.user = { ...ogrenciFull, rol: 'ogrenci' };
+      state.user = { ...data.ogrenci, rol: 'ogrenci' };
 
     } else {
       const tel = document.getElementById('veli-tel').value.trim();
-      const { data: veliKayit, error: veliErr } = await sb.from('veliler')
-        .select('*, ogrenciler(*)')
-        .eq('telefon', tel)
-        .limit(1);
-      if (veliErr) { showError('Bağlantı hatası: ' + veliErr.message); return; }
-      if (!veliKayit || !veliKayit.length) { showError('Bu telefon numarasıyla kayıtlı veli bulunamadı'); return; }
-      const ogr = veliKayit[0].ogrenciler;
-      if (!ogr) { showError('Öğrenci kaydı bulunamadı'); return; }
+      const { data, error } = await sb.functions.invoke('auth-login', { body: { rol: 'veli', telefon: tel } });
+      if (error || !data || data.error) { showError((data && data.error) || 'Bu telefon numarasıyla kayıtlı veli bulunamadı'); return; }
       state.rol = 'veli';
-      state.user = { ...ogr, rol: 'veli' };
+      state.user = { ...data.ogrenci, rol: 'veli' };
     }
 
     initApp();
@@ -9026,6 +9006,29 @@ let _adaptixNotFaturaId  = null; // not eklenen fatura_id
 let _adaptixSifreOgrId   = null; // şifre değiştirilen ogretmen_id
 
 // ── Sekme Geçişi ──────────────────────────────────────────────
+// AdaptiX panel yazma işlemleri — hepsi admin-ops edge function üzerinden,
+// HMAC oturum token'ı ile yetkilendirilir. Doğrudan tabloya yazım YOK.
+async function adminOps(action, payload = {}) {
+  let token = '';
+  try { token = localStorage.getItem('adaptix_admin_token') || ''; } catch(e) {}
+  const { data, error } = await sb.functions.invoke('admin-ops', {
+    body: { action, ...payload },
+    headers: { 'x-admin-token': token },
+  });
+  if (error) {
+    let msg = error.message || 'İşlem başarısız';
+    let status = error.context && error.context.status;
+    try { const j = await error.context.json(); if (j && j.error) { msg = j.error; } } catch(e) {}
+    if (status === 401) {
+      showToast('❌ Oturum süresi doldu, tekrar giriş yapın');
+      setTimeout(logout, 1400);
+    }
+    throw new Error(msg);
+  }
+  if (data && data.error) throw new Error(data.error);
+  return data || {};
+}
+
 function adaptixTab(tab) {
   ['dashboard','ogretmenler','faturalar','basvurular','detay'].forEach(t => {
     document.getElementById('adaptix-tab-' + t)?.classList.toggle('hidden', t !== tab);
@@ -9183,24 +9186,9 @@ async function loadAdaptixOgretmenler() {
 async function adaptixOgretmenSil(ogretmenId) {
   if (!confirm('Bu öğretmen ve tüm verileri kalıcı olarak silinecek. Emin misiniz?')) return;
   showToast('Siliniyor...');
-
-  const { data: ogrenciler } = await sb.from('ogrenciler').select('ogrenci_id').eq('ogretmen_id', ogretmenId);
-  const ogrenciIds = (ogrenciler || []).map(o => o.ogrenci_id);
-
-  if (ogrenciIds.length > 0) {
-    await sb.from('ders_programi').delete().in('ogrenci_id', ogrenciIds);
-    await sb.from('ogrn_kaynak').delete().in('ogrenci_id', ogrenciIds);
-    await sb.from('konu_uyarilari').delete().in('ogrenci_id', ogrenciIds);
-    await sb.from('denemeler').delete().in('ogrenci_id', ogrenciIds);
-    await sb.from('odevler').delete().in('ogrenci_id', ogrenciIds);
-    await sb.from('dersler').delete().in('ogrenci_id', ogrenciIds);
-    await sb.from('ogrenciler').delete().in('ogrenci_id', ogrenciIds);
-  }
-
-  await sb.from('kullanicilar').delete().eq('deger', ogretmenId);
-  const { error } = await sb.from('ogretmenler').delete().eq('ogretmen_id', ogretmenId);
-  if (error) { showToast('❌ ' + error.message); return; }
-
+  try {
+    await adminOps('ogretmen_sil', { ogretmenId });
+  } catch(e) { showToast('❌ ' + e.message); return; }
   showToast('✅ Öğretmen silindi');
   loadAdaptixOgretmenler();
 }
@@ -9209,8 +9197,9 @@ async function adaptixOgretmenSil(ogretmenId) {
 async function adaptixToggleDurum(ogretmenId, mevcutDurum) {
   const yeni = mevcutDurum === 'aktif' ? 'pasif' : 'aktif';
   showToast('Güncelleniyor...');
-  const { error } = await sb.from('ogretmenler').update({ durum: yeni }).eq('ogretmen_id', ogretmenId);
-  if (error) { showToast('❌ ' + error.message); return; }
+  try {
+    await adminOps('ogretmen_durum', { ogretmenId, durum: yeni });
+  } catch(e) { showToast('❌ ' + e.message); return; }
   showToast(`✅ Durum ${yeni} yapıldı`);
   loadAdaptixOgretmenler();
 }
@@ -9274,20 +9263,17 @@ async function adaptixSifreKaydet() {
   const errEl = document.getElementById('asm-error');
   errEl.style.display = 'none';
 
-  if (!sifre || sifre.length < 6) {
-    errEl.textContent = 'Şifre en az 6 karakter olmalıdır.';
+  if (!sifre || sifre.length < 8) {
+    errEl.textContent = 'Şifre en az 8 karakter olmalıdır.';
     errEl.style.display = 'block';
     return;
   }
 
   showToast('Kaydediliyor...');
-  const hash = await hashSifre(sifre);
-  const { error } = await sb.from('kullanicilar')
-    .update({ sifre_hash: hash })
-    .eq('deger', _adaptixSifreOgrId);
-
-  if (error) {
-    errEl.textContent = error.message;
+  try {
+    await adminOps('sifre_degistir', { ogretmenId: _adaptixSifreOgrId, sifre });
+  } catch(e) {
+    errEl.textContent = e.message;
     errEl.style.display = 'block';
     return;
   }
@@ -9307,29 +9293,16 @@ async function adaptixOgretmenKaydet() {
   errEl.style.display = 'none';
   if (!adSoyad) { errEl.textContent = 'Ad soyad zorunludur.'; errEl.style.display = 'block'; return; }
   if (!brans)   { errEl.textContent = 'Branş zorunludur.';    errEl.style.display = 'block'; return; }
-  if (!_adaptixEditId && !sifre) { errEl.textContent = 'Şifre zorunludur.'; errEl.style.display = 'block'; return; }
+  if (!_adaptixEditId && (!sifre || sifre.length < 8)) { errEl.textContent = 'Şifre en az 8 karakter olmalıdır.'; errEl.style.display = 'block'; return; }
 
   showToast('Kaydediliyor...');
-
-  if (_adaptixEditId) {
-    // Güncelleme
-    const { error } = await sb.from('ogretmenler').update({ ad_soyad: adSoyad, email, telefon, brans }).eq('ogretmen_id', _adaptixEditId);
-    if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
-    showToast('✅ Güncellendi');
-  } else {
-    // Yeni öğretmen ekle
-    const { data: ogretmen, error: oErr } = await sb.from('ogretmenler')
-      .insert({ ad_soyad: adSoyad, email, telefon, brans, durum: 'aktif' })
-      .select().single();
-    if (oErr) { errEl.textContent = oErr.message; errEl.style.display = 'block'; return; }
-
-    // Kullanicilar tablosuna ekle
-    const hash = await hashSifre(sifre);
-    const { error: kErr } = await sb.from('kullanicilar').insert({
-      rol: 'ogretmen', sifre_hash: hash, deger: ogretmen.ogretmen_id
-    }, { returning: 'minimal' });
-    if (kErr) { console.error('kullanicilar insert hatası:', kErr); errEl.textContent = 'Öğretmen eklendi ama giriş kaydı oluşturulamadı: ' + kErr.message; errEl.style.display = 'block'; return; }
-    showToast('✅ Öğretmen eklendi');
+  try {
+    await adminOps('ogretmen_kaydet', {
+      editId: _adaptixEditId || null, ad_soyad: adSoyad, email, telefon, brans, sifre,
+    });
+    showToast(_adaptixEditId ? '✅ Güncellendi' : '✅ Öğretmen eklendi');
+  } catch(e) {
+    errEl.textContent = e.message; errEl.style.display = 'block'; return;
   }
 
   adaptixOgretmenModalKapat();
@@ -9535,53 +9508,27 @@ function renderAdaptixFaturalar() {
 // Fatura Oluştur
 async function adaptixFaturaOlustur() {
   showToast('Faturalar kontrol ediliyor...');
-
-  const buAy = new Date();
-  const donem = yerelISO(new Date(buAy.getFullYear(), buAy.getMonth(), 1));
-
-  const [ogretmenRes, ogrenciRes, mevcutRes] = await Promise.all([
-    sb.from('ogretmenler').select('ogretmen_id, ad_soyad').eq('durum', 'aktif'),
-    sb.from('ogrenciler').select('ogrenci_id, ogretmen_id').eq('kayit_durumu', 'AKTİF'),
-    sb.from('faturalar').select('ogretmen_id').eq('donem', donem),
-  ]);
-
-  const ogretmenler = ogretmenRes.data || [];
-  const ogrenciler  = ogrenciRes.data  || [];
-  const mevcutIDs   = (mevcutRes.data  || []).map(f => f.ogretmen_id);
-
-  const yeniFaturalar = ogretmenler
-    .filter(o => !mevcutIDs.includes(o.ogretmen_id))
-    .map(o => ({
-      ogretmen_id:   o.ogretmen_id,
-      donem,
-      ogrenci_sayisi: ogrenciler.filter(og => og.ogretmen_id === o.ogretmen_id).length,
-      durum:          'bekleyen',
-    }));
-
-  if (!yeniFaturalar.length) {
-    showToast('⚠️ Bu dönem için fatura zaten oluşturulmuş');
-    return;
-  }
-
-  const { error } = await sb.from('faturalar').insert(yeniFaturalar);
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast(`✅ ${yeniFaturalar.length} öğretmen için fatura oluşturuldu`);
+  let r;
+  try {
+    r = await adminOps('fatura_olustur');
+  } catch(e) { showToast('❌ ' + e.message); return; }
+  showToast(r.eklenen ? `✅ ${r.eklenen} öğretmen için fatura oluşturuldu`
+                      : '⚠️ Bu dönem için fatura zaten oluşturulmuş');
   loadAdaptixFaturalar();
 }
 
 // Fatura Ödendi İşaretle
 async function adaptixFaturaOdendi(faturaId) {
   showToast('Güncelleniyor...');
-  const { error } = await sb.from('faturalar').update({
-    durum: 'odendi',
-    odeme_tarihi: yerelISO(new Date())
-  }).eq('fatura_id', faturaId);
-  if (error) { showToast('❌ ' + error.message); return; }
+  let r;
+  try {
+    r = await adminOps('fatura_odendi', { faturaId });
+  } catch(e) { showToast('❌ ' + e.message); return; }
   showToast('✅ Ödendi olarak işaretlendi');
   const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === faturaId);
   if (idx >= 0) {
     _adaptixFaturalar[idx].durum = 'odendi';
-    _adaptixFaturalar[idx].odeme_tarihi = yerelISO(new Date());
+    _adaptixFaturalar[idx].odeme_tarihi = r.odeme_tarihi || yerelISO(new Date());
   }
   renderAdaptixFaturalar();
 }
@@ -9602,8 +9549,9 @@ async function adaptixNotKaydet() {
   if (!_adaptixNotFaturaId) return;
   const not = document.getElementById('anm-not').value.trim();
   showToast('Kaydediliyor...');
-  const { error } = await sb.from('faturalar').update({ notlar: not }).eq('fatura_id', _adaptixNotFaturaId);
-  if (error) { showToast('❌ ' + error.message); return; }
+  try {
+    await adminOps('fatura_not', { faturaId: _adaptixNotFaturaId, notlar: not });
+  } catch(e) { showToast('❌ ' + e.message); return; }
   showToast('✅ Not kaydedildi');
   const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === _adaptixNotFaturaId);
   if (idx >= 0) _adaptixFaturalar[idx].notlar = not;
@@ -9700,8 +9648,9 @@ function renderBasvurular(data) {
 }
 
 async function basvuruDurumGuncelle(id, durum) {
-  const { error } = await sb.from('basvurular').update({ durum }).eq('id', id);
-  if (error) { showToast('❌ ' + error.message); return; }
+  try {
+    await adminOps('basvuru_durum', { id, durum });
+  } catch(e) { showToast('❌ ' + e.message); return; }
   showToast('✅ Durum güncellendi');
   loadBasvurular();
 }
@@ -9721,6 +9670,7 @@ function logout() {
   localStorage.removeItem('adaptix_session');
   localStorage.removeItem('adaptix_ogretmen_id');
   localStorage.removeItem('adaptix_ogretmen_adi');
+  localStorage.removeItem('adaptix_admin_token');
   state = { rol:null, user:null, ogretmen_id:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';

@@ -81,6 +81,34 @@ async function issueToken(payload: Record<string, unknown>, ttlSeconds = 8 * 360
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(bodyB64));
   return `${bodyB64}.${b64urlEncode(new Uint8Array(sig))}`;
 }
+
+// ── Supabase-uyumlu custom JWT (HS256, proje legacy JWT secret ile) ──────────
+// RLS politikaları bu token'ın claim'lerini (rol / ogretmen_id / ogrenci_id /
+// veli_id) okuyarak satır-bazlı izolasyon yapar. role:"authenticated" olduğu
+// için PostgREST bu isteği authenticated rolüyle çalıştırır.
+async function supabaseJwtKey(): Promise<CryptoKey> {
+  const secret = Deno.env.get("JWT_LEGACY_SECRET") ?? "";
+  return crypto.subtle.importKey(
+    "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+}
+async function mintSupabaseJWT(claims: Record<string, unknown>, ttlSeconds = 8 * 3600): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "HS256", typ: "JWT" };
+  const payload = {
+    iss: "adaptix-auth-login",
+    role: "authenticated",
+    aud: "authenticated",
+    iat: now,
+    exp: now + ttlSeconds,
+    ...claims,
+  };
+  const h = b64urlEncode(enc.encode(JSON.stringify(header)));
+  const p = b64urlEncode(enc.encode(JSON.stringify(payload)));
+  const key = await supabaseJwtKey();
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`${h}.${p}`));
+  return `${h}.${p}.${b64urlEncode(new Uint8Array(sig))}`;
+}
 // ═════════════ /KRİPTO ═════════════
 
 const corsHeaders = {
@@ -167,7 +195,8 @@ Deno.serve(async (req) => {
 
       if (eslesen.rol === "adaptix") {
         const token = await issueToken({ rol: "adaptix", sub: eslesen.id });
-        return json({ rol: "adaptix", user: { ad: "AdaptiX", rol: "adaptix" }, token });
+        const jwt = await mintSupabaseJWT({ rol: "adaptix", sub: eslesen.id });
+        return json({ rol: "adaptix", user: { ad: "AdaptiX", rol: "adaptix" }, token, jwt });
       }
 
       // öğretmen — deger alanı ogretmen_id taşır
@@ -180,7 +209,8 @@ Deno.serve(async (req) => {
         ogretmen = r.data;
       }
       if (!ogretmen) return json({ error: "Öğretmen kaydı bulunamadı" }, 404);
-      return json({ rol: "ogretmen", ogretmen });
+      const jwt = await mintSupabaseJWT({ rol: "ogretmen", ogretmen_id: ogretmen.ogretmen_id });
+      return json({ rol: "ogretmen", ogretmen, jwt });
     }
 
     // ── Öğrenci (TC kimlik no ile) ───────────────────────────────────────
@@ -191,7 +221,10 @@ Deno.serve(async (req) => {
       if (error) return json({ error: "Sunucu hatası" }, 500);
       const ogr = (hepsi ?? []).find((o: Record<string, unknown>) => String(o.tc_no ?? "").trim() === tc);
       if (!ogr) return json({ error: "TC kimlik numarası bulunamadı" }, 404);
-      return json({ rol: "ogrenci", ogrenci: ogr });
+      const jwt = await mintSupabaseJWT({
+        rol: "ogrenci", ogrenci_id: ogr.ogrenci_id, ogretmen_id: ogr.ogretmen_id ?? null,
+      });
+      return json({ rol: "ogrenci", ogrenci: ogr, jwt });
     }
 
     // ── Veli (telefon ile) ──────────────────────────────────────────────
@@ -208,7 +241,12 @@ Deno.serve(async (req) => {
       if (!veli || !veli.ogrenciler) {
         return json({ error: "Bu telefon numarasıyla kayıtlı veli bulunamadı" }, 404);
       }
-      return json({ rol: "veli", ogrenci: veli.ogrenciler });
+      const child = veli.ogrenciler as Record<string, unknown>;
+      const jwt = await mintSupabaseJWT({
+        rol: "veli", veli_id: veli.veli_id,
+        ogrenci_id: child.ogrenci_id, ogretmen_id: child.ogretmen_id ?? null,
+      });
+      return json({ rol: "veli", ogrenci: child, jwt });
     }
 
     return json({ error: "Geçersiz rol" }, 400);

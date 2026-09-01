@@ -1435,7 +1435,51 @@ tailwind.config = {
 // ── SUPABASE ──────────────────────────────────────────────────
 const SUPABASE_URL = 'https://ldxeenczugcoirdrldjv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_V8o8lkgrliAmX_oV-mjXDA_wbpxEeMu';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// sb: giriş öncesi publishable key ile; giriş sonrası auth-login'in ürettiği
+// custom JWT (Authorization: Bearer) ile yeniden kurulur → RLS satır izolasyonu.
+let sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let _authJWT = null;
+
+function rebuildSb(jwt) {
+  _authJWT = jwt || null;
+  sb = jwt
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        global: { headers: { Authorization: 'Bearer ' + jwt } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+// JWT payload'ından exp okur (saniye). Geçersizse 0.
+function _jwtExp(jwt) {
+  try {
+    const p = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return Number(p.exp) || 0;
+  } catch (e) { return 0; }
+}
+function _jwtGecerli(jwt) {
+  return !!jwt && _jwtExp(jwt) * 1000 > Date.now() + 5000;
+}
+
+// Oturumu (JWT dahil) localStorage'a yaz. rol/user/ogretmen_id state'ten alınır.
+function _saveSession() {
+  try {
+    localStorage.setItem('adaptix_session', JSON.stringify({
+      rol: state.rol, user: state.user, ogretmen_id: state.ogretmen_id, jwt: _authJWT,
+    }));
+  } catch (e) {}
+}
+
+// Süre dolmadan ~2 dk önce kullanıcıyı uyar + çıkışa al (sessiz veri kaybı olmasın).
+setInterval(() => {
+  if (!_authJWT || !state.rol) return;
+  const kalanMs = _jwtExp(_authJWT) * 1000 - Date.now();
+  if (kalanMs <= 120000) {
+    showToast('⏳ Oturum süresi doldu, tekrar giriş yapın');
+    setTimeout(logout, 1500);
+  }
+}, 60000);
 
 // Eski Ada entegrasyonundan kalan, tarayıcıda açıkta duran API anahtarını temizle
 try { localStorage.removeItem('adaptix_ada_key'); } catch(e) {}
@@ -1649,15 +1693,19 @@ async function doLogin() {
   errEl.style.display = 'none';
 
   try {
+    let yeniJWT = null;
+
     if (activeRole === 'ogretmen') {
       const sifre = document.getElementById('ogr-sifre').value;
       const { data, error } = await sb.functions.invoke('auth-login', { body: { rol: 'ogretmen', sifre } });
       if (error || !data || data.error) { showError((data && data.error) || 'Şifre hatalı'); return; }
+      yeniJWT = data.jwt || null;
 
       if (data.rol === 'adaptix') {
         state.rol  = 'adaptix';
         state.user = data.user || { ad: 'AdaptiX', rol: 'adaptix' };
         try { localStorage.setItem('adaptix_admin_token', data.token || ''); } catch(e) {}
+        rebuildSb(yeniJWT);
         initApp();
         return;
       }
@@ -1675,6 +1723,7 @@ async function doLogin() {
       const tc = document.getElementById('ogrenci-tc').value.trim();
       const { data, error } = await sb.functions.invoke('auth-login', { body: { rol: 'ogrenci', tc } });
       if (error || !data || data.error) { showError((data && data.error) || 'TC kimlik numarası bulunamadı'); return; }
+      yeniJWT = data.jwt || null;
       state.rol = 'ogrenci';
       state.user = { ...data.ogrenci, rol: 'ogrenci' };
 
@@ -1682,10 +1731,12 @@ async function doLogin() {
       const tel = document.getElementById('veli-tel').value.trim();
       const { data, error } = await sb.functions.invoke('auth-login', { body: { rol: 'veli', telefon: tel } });
       if (error || !data || data.error) { showError((data && data.error) || 'Bu telefon numarasıyla kayıtlı veli bulunamadı'); return; }
+      yeniJWT = data.jwt || null;
       state.rol = 'veli';
       state.user = { ...data.ogrenci, rol: 'veli' };
     }
 
+    rebuildSb(yeniJWT);
     initApp();
   } catch(e) {
     showError('Bağlantı hatası. Tekrar deneyin.');
@@ -1703,7 +1754,7 @@ async function initApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'flex';
 
-  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user, ogretmen_id: state.ogretmen_id }));
+  _saveSession();
 
   buildNav();
   updateUserInfo();
@@ -6219,7 +6270,7 @@ async function hedefKaydet() {
     .eq('ogrenci_id', state.user.ogrenci_id);
   if (error) { showToast('❌ Hedef kaydedilemedi'); return; }
   state.user.hedef = hedef;
-  localStorage.setItem('adaptix_session', JSON.stringify({ rol: state.rol, user: state.user }));
+  _saveSession();
   showToast('🎯 Hedef kaydedildi!');
   if (hedef) {
     document.getElementById('ogr-hedef-label').textContent = hedef;
@@ -9671,6 +9722,7 @@ function logout() {
   localStorage.removeItem('adaptix_ogretmen_id');
   localStorage.removeItem('adaptix_ogretmen_adi');
   localStorage.removeItem('adaptix_admin_token');
+  rebuildSb(null);
   state = { rol:null, user:null, ogretmen_id:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';
@@ -9684,8 +9736,11 @@ function logout() {
   try {
     const saved = localStorage.getItem('adaptix_session');
     if (!saved) return;
-    const { rol, user, ogretmen_id } = JSON.parse(saved);
+    const { rol, user, ogretmen_id, jwt } = JSON.parse(saved);
     if (!rol || !user) return;
+    // JWT süresi geçmişse oturumu geri yükleme — login ekranı kalsın.
+    if (!_jwtGecerli(jwt)) { localStorage.removeItem('adaptix_session'); return; }
+    rebuildSb(jwt);
     state.rol         = rol;
     state.user        = user;
     state.ogretmen_id = ogretmen_id || null;

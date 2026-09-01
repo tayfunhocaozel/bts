@@ -101,6 +101,15 @@ function yerelISO(d = new Date()): string {
 
 const str = (v: unknown) => (v == null ? "" : String(v)).trim();
 
+// Karışması kolay karakterler (0/O, 1/l/I) hariç, kripto-güvenli geçici şifre.
+function randomPassword(len = 14): string {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const buf = crypto.getRandomValues(new Uint8Array(len));
+  let out = "";
+  for (let i = 0; i < len; i++) out += abc[buf[i] % abc.length];
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "POST bekleniyor" }, 405);
@@ -247,7 +256,7 @@ Deno.serve(async (req) => {
         return json({ ok: true });
       }
 
-      // ── Başvuru durum güncelle ──────────────────────────────────────
+      // ── Başvuru durum güncelle (görüldü / reddet) ───────────────────
       case "basvuru_durum": {
         const id = str(body?.id);
         const durum = str(body?.durum);
@@ -258,6 +267,38 @@ Deno.serve(async (req) => {
         const { error } = await sb.from("basvurular").update({ durum }).eq("id", id);
         if (error) return json({ error: error.message }, 400);
         return json({ ok: true });
+      }
+
+      // ── Başvuru → Öğretmen tek tık (öğretmen + giriş kaydı, tek transaction) ──
+      case "basvuru_onayla": {
+        const id = str(body?.id);
+        if (!id) return json({ error: "Başvuru belirtilmedi" }, 400);
+
+        const { data: b, error: bErr } = await sb.from("basvurular")
+          .select("*").eq("id", id).maybeSingle();
+        if (bErr) return json({ error: bErr.message }, 400);
+        if (!b) return json({ error: "Başvuru bulunamadı" }, 404);
+        if (b.provisioned) {
+          return json({ ok: true, already: true, mesaj: "Bu başvuru zaten öğretmene dönüştürülmüş" });
+        }
+        if (!str(b.ad_soyad)) return json({ error: "Başvuruda ad soyad yok" }, 400);
+
+        const gecici = randomPassword(14);
+        const hash = await hashPassword(gecici);
+        const { data: r, error } = await sb.rpc("adaptix_basvuru_onayla", {
+          p_basvuru_id: id, p_sifre_hash: hash,
+        });
+        if (error) return json({ error: error.message }, 400);
+        if (r?.already) return json({ ok: true, already: true });
+
+        return json({
+          ok: true,
+          ogretmen_id: r?.ogretmen_id ?? null,
+          gecici_sifre: gecici,
+          ad_soyad: b.ad_soyad,
+          telefon: b.telefon ?? "",
+          brans: b.brans ?? "",
+        });
       }
 
       default:

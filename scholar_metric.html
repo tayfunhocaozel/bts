@@ -1388,6 +1388,29 @@ tailwind.config = {
   </div>
 </div>
 
+<!-- ── AdaptiX: Başvuru → Öğretmen Oluşturuldu Modali ────────── -->
+<div id="basvuru-sifre-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:20px;padding:26px 24px;max-width:440px;width:100%;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span class="material-symbols-outlined" style="color:#00661d;font-size:26px;">check_circle</span>
+      <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">Öğretmen oluşturuldu</div>
+    </div>
+    <div id="bsm-ad" style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;"></div>
+    <div style="background:var(--surface-container,#f0f7ff);border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Geçici Şifre</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <code id="bsm-sifre" style="font-family:ui-monospace,monospace;font-size:18px;font-weight:800;color:#013149;letter-spacing:1px;flex:1;word-break:break-all;"></code>
+        <button onclick="bsmKopyala()" class="btn btn-ghost" style="font-size:12px;padding:5px 10px;">Kopyala</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Öğretmen bu şifreyle giriş yapar; giriş sonrası değiştirmesi önerilir.</div>
+    </div>
+    <a id="bsm-wa" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;justify-content:center;text-decoration:none;margin-bottom:8px;">
+      <span class="material-symbols-outlined" style="font-size:18px;">chat</span> WhatsApp ile Gönder
+    </a>
+    <button onclick="bsmKapat()" class="btn btn-ghost" style="width:100%;justify-content:center;">Kapat</button>
+  </div>
+</div>
+
 <!-- ── Kamera ile Kaynak Ekle Modali ──────────────────────── -->
 <div id="kkm-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;padding:16px;">
   <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(1,49,73,.25);">
@@ -9622,14 +9645,16 @@ async function loadBasvurular() {
 
   if (error) { el.innerHTML = `<div style="color:red;padding:16px;">Hata: ${error.message}</div>`; return; }
 
-  const bekliyor = (data || []).filter(b => b.durum === 'bekliyor').length;
+  const liste = data || [];
+  const bekliyor = liste.filter(b => b.durum === 'bekliyor').length;
+  const yetim    = liste.filter(b => b.durum === 'onaylandi' && !b.provisioned).length;
   const badge = document.getElementById('basvuru-badge');
   if (badge) {
-    badge.textContent = bekliyor;
-    badge.style.display = bekliyor > 0 ? 'inline' : 'none';
+    badge.textContent = bekliyor + yetim;
+    badge.style.display = (bekliyor + yetim) > 0 ? 'inline' : 'none';
   }
 
-  renderBasvurular(data || []);
+  renderBasvurular(liste);
 }
 
 function renderBasvurular(data) {
@@ -9664,7 +9689,27 @@ function renderBasvurular(data) {
     return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
   };
 
-  el.innerHTML = `
+  // Onaylı ama öğretmene dönüşmemiş başvurular — "Dikkat" listesi
+  const yetimler = data.filter(b => b.durum === 'onaylandi' && !b.provisioned);
+  const yetimBox = yetimler.length ? `
+    <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:14px;padding:16px 18px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:8px;font-family:Manrope;font-weight:800;font-size:13.5px;color:#9a3412;margin-bottom:10px;">
+        <span class="material-symbols-outlined" style="font-size:19px;">warning</span>
+        Dikkat: öğretmene dönüşmemiş onaylı başvurular (${yetimler.length})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${yetimler.map(b => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:10px;padding:9px 12px;">
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:700;color:var(--ink);">${b.ad_soyad || '—'}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${b.brans || '—'} · ${b.telefon || '—'}</div>
+            </div>
+            <button onclick="basvuruOnayla('${b.id}')" style="flex-shrink:0;font-size:11.5px;font-weight:600;padding:6px 12px;border:none;border-radius:8px;background:#005d8d;color:#fff;cursor:pointer;">Öğretmen Oluştur</button>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  el.innerHTML = yetimBox + `
     <div style="overflow-x:auto;">
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <thead>
@@ -9682,15 +9727,15 @@ function renderBasvurular(data) {
           ${data.map(b => `
           <tr style="border-bottom:1px solid #e8f0f6;">
             <td style="padding:10px 12px;white-space:nowrap;color:#4a6272;">${formatTarih(b.created_at)}</td>
-            <td style="padding:10px 12px;font-weight:600;">${b.ad_soyad || '—'}</td>
+            <td style="padding:10px 12px;font-weight:600;">${b.ad_soyad || '—'}${b.provisioned ? ' <span style="font-size:10px;font-weight:700;color:#065f46;">✓ öğretmen</span>' : ''}</td>
             <td style="padding:10px 12px;">${b.brans || '—'}</td>
             <td style="padding:10px 12px;white-space:nowrap;">${formatTel(b.telefon)}</td>
             <td style="padding:10px 12px;max-width:200px;color:#4a6272;">${b.mesaj || '—'}</td>
             <td style="padding:10px 12px;">${durumRozet(b.durum)}</td>
             <td style="padding:10px 12px;white-space:nowrap;">
               ${b.durum === 'bekliyor' ? `<button onclick="basvuruDurumGuncelle('${b.id}','goruldu')" style="font-size:11px;padding:3px 8px;border:1px solid #3b82f6;border-radius:6px;color:#3b82f6;background:#fff;cursor:pointer;margin-right:4px;">Görüldü</button>` : ''}
-              ${b.durum !== 'onaylandi' ? `<button onclick="basvuruDurumGuncelle('${b.id}','onaylandi')" style="font-size:11px;padding:3px 8px;border:1px solid #10b981;border-radius:6px;color:#10b981;background:#fff;cursor:pointer;margin-right:4px;">Onayla</button>` : ''}
-              ${b.durum !== 'reddedildi' ? `<button onclick="basvuruDurumGuncelle('${b.id}','reddedildi')" style="font-size:11px;padding:3px 8px;border:1px solid #ef4444;border-radius:6px;color:#ef4444;background:#fff;cursor:pointer;">Reddet</button>` : ''}
+              ${!b.provisioned ? `<button onclick="basvuruOnayla('${b.id}')" style="font-size:11px;padding:3px 8px;border:1px solid #10b981;border-radius:6px;color:#10b981;background:#fff;cursor:pointer;margin-right:4px;">${b.durum === 'onaylandi' ? 'Öğretmen Oluştur' : 'Onayla'}</button>` : ''}
+              ${b.durum !== 'reddedildi' && !b.provisioned ? `<button onclick="basvuruDurumGuncelle('${b.id}','reddedildi')" style="font-size:11px;padding:3px 8px;border:1px solid #ef4444;border-radius:6px;color:#ef4444;background:#fff;cursor:pointer;">Reddet</button>` : ''}
             </td>
           </tr>`).join('')}
         </tbody>
@@ -9704,6 +9749,39 @@ async function basvuruDurumGuncelle(id, durum) {
   } catch(e) { showToast('❌ ' + e.message); return; }
   showToast('✅ Durum güncellendi');
   loadBasvurular();
+}
+
+// Başvuru → Öğretmen tek tık: öğretmen + giriş kaydı oluştur, geçici şifreyi göster
+async function basvuruOnayla(id) {
+  if (!confirm('Bu başvurudan öğretmen kaydı ve giriş bilgisi oluşturulacak. Devam edilsin mi?')) return;
+  showToast('Öğretmen oluşturuluyor...');
+  let r;
+  try { r = await adminOps('basvuru_onayla', { id }); }
+  catch(e) { showToast('❌ ' + e.message); return; }
+  loadBasvurular();
+  if (r.already) { showToast('Bu başvuru zaten öğretmene dönüştürülmüş'); return; }
+  basvuruSifreModalAc(r);
+}
+
+function basvuruSifreModalAc(r) {
+  document.getElementById('bsm-ad').textContent =
+    `${r.ad_soyad || 'Öğretmen'}${r.brans ? ' — ' + r.brans : ''}`;
+  document.getElementById('bsm-sifre').textContent = r.gecici_sifre || '';
+  const digits = String(r.telefon || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
+  const mesaj =
+    `Merhaba ${r.ad_soyad || ''}, AdaptiX Bireysel Takip Sistemi'ne öğretmen olarak eklendiniz. ` +
+    `Giriş: https://adaptix.com.tr — Geçici şifreniz: ${r.gecici_sifre}. ` +
+    `Giriş yaptıktan sonra şifrenizi değiştirmeniz önerilir.`;
+  const wa = document.getElementById('bsm-wa');
+  wa.href = digits
+    ? `https://wa.me/90${digits}?text=${encodeURIComponent(mesaj)}`
+    : `https://wa.me/?text=${encodeURIComponent(mesaj)}`;
+  document.getElementById('basvuru-sifre-modal').style.display = 'flex';
+}
+function bsmKapat() { document.getElementById('basvuru-sifre-modal').style.display = 'none'; }
+function bsmKopyala() {
+  const s = document.getElementById('bsm-sifre').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(s).then(() => showToast('✅ Şifre kopyalandı'), () => {});
 }
 
 // ══════════════════════════════════════════════════════════════

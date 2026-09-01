@@ -1340,6 +1340,16 @@ tailwind.config = {
           <option value="">— Branş seçin —</option>
         </select>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label class="lbl">Birim Fiyat (₺)</label>
+          <input type="number" id="aom-birim" class="field" min="0" step="1" placeholder="Varsayılan 50"/>
+        </div>
+        <div>
+          <label class="lbl">İndirim (%)</label>
+          <input type="number" id="aom-indirim" class="field" min="0" max="99" step="1" placeholder="0"/>
+        </div>
+      </div>
       <div id="aom-sifre-grup">
         <label class="lbl">Şifre *</label>
         <input type="password" id="aom-sifre" class="field" placeholder="En az 8 karakter" minlength="8"/>
@@ -9075,6 +9085,7 @@ async function adaExecuteTool(toolName, input) {
 let _adaptixOgretmenler = [];
 let _adaptixFaturalar    = [];
 let _adaptixFaturaFiltre = 'tumsi';
+const FATURA_GECIKME_GUN = 15; // oluşturulmadan N gün sonra hâlâ bekliyorsa vurgula
 let _adaptixEditId       = null; // düzenlenen ogretmen_id
 let _adaptixNotFaturaId  = null; // not eklenen fatura_id
 let _adaptixSifreOgrId   = null; // şifre değiştirilen ogretmen_id
@@ -9299,6 +9310,8 @@ function adaptixOgretmenModalAc(ogretmenId) {
     document.getElementById('aom-ad').value    = o?.ad_soyad  || '';
     document.getElementById('aom-email').value = o?.email     || '';
     document.getElementById('aom-tel').value   = o?.telefon   || '';
+    document.getElementById('aom-birim').value   = (o && o.birim_fiyat != null) ? o.birim_fiyat : '';
+    document.getElementById('aom-indirim').value = o?.indirim_orani ? Math.round(Number(o.indirim_orani) * 100) : '';
     bransEl.value = o?.brans || '';
     sifGrup.style.display = 'none'; // düzenlemede şifre değiştirilmez
   } else {
@@ -9306,6 +9319,8 @@ function adaptixOgretmenModalAc(ogretmenId) {
     document.getElementById('aom-ad').value    = '';
     document.getElementById('aom-email').value = '';
     document.getElementById('aom-tel').value   = '';
+    document.getElementById('aom-birim').value   = '';
+    document.getElementById('aom-indirim').value = '';
     document.getElementById('aom-sifre').value = '';
     bransEl.value = '';
     sifGrup.style.display = '';
@@ -9362,6 +9377,8 @@ async function adaptixOgretmenKaydet() {
   const telefon = document.getElementById('aom-tel').value.trim();
   const brans   = document.getElementById('aom-brans').value;
   const sifre   = document.getElementById('aom-sifre').value;
+  const birim   = document.getElementById('aom-birim').value.trim();
+  const indirim = document.getElementById('aom-indirim').value.trim();
   const errEl   = document.getElementById('aom-error');
 
   errEl.style.display = 'none';
@@ -9373,6 +9390,7 @@ async function adaptixOgretmenKaydet() {
   try {
     await adminOps('ogretmen_kaydet', {
       editId: _adaptixEditId || null, ad_soyad: adSoyad, email, telefon, brans, sifre,
+      birim_fiyat: birim, indirim_yuzde: indirim,
     });
     showToast(_adaptixEditId ? '✅ Güncellendi' : '✅ Öğretmen eklendi');
   } catch(e) {
@@ -9552,22 +9570,27 @@ function renderAdaptixFaturalar() {
               const ad = ogrMap[f.ogretmen_id] || f.ogretmen_id;
               const donem = f.donem ? new Date(f.donem).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }) : '—';
               const odendi = f.durum === 'odendi';
+              const yasGun = f.olusturma_tarihi ? (Date.now() - new Date(f.olusturma_tarihi).getTime()) / 86400000 : 0;
+              const gecikmis = !odendi && yasGun > FATURA_GECIKME_GUN;
+              const ind = Number(f.indirim_orani) || 0;
               return `
-              <tr style="border-bottom:1px solid var(--line);">
+              <tr style="border-bottom:1px solid var(--line);${gecikmis?'background:rgba(186,26,26,0.06);':''}">
                 <td style="padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink);">${ad}</td>
                 <td style="padding:13px 16px;font-size:13px;color:var(--ink-soft);">${donem}</td>
                 <td style="padding:13px 16px;text-align:center;font-size:14px;font-weight:700;color:#005d8d;">${f.ogrenci_sayisi||0}</td>
-                <td style="padding:13px 16px;text-align:right;font-size:14px;font-weight:800;color:var(--ink);">₺${Number(f.toplam_tutar||0).toLocaleString('tr-TR')}</td>
+                <td style="padding:13px 16px;text-align:right;font-size:14px;font-weight:800;color:var(--ink);">₺${Number(f.toplam_tutar||0).toLocaleString('tr-TR')}${ind>0?`<div style="font-size:10px;font-weight:600;color:#805600;">%${Math.round(ind*100)} indirim · birim ₺${Number(f.birim_fiyat||0).toLocaleString('tr-TR')}</div>`:''}</td>
                 <td style="padding:13px 16px;text-align:center;">
                   <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:16px;${odendi?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
                     ${odendi?'Ödendi':'Bekliyor'}
                   </span>
+                  ${gecikmis?`<div style="font-size:10px;font-weight:700;color:#ba1a1a;margin-top:2px;">⚠ ${Math.floor(yasGun)} gündür bekliyor</div>`:''}
                   ${f.odeme_tarihi?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;">${new Date(f.odeme_tarihi).toLocaleDateString('tr-TR')}</div>`:''}
-                  ${f.notlar?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${f.notlar}">📝 ${f.notlar}</div>`:''}
+                  ${f.notlar?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(f.notlar||'').replace(/"/g,'&quot;')}">📝 ${f.notlar}</div>`:''}
                 </td>
                 <td style="padding:13px 16px;text-align:right;">
                   <div style="display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;">
                     ${!odendi?`<button onclick="adaptixFaturaOdendi('${f.fatura_id}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(0,130,40,0.12);color:#00661d;border:none;cursor:pointer;">✓ Ödendi</button>`:''}
+                    ${odendi?`<button onclick="adaptixFaturaOdemeGeriAl('${f.fatura_id}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(254,178,35,0.18);color:#805600;border:none;cursor:pointer;">↩ Geri Al</button>`:''}
                     <button onclick="adaptixNotModalAc('${f.fatura_id}','${(f.notlar||'').replace(/'/g,"&#39;")}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">📝 Not</button>
                   </div>
                 </td>
@@ -9603,6 +9626,24 @@ async function adaptixFaturaOdendi(faturaId) {
   if (idx >= 0) {
     _adaptixFaturalar[idx].durum = 'odendi';
     _adaptixFaturalar[idx].odeme_tarihi = r.odeme_tarihi || yerelISO(new Date());
+  }
+  renderAdaptixFaturalar();
+}
+
+// Fatura Ödeme Geri Al
+async function adaptixFaturaOdemeGeriAl(faturaId) {
+  if (!confirm('Bu faturanın ödeme kaydı geri alınsın mı? Durum "Bekliyor"a döner.')) return;
+  showToast('Geri alınıyor...');
+  let r;
+  try {
+    r = await adminOps('fatura_odeme_geri_al', { faturaId });
+  } catch(e) { showToast('❌ ' + e.message); return; }
+  showToast('↩ Ödeme geri alındı');
+  const idx = _adaptixFaturalar.findIndex(f => f.fatura_id === faturaId);
+  if (idx >= 0) {
+    _adaptixFaturalar[idx].durum = 'bekleyen';
+    _adaptixFaturalar[idx].odeme_tarihi = null;
+    if (r && r.notlar != null) _adaptixFaturalar[idx].notlar = r.notlar;
   }
   renderAdaptixFaturalar();
 }

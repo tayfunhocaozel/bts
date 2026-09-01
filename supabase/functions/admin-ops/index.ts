@@ -144,12 +144,24 @@ Deno.serve(async (req) => {
         const brans = str(body?.brans);
         const sifre = String(body?.sifre ?? "");
 
+        // Birim fiyat: boş => null (genel varsayılan). İndirim: yüzde (0-99) => oran.
+        const bfRaw = str(body?.birim_fiyat);
+        const birim_fiyat = bfRaw === "" ? null : Math.max(0, Math.round(Number(bfRaw) || 0));
+        const indPct = Math.min(Math.max(Number(body?.indirim_yuzde) || 0, 0), 99);
+        const indirim_orani = Math.round(indPct) / 100;
+
         if (!ad_soyad) return json({ error: "Ad soyad zorunludur." }, 400);
         if (!brans) return json({ error: "Branş zorunludur." }, 400);
+        if (birim_fiyat !== null && !Number.isFinite(birim_fiyat)) {
+          return json({ error: "Birim fiyat geçersiz." }, 400);
+        }
 
         if (editId) {
           const { error } = await sb.from("ogretmenler")
-            .update({ ad_soyad, email: email || null, telefon: telefon || null, brans })
+            .update({
+              ad_soyad, email: email || null, telefon: telefon || null, brans,
+              birim_fiyat, indirim_orani,
+            })
             .eq("ogretmen_id", editId);
           if (error) return json({ error: error.message }, 400);
           return json({ ok: true, mode: "update" });
@@ -157,7 +169,10 @@ Deno.serve(async (req) => {
 
         if (sifre.length < 8) return json({ error: "Şifre en az 8 karakter olmalıdır." }, 400);
         const { data: ogr, error: oErr } = await sb.from("ogretmenler")
-          .insert({ ad_soyad, email: email || null, telefon: telefon || null, brans, durum: "aktif" })
+          .insert({
+            ad_soyad, email: email || null, telefon: telefon || null, brans, durum: "aktif",
+            birim_fiyat, indirim_orani,
+          })
           .select().single();
         if (oErr) return json({ error: oErr.message }, 400);
 
@@ -204,35 +219,35 @@ Deno.serve(async (req) => {
         return json({ ok: true });
       }
 
-      // ── Bu ay fatura oluştur ─────────────────────────────────────────
+      // ── Bu ay fatura oluştur (manuel tetikleme; cron da aynı RPC'yi çağırır) ──
       case "fatura_olustur": {
-        const nowTR = new Date(Date.now() + 3 * 3600 * 1000);
-        const donem = `${nowTR.getUTCFullYear()}-${String(nowTR.getUTCMonth() + 1).padStart(2, "0")}-01`;
-
-        const [ogrRes, ogcRes, mevRes] = await Promise.all([
-          sb.from("ogretmenler").select("ogretmen_id").eq("durum", "aktif"),
-          sb.from("ogrenciler").select("ogrenci_id, ogretmen_id").eq("kayit_durumu", "AKTİF"),
-          sb.from("faturalar").select("ogretmen_id").eq("donem", donem),
-        ]);
-        if (ogrRes.error || ogcRes.error || mevRes.error) {
-          return json({ error: "Veri okunamadı" }, 500);
-        }
-        const mevcut = new Set((mevRes.data ?? []).map((f: { ogretmen_id: string }) => f.ogretmen_id));
-        const yeni = (ogrRes.data ?? [])
-          .filter((o: { ogretmen_id: string }) => !mevcut.has(o.ogretmen_id))
-          .map((o: { ogretmen_id: string }) => ({
-            ogretmen_id: o.ogretmen_id,
-            donem,
-            ogrenci_sayisi: (ogcRes.data ?? [])
-              .filter((s: { ogretmen_id: string }) => s.ogretmen_id === o.ogretmen_id).length,
-            durum: "bekleyen",
-          }));
-        if (!yeni.length) {
-          return json({ ok: true, eklenen: 0, mesaj: "Bu dönem için fatura zaten oluşturulmuş" });
-        }
-        const { error } = await sb.from("faturalar").insert(yeni);
+        const { data: r, error } = await sb.rpc("adaptix_fatura_uret");
         if (error) return json({ error: error.message }, 400);
-        return json({ ok: true, eklenen: yeni.length });
+        const eklenen = Number(r?.eklenen ?? 0);
+        return json({
+          ok: true,
+          eklenen,
+          mesaj: eklenen ? undefined : "Bu dönem için fatura zaten oluşturulmuş",
+        });
+      }
+
+      // ── Fatura ödeme geri al ────────────────────────────────────────
+      case "fatura_odeme_geri_al": {
+        const faturaId = str(body?.faturaId);
+        if (!faturaId) return json({ error: "Fatura belirtilmedi" }, 400);
+        const { data: f, error: fErr } = await sb.from("faturalar")
+          .select("durum, notlar").eq("fatura_id", faturaId).maybeSingle();
+        if (fErr) return json({ error: fErr.message }, 400);
+        if (!f) return json({ error: "Fatura bulunamadı" }, 404);
+        if (f.durum !== "odendi") {
+          return json({ error: "Yalnızca ödenmiş faturanın ödemesi geri alınabilir" }, 400);
+        }
+        const not = `${str(f.notlar) ? str(f.notlar) + "\n" : ""}[Ödeme geri alındı: ${yerelISO()}]`;
+        const { error } = await sb.from("faturalar")
+          .update({ durum: "bekleyen", odeme_tarihi: null, notlar: not })
+          .eq("fatura_id", faturaId);
+        if (error) return json({ error: error.message }, 400);
+        return json({ ok: true, notlar: not });
       }
 
       // ── Fatura ödendi işaretle ───────────────────────────────────────

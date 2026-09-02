@@ -2005,13 +2005,18 @@ function fillSelects() {
 //   < 0 borçlu | 0 güncel | > 0 peşin
 async function loadDersBakiyeleri() {
   if (state.rol !== 'ogretmen') return 0;
-  const { data, error } = await sb.from('ders_odeme_bakiye')
-    .select('ogrenci_id, bakiye, odenen_ders, islenen_ders');
-  if (error) { console.error('Ders bakiyesi sorgu hatası:', error.message); return 0; }
-  const map = {};
-  (data || []).forEach(r => { map[r.ogrenci_id] = r; });
-  state.dersBakiyeMap = map;
-  return (data || []).reduce((s, r) => s + (Number(r.bakiye) < 0 ? -Number(r.bakiye) : 0), 0);
+  try {
+    const { data, error } = await sb.from('ders_odeme_bakiye')
+      .select('ogrenci_id, bakiye, odenen_ders, islenen_ders');
+    if (error) { console.error('Ders bakiyesi sorgu hatası:', error.message); return 0; }
+    const map = {};
+    (data || []).forEach(r => { map[r.ogrenci_id] = r; });
+    state.dersBakiyeMap = map;
+    return (data || []).reduce((s, r) => s + (Number(r.bakiye) < 0 ? -Number(r.bakiye) : 0), 0);
+  } catch (e) {
+    console.error('Ders bakiyesi beklenmeyen hata:', e);
+    return 0;
+  }
 }
 
 function hesaplaDersBakiyesi(ogrenciId) {

@@ -186,9 +186,10 @@ tailwind.config = {
     /* İçerik padding küçült */
     .scrollwrap { padding: 14px 14px 36px !important; }
 
-    /* Dashboard stat grid: 3 → 2 sütun */
-    #dashStats { grid-template-columns: 1fr 1fr !important; }
-    #dashStats > .card-2xl:last-child { grid-column: 1 / -1; }
+    /* Dashboard stat grid: mobilde 4 kart 2x2 */
+    #dashStats { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+    #dashStats .card-2xl { padding: 16px 16px !important; }
+    #dashStats .card-2xl > div:last-child { font-size: 26px !important; }
 
     /* Kaynaklar üst grid: yan yana → alt alta */
     #kaynaklar-top-grid { grid-template-columns: 1fr !important; }
@@ -2042,21 +2043,35 @@ async function _odemeGorunumleriYenile(ogrenciId) {
   if (document.getElementById('ogrenci-listesi')?.innerHTML) renderOgrenciler();
 }
 
-// Öğrenci raporundaki "Ders Ödeme Bakiyesi" bölümü (yalnız öğretmen, yazdırmada gizli)
+// Öğrenci raporunda ödeme durumu: bakiye rozeti + "Ödeme Gir" öğrenci bilgi
+// kartının İÇİNE (#rapor-odeme-ozet); ödeme geçmişi katlanabilir bölüm olarak
+// hemen altına (#rapor-odeme, varsayılan kapalı). Hepsi yalnız öğretmen +
+// yazdırmada gizli (print-hide / #rapor-content zaten print'te gizli).
 async function renderOdemeBolumu(ogrenciId) {
-  const el = document.getElementById('rapor-odeme');
-  if (!el) return;
-  el.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] p-5 mb-5 border border-outline-variant/20">
-    <div class="flex items-center gap-2 mb-3">
-      <span class="material-symbols-outlined text-primary text-xl">account_balance_wallet</span>
-      <h2 class="font-headline font-bold text-base text-on-surface">Ders Ödeme Bakiyesi</h2>
-    </div>
-    <div class="flex justify-center py-6"><div class="spinner"></div></div>
-  </div>`;
+  const gecmisEl = document.getElementById('rapor-odeme');
+  if (!gecmisEl) return;
 
-  if (!state.dersBakiyeMap[ogrenciId]) await loadDersBakiyeleri();
-  const r = state.dersBakiyeMap[ogrenciId] || { bakiye: 0, odenen_ders: 0, islenen_ders: 0 };
-  const b = Number(r.bakiye);
+  // 1) Bilgi kartı içindeki özet: rozet + Ödeme Gir butonu
+  const ozetEl = document.getElementById('rapor-odeme-ozet');
+  if (ozetEl) {
+    if (!state.dersBakiyeMap[ogrenciId]) await loadDersBakiyeleri();
+    ozetEl.innerHTML = `
+      ${dersBakiyeRozetHTML(ogrenciId) || '<span class="text-xs text-outline">Bakiye —</span>'}
+      <button onclick="odemeGirModalAc('${ogrenciId}')"
+        class="text-xs font-bold px-3 py-1.5 rounded-full bg-primary text-on-primary hover:opacity-90 transition-opacity">＋ Ödeme Gir</button>`;
+  }
+
+  // 2) Katlanabilir "Ödeme Geçmişi" (varsayılan kapalı)
+  gecmisEl.innerHTML = `<details class="group bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] mb-5 border border-outline-variant/20 overflow-hidden">
+    <summary class="px-5 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-sm font-bold text-on-surface flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-lg">account_balance_wallet</span>
+      Ödeme Geçmişi
+      <span class="material-symbols-outlined text-outline ml-auto transition-transform group-open:rotate-180">expand_more</span>
+    </summary>
+    <div class="px-5 pb-4 pt-1 border-t border-outline-variant/15">
+      <div class="flex justify-center py-4"><div class="spinner"></div></div>
+    </div>
+  </details>`;
 
   const { data: odemeler, error } = await sb.from('ders_odemeleri')
     .select('id, tarih, ders_sayisi, aciklama, created_at')
@@ -2064,11 +2079,7 @@ async function renderOdemeBolumu(ogrenciId) {
     .order('tarih', { ascending: false })
     .order('created_at', { ascending: false });
 
-  const durumRenk  = b < 0 ? 'text-error' : b > 0 ? 'text-primary' : 'text-tertiary';
-  const durumMetin = b < 0 ? `${-b} ders borçlu` : b > 0 ? `${b} ders peşin` : 'Güncel — borç yok';
-  const bakiyeStr  = b > 0 ? '+' + b : String(b);
-
-  const gecmisHTML = error
+  const icerik = error
     ? `<div class="text-sm text-error px-1 py-2">❌ ${error.message}</div>`
     : !(odemeler || []).length
       ? `<div class="text-sm text-outline px-1 py-3">Henüz ödeme kaydı yok.</div>`
@@ -2082,23 +2093,8 @@ async function renderOdemeBolumu(ogrenciId) {
             class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full text-error hover:bg-error/10 transition-colors">🗑️</button>
         </div>`).join('') + `</div>`;
 
-  el.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] p-5 mb-5 border border-outline-variant/20">
-    <div class="flex items-center justify-between gap-3 mb-4">
-      <div class="flex items-center gap-2">
-        <span class="material-symbols-outlined text-primary text-xl">account_balance_wallet</span>
-        <h2 class="font-headline font-bold text-base text-on-surface">Ders Ödeme Bakiyesi</h2>
-      </div>
-      <button onclick="odemeGirModalAc('${ogrenciId}')"
-        class="text-xs font-bold px-3 py-2 rounded-full bg-primary text-on-primary hover:opacity-90 transition-opacity flex-shrink-0">＋ Ödeme Gir</button>
-    </div>
-    <div class="flex items-baseline gap-2 mb-1">
-      <span class="font-headline text-3xl font-extrabold ${durumRenk}">${bakiyeStr}</span>
-      <span class="text-sm font-semibold ${durumRenk}">${durumMetin}</span>
-    </div>
-    <div class="text-xs text-outline mb-4">${r.odenen_ders} ders ödendi &nbsp;•&nbsp; ${r.islenen_ders} ders işlendi</div>
-    <div class="text-xs font-bold text-outline uppercase tracking-wider mb-1">Ödeme Geçmişi</div>
-    ${gecmisHTML}
-  </div>`;
+  const box = gecmisEl.querySelector('details > div');
+  if (box) box.innerHTML = icerik;
 }
 
 function odemeGirModalAc(ogrenciId) {
@@ -5203,6 +5199,7 @@ async function loadRapor() {
       <div class="text-right">
         <div class="text-xs text-outline">${bugun}</div>
         <div class="text-xs font-semibold text-primary mt-1">${dersOturumSayisi} ders oturumu</div>
+        ${state.rol === 'ogretmen' ? `<div id="rapor-odeme-ozet" class="print-hide flex flex-col items-end gap-1.5 mt-2"></div>` : ''}
       </div>
     </div>
   </div>

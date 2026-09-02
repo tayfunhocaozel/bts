@@ -144,6 +144,7 @@ tailwind.config = {
   .stat-amber { background:linear-gradient(135deg,#ffc24d,#feb223); color:#5a3d00; border:none; }
   .stat-green { background:linear-gradient(135deg,#16a046,#008228); color:#fff; border:none; }
   .stat-orange{ background:linear-gradient(135deg,#ff9836,#f57c00); color:#fff; border:none; }
+  .stat-rose  { background:linear-gradient(135deg,#ff6b6b,#d32f2f); color:#fff; border:none; }
   .stat-bg .material-symbols-outlined { font-size:116px; opacity:.16; }
   .chip { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:8px; background:#f5faff; border:1px solid var(--line); font-size:11.5px; font-weight:700; color:#004a72; font-family:Manrope,sans-serif; }
   .seg { display:inline-flex; background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px; gap:2px; }
@@ -456,7 +457,7 @@ tailwind.config = {
       </div>
 
       <!-- Stats -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;" id="dashStats">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px;" id="dashStats">
         <div class="card-2xl stat-navy" style="padding:20px 22px;cursor:pointer;" onclick="goPage('ogrenciler')">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">group</span>
@@ -477,6 +478,13 @@ tailwind.config = {
             <span style="font-size:12px;font-weight:600;opacity:.85;">Bu Ay Ders</span>
           </div>
           <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-ders"><div class="spinner"></div></div>
+        </div>
+        <div class="card-2xl stat-rose" style="padding:20px 22px;cursor:pointer;" onclick="acBorcluDersModal()">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span class="material-symbols-outlined ico-fill" style="font-size:22px;opacity:.85;">account_balance_wallet</span>
+            <span style="font-size:12px;font-weight:600;opacity:.85;">Toplam Borçlu Ders</span>
+          </div>
+          <div style="font-family:Manrope;font-size:34px;font-weight:800;line-height:1;" id="stat-borclu-ders"><div class="spinner"></div></div>
         </div>
       </div>
 

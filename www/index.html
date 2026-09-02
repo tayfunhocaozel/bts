@@ -1435,7 +1435,7 @@ tailwind.config = {
 <div id="kkm-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;padding:16px;">
   <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(1,49,73,.25);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);">📷 Kamera ile Kaynak Ekle</div>
+      <div id="kkm-baslik" style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);">📷 Kamera ile Kaynak Ekle</div>
       <button onclick="kkmKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
         <span class="material-symbols-outlined">close</span>
       </button>
@@ -1979,14 +1979,22 @@ function goPage(id) {
 
 // ── MASTER DATA ───────────────────────────────────────────────
 async function loadMasterData() {
-  const [o, k, ky] = await Promise.all([
+  const [o, k, ky, kk] = await Promise.all([
     sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad'),
     sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').order('sinif').order('konu'),
     sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi'),
+    sb.from('kaynak_konulari').select('kaynak_id'),
   ]);
   state.ogrenciler = o.data || [];
   state.kazanimlar = k.data || [];
   state.kaynaklar  = ky.data || [];
+  state._kaynakKonuluIdSet = new Set((kk.data || []).map(r => r.kaynak_id));
+}
+
+// kaynak_konulari'nda satırı olan kaynak_id kümesini tazeler (zenginleştirme sonrası).
+async function kaynakKonuluIdleriYukle() {
+  const { data } = await sb.from('kaynak_konulari').select('kaynak_id');
+  state._kaynakKonuluIdSet = new Set((data || []).map(r => r.kaynak_id));
 }
 
 function fillSelects() {
@@ -4288,6 +4296,9 @@ function renderKaynaklar() {
   const el = document.getElementById('kaynak-listesi');
   if (!el) return;
 
+  // kaynak_konulari satırı olan kaynaklar — bunlarda "zenginleştir" butonu gösterilmez
+  const konuluSet = state._kaynakKonuluIdSet || new Set();
+
   const filtered = state.kaynaklar.filter(k =>
     (!filtreSinif || (k.sinif||'').toLowerCase() === filtreSinif.toLowerCase()) &&
     (!filtreAd || (k.kaynak_adi||'').toLowerCase().includes(filtreAd))
@@ -4299,6 +4310,11 @@ function renderKaynaklar() {
         <div class="flex-1">
           <div class="text-sm font-semibold text-on-surface">${k.kaynak_adi}</div>
           <div class="text-xs text-outline">${k.yayin_evi||'—'} — ${k.sinif}</div>
+          ${konuluSet.has(k.kaynak_id) ? '' : `
+          <button onclick="kameraKaynakModalAc('${k.kaynak_id}', this.dataset.adi)" data-adi="${kkmEsc(k.kaynak_adi)}"
+            style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;color:var(--primary);background:none;border:none;padding:2px 0;cursor:pointer;font-size:11.5px;font-weight:600;">
+            <span class="material-symbols-outlined" style="font-size:14px;">photo_camera</span> İçindekiler / Cevap Anahtarı Ekle
+          </button>`}
         </div>
         <select onchange="kaynakTurGuncelle('${k.kaynak_id}', this.value)"
           class="text-xs font-bold px-2 py-1 rounded-full border-none appearance-none cursor-pointer"
@@ -4361,12 +4377,21 @@ function kkmEsc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function kameraKaynakModalAc() {
+// kaynakId verilirse "zenginleştirme" modu: kapak adımı atlanır, kayıtta yeni
+// kaynaklar satırı açılmaz, konu/cevap satırları var olan kaynak_id'ye eklenir.
+function kameraKaynakModalAc(kaynakId, kaynakAdi) {
+  const zeng = !!kaynakId;
   state._kkm = {
-    adimIndex: 0,
-    fotolar: [[], [], []],
-    sonuc: { kaynak_adi: '', yayin_evi: '', sinif: '8. Sınıf', konu_listesi: [], cevap_anahtari: [] }
+    mod: zeng ? 'zenginlestir' : 'yeni',
+    kaynakId: kaynakId || null,
+    kaynakAdi: kaynakAdi || '',
+    ilkAdim: zeng ? 1 : 0,          // 0=kapak, 1=içindekiler — zenginleştirmede kapak yok
+    adimIndex: zeng ? 1 : 0,
+    fotolar: [[], [], []],         // [kapak, içindekiler, cevap] — slot yapısı iki modda da aynı
+    sonuc: { kaynak_adi: kaynakAdi || '', yayin_evi: '', sinif: '8. Sınıf', konu_listesi: [], cevap_anahtari: [] }
   };
+  const baslikEl = document.getElementById('kkm-baslik');
+  if (baslikEl) baslikEl.textContent = zeng ? '📷 İçindekiler / Cevap Anahtarı Ekle' : '📷 Kamera ile Kaynak Ekle';
   document.getElementById('kkm-modal').style.display = 'flex';
   kkmRenderAdim();
 }
@@ -4422,7 +4447,7 @@ function kkmFotoSil(fotoIdx) {
 }
 
 function kkmGeri() {
-  state._kkm.adimIndex = Math.max(0, state._kkm.adimIndex - 1);
+  state._kkm.adimIndex = Math.max(state._kkm.ilkAdim || 0, state._kkm.adimIndex - 1);
   kkmRenderAdim();
 }
 
@@ -4447,8 +4472,11 @@ function kkmRenderAdim() {
   const sonAdimMi = k.adimIndex === KKM_ADIMLAR.length - 1;
   const govde = document.getElementById('kkm-govde');
 
-  const cubuk = KKM_ADIMLAR.map((a, i) => `
-    <div style="flex:1;height:4px;border-radius:2px;background:${i <= k.adimIndex ? 'var(--primary)' : 'var(--surface-container-high)'};"></div>`).join('');
+  const ilkAdim = k.ilkAdim || 0;
+  const cubuk = KKM_ADIMLAR.slice(ilkAdim).map((a, gi) => {
+    const i = gi + ilkAdim;
+    return `<div style="flex:1;height:4px;border-radius:2px;background:${i <= k.adimIndex ? 'var(--primary)' : 'var(--surface-container-high)'};"></div>`;
+  }).join('');
 
   const gorselAlani = adim.coklu
     ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;justify-content:center;">
@@ -4470,7 +4498,7 @@ function kkmRenderAdim() {
   govde.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:18px;">${cubuk}</div>
     <div style="text-align:center;">
-      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;">Adım ${k.adimIndex+1}/${KKM_ADIMLAR.length}${adim.coklu ? ' · birden fazla fotoğraf eklenebilir' : ''}</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:4px;">Adım ${k.adimIndex - ilkAdim + 1}/${KKM_ADIMLAR.length - ilkAdim}${adim.coklu ? ' · birden fazla fotoğraf eklenebilir' : ''}</div>
       <div style="font-family:Manrope;font-weight:700;font-size:15px;color:var(--ink);margin-bottom:14px;">${adim.baslik}</div>
       ${gorselAlani}
       ${!adim.coklu ? `
@@ -4479,7 +4507,7 @@ function kkmRenderAdim() {
       </label>` : ''}
       <input type="file" id="kkm-file-input" accept="image/*" capture="environment" style="display:none;" onchange="kkmFotoSecildi(this)"/>
       <div style="display:flex;gap:10px;margin-top:14px;">
-        ${k.adimIndex > 0 ? `<button onclick="kkmGeri()" class="btn btn-ghost" style="flex:1;justify-content:center;">Geri</button>` : ''}
+        ${k.adimIndex > ilkAdim ? `<button onclick="kkmGeri()" class="btn btn-ghost" style="flex:1;justify-content:center;">Geri</button>` : ''}
         ${sonAdimMi
           ? `<button onclick="kkmAnalizEt()" id="kkm-analiz-btn" class="btn btn-primary" style="flex:2;justify-content:center;">
               <span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span> ${varMi ? 'Tümünü Analiz Et' : 'Cevap Anahtarı Olmadan Analiz Et'}
@@ -4496,8 +4524,15 @@ async function kkmAnalizEt() {
   const k = state._kkm;
   const durum = document.getElementById('kkm-durum');
   const btn = document.getElementById('kkm-analiz-btn');
-  if (durum) durum.textContent = 'Tüm fotoğraflar birlikte analiz ediliyor... (biraz sürebilir)';
   if (btn) btn.disabled = true;
+
+  // Edge function fotoğrafları tek çağrıda işleyip döndüğü için foto-başına ("2/4")
+  // ilerleme gösterilemiyor; en azından foto sayısı + geçen süre canlı gösterilir.
+  const fotoSayisi = k.fotolar.reduce((t, g) => t + g.length, 0);
+  const t0 = Date.now();
+  const tik = () => { if (durum) durum.textContent = `Fotoğraflar analiz ediliyor… (${fotoSayisi} fotoğraf · ${Math.round((Date.now() - t0) / 1000)} sn)`; };
+  tik();
+  const sayacId = setInterval(tik, 1000);
 
   const paketle = fotolar => fotolar.map(f => ({ mimeType: f.mimeType, data: f.base64 }));
 
@@ -4530,8 +4565,10 @@ async function kkmAnalizEt() {
     // şüphesi olan foto ("uyarilar") mesajları önizleme ekranında gösterilir.
     k.sonuc._uyarilar = [...(data.hatalar || []), ...(data.uyarilar || [])];
 
+    clearInterval(sayacId);
     kkmRenderOnizleme();
   } catch (err) {
+    clearInterval(sayacId);
     if (durum) durum.textContent = '❌ ' + err.message;
     if (btn) btn.disabled = false;
   }
@@ -4594,8 +4631,22 @@ function kkmTestSil(cid) {
 
 function kkmRenderOnizleme() {
   const s = state._kkm.sonuc;
+  const zeng = state._kkm.mod === 'zenginlestir';
   const govde = document.getElementById('kkm-govde');
   const sinifOpts = ['5. Sınıf','6. Sınıf','7. Sınıf','8. Sınıf'].map(sn => `<option ${s.sinif===sn?'selected':''}>${sn}</option>`).join('');
+
+  // Zenginleştirme modunda kaynak zaten var; kapak OCR'ı da yapılmadı — adı salt-okunur göster.
+  const kaynakBilgiAlani = zeng ? `
+    <div style="background:var(--surface-container-low);border-radius:12px;padding:10px 12px;">
+      <div style="font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;">Kaynak</div>
+      <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);">${kkmEsc(state._kkm.kaynakAdi)}</div>
+    </div>` : `
+    <label class="lbl">Kaynak Adı *</label>
+    <input type="text" id="kkm-o-ad" class="field" value="${kkmEsc(s.kaynak_adi)}"/>
+    <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      <input type="text" id="kkm-o-yayinevi" placeholder="Yayınevi" class="field" value="${kkmEsc(s.yayin_evi)}"/>
+      <select id="kkm-o-sinif" class="field">${sinifOpts}</select>
+    </div>`;
 
   const uyariBandi = (s._uyarilar && s._uyarilar.length) ? `
     <div style="background:rgba(217,52,43,.08);border:1px solid var(--error);border-radius:12px;padding:10px 12px;margin-bottom:14px;">
@@ -4608,12 +4659,7 @@ function kkmRenderOnizleme() {
   govde.innerHTML = `
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Bilgileri kontrol edip düzenleyin, ardından kaydedin.</div>
     ${uyariBandi}
-    <label class="lbl">Kaynak Adı *</label>
-    <input type="text" id="kkm-o-ad" class="field" value="${kkmEsc(s.kaynak_adi)}"/>
-    <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-      <input type="text" id="kkm-o-yayinevi" placeholder="Yayınevi" class="field" value="${kkmEsc(s.yayin_evi)}"/>
-      <select id="kkm-o-sinif" class="field">${sinifOpts}</select>
-    </div>
+    ${kaynakBilgiAlani}
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;margin-bottom:8px;">
       <div class="lbl" style="margin:0;">Konular (${s.konu_listesi.length})</div>
@@ -4639,11 +4685,14 @@ function kkmRenderOnizleme() {
 async function kkmKaydet() {
   const k = state._kkm;
   const s = k.sonuc;
-  s.kaynak_adi  = document.getElementById('kkm-o-ad').value.trim();
-  s.yayin_evi   = document.getElementById('kkm-o-yayinevi').value.trim();
-  s.sinif       = document.getElementById('kkm-o-sinif').value;
+  const zeng = k.mod === 'zenginlestir';
 
-  if (!s.kaynak_adi) { showToast('⚠️ Kaynak adı zorunlu'); return; }
+  if (!zeng) {
+    s.kaynak_adi  = document.getElementById('kkm-o-ad').value.trim();
+    s.yayin_evi   = document.getElementById('kkm-o-yayinevi').value.trim();
+    s.sinif       = document.getElementById('kkm-o-sinif').value;
+    if (!s.kaynak_adi) { showToast('⚠️ Kaynak adı zorunlu'); return; }
+  }
   if (!s.konu_listesi.length) { showToast('⚠️ En az bir konu ekleyin'); return; }
 
   const durum = document.getElementById('kkm-kayit-durum');
@@ -4651,17 +4700,22 @@ async function kkmKaydet() {
   if (durum) durum.textContent = 'Kaydediliyor...';
   if (btn) btn.disabled = true;
 
-  const kaynakId = 'KYN-' + Date.now();
+  const kaynakId = zeng ? k.kaynakId : ('KYN-' + Date.now());
   try {
-    const { error: kErr } = await sb.from('kaynaklar').insert({
-      kaynak_adi: s.kaynak_adi, kaynak_id: kaynakId,
-      yayin_evi: s.yayin_evi, sinif: s.sinif,
-      zorluk_derecesi: 'Orta',
-      konu_sayisi: s.konu_listesi.length,
-      tur: 'Soru Bankası',
-      ders: state.brans || 'İlköğretim Matematik'
-    });
-    if (kErr) throw new Error(kErr.message);
+    if (!zeng) {
+      const { error: kErr } = await sb.from('kaynaklar').insert({
+        kaynak_adi: s.kaynak_adi, kaynak_id: kaynakId,
+        yayin_evi: s.yayin_evi, sinif: s.sinif,
+        zorluk_derecesi: 'Orta',
+        konu_sayisi: s.konu_listesi.length,
+        tur: 'Soru Bankası',
+        ders: state.brans || 'İlköğretim Matematik'
+      });
+      if (kErr) throw new Error(kErr.message);
+    } else {
+      // Var olan kaynak: elle girilmiş konu_sayisi'ni OCR'dan gelen gerçek sayıyla güncelle.
+      await sb.from('kaynaklar').update({ konu_sayisi: s.konu_listesi.length }).eq('kaynak_id', kaynakId);
+    }
 
     const { error: kkErr } = await sb.from('kaynak_konulari').insert(
       s.konu_listesi.map((o, i) => ({ kaynak_id: kaynakId, konu_adi: o.konu_adi, sayfa_no: o.sayfa_no, sira: i }))
@@ -4678,9 +4732,11 @@ async function kkmKaydet() {
       if (caErr) throw new Error('Cevap anahtarı kaydedilemedi: ' + caErr.message);
     }
 
-    showToast('✅ Kaynak kaydedildi!');
+    showToast(zeng ? '✅ Kaynak zenginleştirildi!' : '✅ Kaynak kaydedildi!');
+    // TODO (Bölüm 5): zeng && bu kaynak_id için geriye dönük ödev eşleştirmesini tetikle
     const { data } = await sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi');
     state.kaynaklar = data || [];
+    await kaynakKonuluIdleriYukle();
     renderKaynaklar();
     kkmKapat();
   } catch (err) {

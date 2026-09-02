@@ -17,6 +17,10 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 //  - Eksiksiz çıkarma: her içindekiler/cevap isteği kendi "toplam_satir_sayisi"
 //    değerini döndürür; liste uzunluğu bu sayıyla uyuşmazsa 1 kez otomatik retry
 //    yapılır, hâlâ uyuşmazsa "uyarilar" dizisine "eksik olabilir" notu eklenir.
+//  - İstek başına 70 sn timeout + toplam 110 sn süre bütçesi (aşılınca kalan
+//    fotoğraflar uyarıyla atlanır) + ölçülü maxOutputTokens → 546 WORKER_RESOURCE_LIMIT önlenir.
+//  - Gemini geçici yoğunluk hatalarında (429/503/"high demand") artan bekleme ile
+//    istek başına 3 kez otomatik denenir.
 //
 // ada-chat'teki Anthropic-uyumlu sohbet/tool-calling katmanından bağımsızdır.
 
@@ -25,9 +29,15 @@ const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // Bir "Tümünü Analiz Et" çağrısında Gemini'ye aynı anda gönderilecek en fazla istek.
-const PARALEL_LIMIT = 4;
-// Fotoğraf başına çıktı zaten küçük; 65536 pratik olarak hiç zorlanmayacak, güvenlik payı.
-const MAX_OUTPUT_TOKENS = 65536;
+const PARALEL_LIMIT = 3;
+// Fotoğraf başına liste çıktısı küçük (~100 öğe bile <2K token). Ölçülü tutmak
+// modelin aşırı "düşünüp" süreyi patlatmasını da dolaylı sınırlar.
+const MAX_OUTPUT_TOKENS = 16384;
+// Edge function CPU/duvar-saati bütçesi ~150 sn. Bu süreye yaklaşınca retry ve yeni
+// grup başlatmayı kes; eldeki sonucu (uyarı ekleyerek) döndür — 546 WORKER_RESOURCE_LIMIT önlenir.
+const SURE_BUTCESI_MS = 110_000;
+// Tek bir Gemini isteği için üst sınır — takılan bir çağrı tüm bütçeyi yemesin.
+const ISTEK_TIMEOUT_MS = 70_000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,12 +48,9 @@ const corsHeaders = {
 // ── Prompt & şemalar (fotoğraf türü başına ayrı) ──────────────────────────────
 
 const SAYIM_KURALI =
-  "\n\nKURAL: Fotoğrafta gördüğün HER SATIRI, HER KONUYU, HER TEST SORUSUNU eksiksiz çıkar. " +
-  "Asla 'örnek olarak birkaçını' listeleme, asla özetleme, asla 'vb.' ile kısaltma yapma. " +
-  "Görüntüde 40 öğe varsa 40 öğe döndür, 5 değil. Bu kritik bir gereksinimdir.\n" +
-  "Adım 1: Önce fotoğrafta kaç satır/konu/soru gördüğünü say ve bu sayıyı toplam_satir_sayisi alanına yaz.\n" +
-  "Adım 2: Tam olarak o sayıda öğe içeren bir liste döndür.\n" +
-  "Liste uzunluğun toplam_satir_sayisi ile eşleşmiyorsa tekrar say ve düzelt.";
+  "\n\nKURAL: Fotoğrafta gördüğün HER SATIRI eksiksiz çıkar. Asla 'örnek olarak birkaçını' " +
+  "listeleme, asla özetleme, asla 'vb.' ile kısaltma yapma. Görüntüde 40 öğe varsa 40 öğe " +
+  "döndür, 5 değil. Ayrıca fotoğrafta toplam kaç satır gördüğünü toplam_satir_sayisi alanına yaz.";
 
 const KAPAK_PROMPT =
   "Sen bir ders kaynağı (soru bankası / deneme kitabı) kataloglama asistanısın. " +
@@ -127,7 +134,18 @@ function hataYaniti(mesaj: string, status: number) {
   });
 }
 
-// Tek fotoğraf + tek şema için tek Gemini isteği. Hata durumunda anlamlı mesajla throw eder.
+const uyu = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Geçici (yeniden denenebilir) Gemini hatası mı? 429/500/503/529 veya
+// "aşırı yoğunluk / overloaded / UNAVAILABLE / RESOURCE_EXHAUSTED" mesajları.
+function geciciHataMi(status: number | null, mesaj: string): boolean {
+  if (status !== null && [429, 500, 502, 503, 529].includes(status)) return true;
+  return /high demand|overloaded|try again later|unavailable|resource[_ ]exhausted|rate limit/i
+    .test(mesaj || "");
+}
+
+// Tek fotoğraf + tek şema için tek Gemini isteği. Geçici yoğunluk hatalarında
+// artan bekleme ile en fazla 3 kez dener. Kalıcı hatada anlamlı mesajla throw eder.
 async function geminiCagir(
   apiKey: string,
   sistemPrompt: string,
@@ -149,44 +167,73 @@ async function geminiCagir(
     },
   };
 
-  const response = await fetch(GEMINI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify(body),
-  });
+  const DENEME = 3;
+  let sonHata = "Gemini API hatası";
 
-  const responseData = await response.json();
-  if (!response.ok) {
-    throw new Error(responseData?.error?.message || "Gemini API hatası");
+  for (let deneme = 1; deneme <= DENEME; deneme++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), ISTEK_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify(body),
+        signal: ac.signal,
+      });
+    } catch (e) {
+      sonHata = (e as Error).name === "AbortError"
+        ? "Gemini isteği zaman aşımına uğradı"
+        : `Gemini isteği başarısız: ${(e as Error).message}`;
+      clearTimeout(timer);
+      if (deneme < DENEME) { await uyu(deneme * 4000); continue; }
+      throw new Error(sonHata);
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const responseData = await response.json();
+    if (!response.ok) {
+      sonHata = responseData?.error?.message || "Gemini API hatası";
+      if (deneme < DENEME && geciciHataMi(response.status, sonHata)) {
+        await uyu(deneme * 4000);
+        continue;
+      }
+      throw new Error(sonHata);
+    }
+
+    const candidate = responseData?.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text;
+    if (!text) {
+      const reason = responseData?.promptFeedback?.blockReason ||
+        candidate?.finishReason || "bilinmeyen neden";
+      throw new Error(`Gemini yanıt üretmedi (${reason})`);
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(
+        candidate?.finishReason === "MAX_TOKENS"
+          ? "Gemini yanıtı çok uzun olduğu için kesildi"
+          : "Gemini yanıtı geçerli JSON değil",
+      );
+    }
   }
 
-  const candidate = responseData?.candidates?.[0];
-  const text = candidate?.content?.parts?.[0]?.text;
-  if (!text) {
-    const reason = responseData?.promptFeedback?.blockReason ||
-      candidate?.finishReason || "bilinmeyen neden";
-    throw new Error(`Gemini yanıt üretmedi (${reason})`);
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(
-      candidate?.finishReason === "MAX_TOKENS"
-        ? "Gemini yanıtı çok uzun olduğu için kesildi"
-        : "Gemini yanıtı geçerli JSON değil",
-    );
-  }
+  throw new Error(sonHata);
 }
 
 // Sayım doğrulamalı çağrı: liste uzunluğu toplam_satir_sayisi ile uyuşmazsa 1 kez retry;
 // retry daha çok öğe çıkarırsa onu kullanır. Sonuç hâlâ kendi sayımıyla uyuşmazsa eksik=true.
+// sonlanmaZamani geçildiyse retry hiç denenmez (süre bütçesi koruması).
 async function sayimliCagir(
   apiKey: string,
   prompt: string,
   schema: unknown,
   img: Gorsel,
   listeAlani: "konular" | "testler",
+  sonlanmaZamani: number,
 ): Promise<{ liste: any[]; eksik: boolean }> {
   const listeOf = (r: any) => (Array.isArray(r?.[listeAlani]) ? r[listeAlani] : []);
   const uyumlu = (r: any) => {
@@ -197,7 +244,7 @@ async function sayimliCagir(
   const ilk = await geminiCagir(apiKey, prompt, schema, img);
   let secili = ilk;
 
-  if (!uyumlu(ilk)) {
+  if (!uyumlu(ilk) && Date.now() < sonlanmaZamani) {
     try {
       const tekrar = await geminiCagir(
         apiKey,
@@ -217,13 +264,20 @@ async function sayimliCagir(
 }
 
 // items'ı limit boyutlu gruplara böler, her grubu Promise.all ile paralel işler.
-async function gruplarHalinde<T, R>(
+// sonlanmaZamani geçildiyse kalan gruplar hiç başlatılmaz; onların yerine
+// { i, sureDoldu:true } işareti döner (çağıran bunu uyarıya çevirir).
+async function gruplarHalinde<T>(
   items: T[],
   limit: number,
-  fn: (item: T, index: number) => Promise<R>,
-): Promise<R[]> {
-  const sonuc: R[] = [];
+  sonlanmaZamani: number,
+  fn: (item: T, index: number) => Promise<any>,
+): Promise<any[]> {
+  const sonuc: any[] = [];
   for (let i = 0; i < items.length; i += limit) {
+    if (Date.now() >= sonlanmaZamani) {
+      for (let j = i; j < items.length; j++) sonuc.push({ i: j, sureDoldu: true });
+      break;
+    }
     const grup = items.slice(i, i + limit);
     const grupSonuc = await Promise.all(grup.map((item, j) => fn(item, i + j)));
     sonuc.push(...grupSonuc);
@@ -266,6 +320,7 @@ Deno.serve(async (req) => {
     const hatalar: string[] = [];
     const uyarilar: string[] = [];
     let basariliCagri = 0;
+    const sonlanmaZamani = Date.now() + SURE_BUTCESI_MS;
 
     // 1) KAPAK — tek istek
     let kaynakAdi = "", yayinEvi = "", sinif = "";
@@ -285,8 +340,9 @@ Deno.serve(async (req) => {
     const icSonuclar = await gruplarHalinde(
       icindekilerGorselleri,
       PARALEL_LIMIT,
+      sonlanmaZamani,
       (img, i) =>
-        sayimliCagir(apiKey, ICINDEKILER_PROMPT, ICINDEKILER_SCHEMA, img, "konular")
+        sayimliCagir(apiKey, ICINDEKILER_PROMPT, ICINDEKILER_SCHEMA, img, "konular", sonlanmaZamani)
           .then((r) => ({ i, ...r }))
           .catch((e) => ({ i, hata: (e as Error).message })),
     );
@@ -295,6 +351,10 @@ Deno.serve(async (req) => {
     icSonuclar
       .sort((a: any, b: any) => a.i - b.i)
       .forEach((r: any) => {
+        if (r.sureDoldu) {
+          uyarilar.push(`İçindekiler fotoğraf ${r.i + 1}: süre sınırı nedeniyle işlenemedi, tekrar deneyin.`);
+          return;
+        }
         if (r.hata) {
           hatalar.push(`İçindekiler fotoğraf ${r.i + 1} okunamadı: ${r.hata}`);
           return;
@@ -316,8 +376,9 @@ Deno.serve(async (req) => {
       const caSonuclar = await gruplarHalinde(
         cevapGorselleri,
         PARALEL_LIMIT,
+        sonlanmaZamani,
         (img, i) =>
-          sayimliCagir(apiKey, CEVAP_PROMPT, CEVAP_SCHEMA, img, "testler")
+          sayimliCagir(apiKey, CEVAP_PROMPT, CEVAP_SCHEMA, img, "testler", sonlanmaZamani)
             .then((r) => ({ i, ...r }))
             .catch((e) => ({ i, hata: (e as Error).message })),
       );
@@ -326,6 +387,10 @@ Deno.serve(async (req) => {
       caSonuclar
         .sort((a: any, b: any) => a.i - b.i)
         .forEach((r: any) => {
+          if (r.sureDoldu) {
+            uyarilar.push(`Cevap anahtarı fotoğraf ${r.i + 1}: süre sınırı nedeniyle işlenemedi, tekrar deneyin.`);
+            return;
+          }
           if (r.hata) {
             hatalar.push(`Cevap anahtarı fotoğraf ${r.i + 1} okunamadı: ${r.hata}`);
             return;
@@ -357,8 +422,9 @@ Deno.serve(async (req) => {
 
     // Hiçbir istek başarılı olmadıysa üst düzey hata
     if (basariliCagri === 0) {
+      const detay = [...hatalar, ...uyarilar];
       return hataYaniti(
-        hatalar.length ? hatalar.join(" · ") : "Hiçbir fotoğraf işlenemedi.",
+        detay.length ? detay.join(" · ") : "Hiçbir fotoğraf işlenemedi.",
         502,
       );
     }

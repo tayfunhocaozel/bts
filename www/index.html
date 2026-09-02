@@ -757,6 +757,9 @@ tailwind.config = {
           <button onclick="kameraKaynakModalAc()" class="btn btn-ghost" style="width:100%;justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:18px;">photo_camera</span> Kamera ile Ekle
           </button>
+          <button onclick="gecmisOdevEslestirAc()" class="btn btn-ghost" style="width:100%;justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:18px;">history</span> Geçmiş Ödevleri Eşleştir
+          </button>
         </div>
 
         <!-- Öğrenciye Ata -->
@@ -1441,6 +1444,19 @@ tailwind.config = {
       </button>
     </div>
     <div id="kkm-govde"></div>
+  </div>
+</div>
+
+<!-- ── V4 Bölüm 5: Geçmiş ödevleri eşleştir modalı ──────────── -->
+<div id="god-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);">🕘 Geçmiş Ödevleri Eşleştir</div>
+      <button onclick="godKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div id="god-govde"></div>
   </div>
 </div>
 
@@ -4733,7 +4749,16 @@ async function kkmKaydet() {
     }
 
     showToast(zeng ? '✅ Kaynak zenginleştirildi!' : '✅ Kaynak kaydedildi!');
-    // TODO (Bölüm 5): zeng && bu kaynak_id için geriye dönük ödev eşleştirmesini tetikle
+    if (zeng) {
+      // Bölüm 5 Adım B: bu kaynağa ZATEN bağlı (geçmiş dahil) ödevlerin kapsamını çıkar.
+      // Henüz bağlanmamış serbest-metin ödevler için "Geçmiş Ödevleri Eşleştir" butonu ayrı.
+      try {
+        const kap = await kapsamOlustur(kaynakId, { sessiz: true });
+        if (kap.odev) {
+          showToast(`📎 ${kap.eslesenOdev}/${kap.odev} bağlı ödevin kapsamı çıkarıldı${kap.anlasilamayan.length ? ` · ${kap.anlasilamayan.length} anlaşılamadı` : ''}`);
+        }
+      } catch (e) { console.warn('kapsamOlustur:', e); }
+    }
     const { data } = await sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi');
     state.kaynaklar = data || [];
     await kaynakKonuluIdleriYukle();
@@ -4776,20 +4801,27 @@ async function kaynakIlerlemeleriGetir(ogrenciId, ogrnKaynakRows) {
   if (!kaynakIds.length) return [];
 
   const konuSayilari = {}, testSayilari = {}, bitenKonu = {}, bitenTest = {};
-  const [{ data: konular }, { data: testler }, { data: tamamlananlar }] = await Promise.all([
+  const [{ data: konular }, { data: testler }, { data: tamamlananlar }, { data: kapsamlar }] = await Promise.all([
     sb.from('kaynak_konulari').select('kaynak_id, konu_adi').in('kaynak_id', kaynakIds),
     sb.from('kaynak_cevap_anahtari').select('kaynak_id, test_no').in('kaynak_id', kaynakIds),
-    sb.from('odevler').select('kaynak_id, kaynak_konu_id, test_no').eq('ogrenci_id', ogrenciId).eq('durum', 'TAMAMLANDI')
+    sb.from('odevler').select('kaynak_id, kaynak_konu_id, test_no').eq('ogrenci_id', ogrenciId).eq('durum', 'TAMAMLANDI'),
+    // Bölüm 5: serbest-metin ödevlerin parse edilmiş kapsamı (bir ödev → çok konu/test)
+    sb.from('odev_kaynak_kapsam')
+      .select('kaynak_konu_id, test_no, odevler!inner(kaynak_id, ogrenci_id, durum)')
+      .eq('odevler.ogrenci_id', ogrenciId).eq('odevler.durum', 'TAMAMLANDI')
   ]);
   (konular || []).forEach(kk => {
     if (KAYNAK_KONU_DISI.test(kk.konu_adi || '')) return;
     konuSayilari[kk.kaynak_id] = (konuSayilari[kk.kaynak_id] || 0) + 1;
   });
   (testler || []).forEach(t => { testSayilari[t.kaynak_id] = (testSayilari[t.kaynak_id] || 0) + 1; });
-  (tamamlananlar || []).forEach(o => {
-    if (o.kaynak_konu_id) (bitenKonu[o.kaynak_id] = bitenKonu[o.kaynak_id] || new Set()).add(o.kaynak_konu_id);
-    if (o.test_no != null) (bitenTest[o.kaynak_id] = bitenTest[o.kaynak_id] || new Set()).add(o.test_no);
-  });
+  const bitenEkle = (kid, konuId, testNo) => {
+    if (!kid) return;
+    if (konuId) (bitenKonu[kid] = bitenKonu[kid] || new Set()).add(konuId);
+    if (testNo != null) (bitenTest[kid] = bitenTest[kid] || new Set()).add(testNo);
+  };
+  (tamamlananlar || []).forEach(o => bitenEkle(o.kaynak_id, o.kaynak_konu_id, o.test_no));
+  (kapsamlar || []).forEach(r => bitenEkle(r.odevler?.kaynak_id, r.kaynak_konu_id, r.test_no));
 
   return kaynaklar.map(k => {
     const kaynakId = kaynakIdMap[k.kayit_id];
@@ -4806,6 +4838,218 @@ async function kaynakIlerlemeleriGetir(ogrenciId, ogrnKaynakRows) {
       toplam, islenen, pct: Math.round(islenen / toplam * 100)
     };
   }).filter(Boolean);
+}
+
+// ═══ V4 Bölüm 5 — Geriye dönük ödev eşleştirme ═══════════════════════════════
+//
+// odev_detay serbest metnini yapılandırılmış kapsama çevirir. Tek tanım —
+// Adım B (kapsamOlustur) ve gelecekte Bölüm 2 yeni-ödev akışı ortak kullanır.
+// KURAL: sayfada tire = ARALIK; testte tire = LİSTE (asla aralık değil).
+
+function parseSayfaAraligi(odevDetay) {
+  const s = odevDetay || '';
+  // "sy/sayfa + rakam" hiç geçmiyorsa bu bir sayfa referansı değil (yanlış eşleşmeyi önler).
+  if (!/s(?:y|ayfa)?\.?\s*\d/i.test(s)) return null;
+  // "/" ile ayrılmış her parça ayrı aralık: "Sy 49-50 / 57-58" → iki aralık.
+  // İlk parçadan sonrakiler "sy" etiketi taşımadığı için sayıları serbest tararız.
+  const araliklar = [];
+  s.split('/').forEach(parca => {
+    const m = parca.match(/(\d+)\s*[-–—]\s*(\d+)/);
+    if (m) { araliklar.push({ baslangic: +m[1], bitis: +m[2] }); return; }
+    const tek = parca.match(/\d+/);
+    if (tek) araliklar.push({ baslangic: +tek[0], bitis: +tek[0] });
+  });
+  return araliklar.length ? araliklar : null;
+}
+
+function parseTestNumbers(odevDetay) {
+  const bloklar = (odevDetay || '').match(/test\s*[\d\s,\-–—\/]+(?:ve|ile)?[\d\s,\-–—\/]*/gi) || [];
+  const sayilar = new Set();
+  bloklar.forEach(blok => (blok.match(/\d+/g) || []).forEach(n => sayilar.add(Number(n))));
+  return [...sayilar].sort((a, b) => a - b);
+}
+
+// odev_detay'da "test" geçiyorsa test listesi; yoksa sayfa aralığı. (Aynı kaynağın
+// hem "Sy 43-51" hem "Test 21-25" ödevleri olabildiği için kaynak türüne değil
+// metnin kendisine bakılır.)
+function parseKapsam(odevDetay) {
+  const s = odevDetay || '';
+  if (/test/i.test(s)) {
+    const testler = parseTestNumbers(s);
+    if (testler.length) return { tip: 'test', degerler: testler };
+  }
+  const araliklar = parseSayfaAraligi(s);
+  if (araliklar) return { tip: 'sayfa_araligi', araliklar };
+  return null;
+}
+
+// Konsol doğrulaması (dokümandaki örnekler). parseKapsamSelfTest() → {gecti, toplam, hatalar}
+function parseKapsamSelfTest() {
+  const es = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const senaryo = [
+    ['parseSayfaAraligi', 'Sy 79-91', [{ baslangic: 79, bitis: 91 }]],
+    ['parseSayfaAraligi', 'Sy 7-8', [{ baslangic: 7, bitis: 8 }]],
+    ['parseSayfaAraligi', 'Sy 49-50 / 57-58', [{ baslangic: 49, bitis: 50 }, { baslangic: 57, bitis: 58 }]],
+    ['parseSayfaAraligi', 'Sy 96-105', [{ baslangic: 96, bitis: 105 }]],
+    ['parseSayfaAraligi', 'SB ödevi sy 43-51 verildi', [{ baslangic: 43, bitis: 51 }]],
+    ['parseTestNumbers', 'Test 13-14-15', [13, 14, 15]],
+    ['parseTestNumbers', 'Test 17-18-19-20', [17, 18, 19, 20]],
+    ['parseTestNumbers', 'Test 11 - Test 12', [11, 12]],
+    ['parseTestNumbers', 'test 21, 22 ve 23', [21, 22, 23]],
+    ['parseTestNumbers', 'Test 21-25 çözülecek', [21, 25]],
+    ['parseTestNumbers', 'Test 21 ve test 25 çözülecek', [21, 25]],
+  ];
+  const fn = { parseSayfaAraligi, parseTestNumbers };
+  const hatalar = senaryo.filter(([f, g, exp]) => !es(fn[f](g), exp))
+    .map(([f, g, exp]) => ({ f, g, beklenen: exp, cikan: fn[f](g) }));
+  return { gecti: senaryo.length - hatalar.length, toplam: senaryo.length, hatalar };
+}
+
+// Adım B — kaynak_id'si dolu ödevlerin odev_detay'ını parse edip odev_kaynak_kapsam'a yazar.
+// Idempotent: bu kaynağın ödevleri için önce mevcut kapsam satırları silinir.
+// odevler.kaynak_konu_id / test_no ZATEN dolu olan (checkbox modu) ödevler atlanır —
+// onlar ilerleme hesabına o kolonlar üzerinden zaten giriyor.
+async function kapsamOlustur(kaynakId, opts = {}) {
+  const bos = { odev: 0, eslesenOdev: 0, kapsamSatiri: 0, anlasilamayan: [] };
+  const { data: odevler } = await sb.from('odevler')
+    .select('odev_id, odev_detay, kaynak_konu_id, test_no')
+    .eq('kaynak_id', kaynakId).eq('ogretmen_id', state.ogretmen_id);
+  if (!odevler || !odevler.length) return bos;
+
+  const [{ data: konular }, { data: testler }] = await Promise.all([
+    sb.from('kaynak_konulari').select('id, konu_adi, sayfa_no').eq('kaynak_id', kaynakId),
+    sb.from('kaynak_cevap_anahtari').select('test_no').eq('kaynak_id', kaynakId)
+  ]);
+  // Sayfa aralığından konu bulma: her konuya bitiş sayfası ata (sonraki konunun sayfa_no - 1)
+  const konuList = (konular || []).filter(k => k.sayfa_no != null && !KAYNAK_KONU_DISI.test(k.konu_adi || ''))
+    .sort((a, b) => a.sayfa_no - b.sayfa_no);
+  konuList.forEach((k, i) => { k._son = (i + 1 < konuList.length) ? konuList[i + 1].sayfa_no - 1 : Infinity; });
+  const testSet = new Set((testler || []).map(t => t.test_no).filter(v => v != null));
+
+  await sb.from('odev_kaynak_kapsam').delete().in('odev_id', odevler.map(o => o.odev_id));
+
+  const yeniSatirlar = [], anlasilamayan = [];
+  let eslesenOdev = 0;
+
+  odevler.forEach(o => {
+    if (o.kaynak_konu_id || o.test_no != null) { eslesenOdev++; return; }  // checkbox modu — atla
+    const kap = parseKapsam(o.odev_detay);
+    let eklendi = 0;
+    if (kap && kap.tip === 'sayfa_araligi' && konuList.length) {
+      const idSet = new Set();
+      kap.araliklar.forEach(a => konuList.forEach(k => {
+        if (k.sayfa_no <= a.bitis && k._son >= a.baslangic) idSet.add(k.id);
+      }));
+      idSet.forEach(id => { yeniSatirlar.push({ odev_id: o.odev_id, kaynak_konu_id: id, test_no: null }); eklendi++; });
+    } else if (kap && kap.tip === 'test' && testSet.size) {
+      kap.degerler.forEach(tn => {
+        if (testSet.has(tn)) { yeniSatirlar.push({ odev_id: o.odev_id, kaynak_konu_id: null, test_no: tn }); eklendi++; }
+      });
+    }
+    if (eklendi) eslesenOdev++;
+    else anlasilamayan.push({ odev_id: o.odev_id, odev_detay: o.odev_detay || '' });
+  });
+
+  if (yeniSatirlar.length) {
+    const { error } = await sb.from('odev_kaynak_kapsam').insert(yeniSatirlar);
+    if (error) {
+      if (!opts.sessiz) showToast('❌ Kapsam yazılamadı: ' + error.message);
+      return { odev: odevler.length, eslesenOdev: 0, kapsamSatiri: 0, anlasilamayan, hata: error.message };
+    }
+  }
+  return { odev: odevler.length, eslesenOdev, kapsamSatiri: yeniSatirlar.length, anlasilamayan };
+}
+
+// Adım A — "Geçmiş Ödevleri Eşleştir" modalı (Kaynaklar bölümü).
+// RPC bulanık aday listesini döndürür; öğretmen onaylar; SESSİZ güncelleme YOK.
+async function gecmisOdevEslestirAc() {
+  document.getElementById('god-modal').style.display = 'flex';
+  const govde = document.getElementById('god-govde');
+  govde.innerHTML = '<div style="padding:24px 0;text-align:center;color:var(--ink-soft);font-size:13px;">Geçmiş ödevler taranıyor…</div>';
+  const { data, error } = await sb.rpc('gecmis_odev_eslesme_adaylari', { p_esik: 0.6 });
+  if (error) { govde.innerHTML = `<div style="color:var(--error);font-size:13px;padding:12px 0;">❌ ${error.message}</div>`; return; }
+  const adaylar = data || [];
+  if (!adaylar.length) {
+    govde.innerHTML = '<div style="padding:24px 0;text-align:center;color:var(--ink-soft);font-size:13px;">Kaynağa bağlanmamış, adı bir kaynakla eşleşen ödev bulunamadı.</div>';
+    return;
+  }
+  const grup = {};
+  adaylar.forEach(a => {
+    (grup[a.kaynak_id] = grup[a.kaynak_id] || { kaynak_adi: a.kaynak_adi, odevler: [] }).odevler.push(a);
+  });
+  state._godGrup = grup;
+  godRender();
+}
+
+function godRender() {
+  const grup = state._godGrup || {};
+  const bloklar = Object.entries(grup).map(([kid, g]) => `
+    <div style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:8px;font-family:Manrope;font-weight:700;font-size:13px;color:var(--ink);cursor:pointer;">
+        <input type="checkbox" class="god-kaynak-all" data-kid="${kid}" checked onchange="godTumSec(this)">
+        ${kkmEsc(g.kaynak_adi)} <span style="font-weight:500;color:var(--ink-soft);">— ${g.odevler.length} ödev</span>
+      </label>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;">
+        ${g.odevler.map(o => `
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink);cursor:pointer;padding-left:22px;">
+            <input type="checkbox" class="god-odev" data-kid="${kid}" data-odev="${o.odev_id}" checked>
+            <span style="color:var(--ink-soft);white-space:nowrap;">${o.verilis_tarihi ? odevTarihGoster(o.verilis_tarihi) : '—'}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kkmEsc(o.odev_detay || '—')}</span>
+            <span style="color:var(--ink-soft);">%${Math.round((o.benzerlik || 0) * 100)}</span>
+          </label>`).join('')}
+      </div>
+    </div>`).join('');
+  document.getElementById('god-govde').innerHTML = `
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;">
+      Bu ödevlerin kaynağı serbest metinden anlaşıldı. Onayladıklarınız kaynağa bağlanır; kaynağın
+      konu/test verisi varsa kapsamları da otomatik çıkarılır. Yanlış olanların işaretini kaldırın.
+    </div>
+    ${bloklar}
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button onclick="godKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">Vazgeç</button>
+      <button onclick="godOnayla()" id="god-onayla-btn" class="btn btn-primary" style="flex:2;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;">link</span> Seçilenleri Bağla
+      </button>
+    </div>
+    <div id="god-durum" style="margin-top:10px;font-size:13px;color:var(--ink-soft);min-height:18px;"></div>`;
+}
+
+function godTumSec(cb) {
+  document.querySelectorAll(`.god-odev[data-kid="${cb.dataset.kid}"]`).forEach(x => { x.checked = cb.checked; });
+}
+
+function godKapat() {
+  document.getElementById('god-modal').style.display = 'none';
+  state._godGrup = null;
+}
+
+async function godOnayla() {
+  const secili = [...document.querySelectorAll('.god-odev:checked')];
+  if (!secili.length) { showToast('⚠️ En az bir ödev seçin'); return; }
+  const durum = document.getElementById('god-durum');
+  const btn = document.getElementById('god-onayla-btn');
+  if (btn) btn.disabled = true;
+  if (durum) durum.textContent = 'Bağlanıyor…';
+
+  const perKaynak = {};
+  secili.forEach(cb => { (perKaynak[cb.dataset.kid] = perKaynak[cb.dataset.kid] || []).push(cb.dataset.odev); });
+
+  let toplamOdev = 0, toplamKapsam = 0, anlasilamayanTop = 0;
+  try {
+    for (const [kid, odevIds] of Object.entries(perKaynak)) {
+      const { error } = await sb.from('odevler').update({ kaynak_id: kid }).in('odev_id', odevIds);
+      if (error) throw new Error(error.message);
+      const r = await kapsamOlustur(kid, { sessiz: true });        // Adım B
+      toplamOdev += odevIds.length;
+      toplamKapsam += r.kapsamSatiri;
+      anlasilamayanTop += r.anlasilamayan.length;
+    }
+    showToast(`✅ ${toplamOdev} ödev bağlandı · ${toplamKapsam} kapsam satırı${anlasilamayanTop ? ` · ${anlasilamayanTop} ödevin kapsamı anlaşılamadı` : ''}`);
+    godKapat();
+  } catch (err) {
+    if (durum) durum.textContent = '❌ ' + err.message;
+    if (btn) btn.disabled = false;
+  }
 }
 
 // kaynakIlerlemeleriGetir() çıktısını kart olarak basar (öğrenci ve veli "Başarı" bölümü).

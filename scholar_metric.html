@@ -900,6 +900,7 @@ tailwind.config = {
         </select>
       </div>
       <div id="rapor-content"></div>
+      <div id="rapor-odeme" class="print-hide"></div>
       <div id="rapor-soru-bankasi" class="print-hide"></div>
       <div id="rapor-print-view" style="display:none;"></div>
     </div>
@@ -1534,7 +1535,8 @@ let state = {
   _dersEditSession: null,
   _odevKazanimlar: [], _odevKaynaklar: [], _odevSinif: '',
   _odevTaslaklari: [],
-  _haftalikProgram: []
+  _haftalikProgram: [],
+  dersBakiyeMap: {}
 };
 
 const GUNLER = ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
@@ -1951,6 +1953,7 @@ function goPage(id) {
   if (realId === 'veli-panel')    veliTab(id === 'veli-panel' ? 'ozet' : VELI_SUB_PAGES[id]);
 
   if (id === 'ders-programi') loadHaftalikProgram();
+  if (id === 'ogrenciler') { renderOgrenciler(); loadDersBakiyeleri().then(renderOgrenciler); }
   if (id === 'ders') { const dt = document.getElementById('ders-tarih'); if (dt && !dt.value) dt.value = yerelISO(new Date()); }
   if (id === 'ada') adaSayfaAcildi();
   if (id === 'odul-dukkani')  loadOdulDukkani();
@@ -1997,6 +2000,178 @@ function fillSelects() {
   renderKaynaklar();
 }
 
+// ── DERS ÖDEME BAKİYESİ (öğretmen ↔ veli, ders ADEDİ bazlı — tutar YOK) ──
+// bakiye = ödenen ders sayısı − işlenen DISTINCT ders (tarih) sayısı
+//   < 0 borçlu | 0 güncel | > 0 peşin
+async function loadDersBakiyeleri() {
+  if (state.rol !== 'ogretmen') return 0;
+  const { data, error } = await sb.from('ders_odeme_bakiye')
+    .select('ogrenci_id, bakiye, odenen_ders, islenen_ders');
+  if (error) { console.error('Ders bakiyesi sorgu hatası:', error.message); return 0; }
+  const map = {};
+  (data || []).forEach(r => { map[r.ogrenci_id] = r; });
+  state.dersBakiyeMap = map;
+  return (data || []).reduce((s, r) => s + (Number(r.bakiye) < 0 ? -Number(r.bakiye) : 0), 0);
+}
+
+function hesaplaDersBakiyesi(ogrenciId) {
+  const r = state.dersBakiyeMap[ogrenciId];
+  return r ? Number(r.bakiye) : 0;
+}
+
+function dersBakiyeRozetHTML(ogrenciId) {
+  const r = state.dersBakiyeMap[ogrenciId];
+  if (!r) return '';
+  const b = Number(r.bakiye);
+  if (b < 0) return `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-error/10 text-error whitespace-nowrap">🔴 ${-b} ders borçlu</span>`;
+  if (b > 0) return `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap">🔵 ${b} ders peşin</span>`;
+  return `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary whitespace-nowrap">🟢 Güncel</span>`;
+}
+
+// Ödeme yazıldıktan/silindikten sonra bağlı görünümleri tazele
+async function _odemeGorunumleriYenile(ogrenciId) {
+  const toplamBorclu = await loadDersBakiyeleri();
+  const borcluEl = document.getElementById('stat-borclu-ders');
+  if (borcluEl) borcluEl.textContent = toplamBorclu;
+  if (ogrenciId && document.getElementById('rapor-ogrenci')?.value === ogrenciId) renderOdemeBolumu(ogrenciId);
+  if (document.getElementById('ogrenci-listesi')?.innerHTML) renderOgrenciler();
+}
+
+// Öğrenci raporundaki "Ders Ödeme Bakiyesi" bölümü (yalnız öğretmen, yazdırmada gizli)
+async function renderOdemeBolumu(ogrenciId) {
+  const el = document.getElementById('rapor-odeme');
+  if (!el) return;
+  el.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] p-5 mb-5 border border-outline-variant/20">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="material-symbols-outlined text-primary text-xl">account_balance_wallet</span>
+      <h2 class="font-headline font-bold text-base text-on-surface">Ders Ödeme Bakiyesi</h2>
+    </div>
+    <div class="flex justify-center py-6"><div class="spinner"></div></div>
+  </div>`;
+
+  if (!state.dersBakiyeMap[ogrenciId]) await loadDersBakiyeleri();
+  const r = state.dersBakiyeMap[ogrenciId] || { bakiye: 0, odenen_ders: 0, islenen_ders: 0 };
+  const b = Number(r.bakiye);
+
+  const { data: odemeler, error } = await sb.from('ders_odemeleri')
+    .select('id, tarih, ders_sayisi, aciklama, created_at')
+    .eq('ogrenci_id', ogrenciId)
+    .order('tarih', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  const durumRenk  = b < 0 ? 'text-error' : b > 0 ? 'text-primary' : 'text-tertiary';
+  const durumMetin = b < 0 ? `${-b} ders borçlu` : b > 0 ? `${b} ders peşin` : 'Güncel — borç yok';
+  const bakiyeStr  = b > 0 ? '+' + b : String(b);
+
+  const gecmisHTML = error
+    ? `<div class="text-sm text-error px-1 py-2">❌ ${error.message}</div>`
+    : !(odemeler || []).length
+      ? `<div class="text-sm text-outline px-1 py-3">Henüz ödeme kaydı yok.</div>`
+      : `<div class="divide-y divide-outline-variant/15">` + odemeler.map(o => `
+        <div class="flex items-center justify-between py-2.5">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-on-surface">+${o.ders_sayisi} ders</div>
+            <div class="text-xs text-outline">${o.tarih ? new Date(o.tarih).toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' }) : '—'}${o.aciklama ? ' • ' + o.aciklama.replace(/</g, '&lt;') : ''}</div>
+          </div>
+          <button onclick="odemeSil('${o.id}','${ogrenciId}')" title="Kaydı sil"
+            class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full text-error hover:bg-error/10 transition-colors">🗑️</button>
+        </div>`).join('') + `</div>`;
+
+  el.innerHTML = `<div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] p-5 mb-5 border border-outline-variant/20">
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-xl">account_balance_wallet</span>
+        <h2 class="font-headline font-bold text-base text-on-surface">Ders Ödeme Bakiyesi</h2>
+      </div>
+      <button onclick="odemeGirModalAc('${ogrenciId}')"
+        class="text-xs font-bold px-3 py-2 rounded-full bg-primary text-on-primary hover:opacity-90 transition-opacity flex-shrink-0">＋ Ödeme Gir</button>
+    </div>
+    <div class="flex items-baseline gap-2 mb-1">
+      <span class="font-headline text-3xl font-extrabold ${durumRenk}">${bakiyeStr}</span>
+      <span class="text-sm font-semibold ${durumRenk}">${durumMetin}</span>
+    </div>
+    <div class="text-xs text-outline mb-4">${r.odenen_ders} ders ödendi &nbsp;•&nbsp; ${r.islenen_ders} ders işlendi</div>
+    <div class="text-xs font-bold text-outline uppercase tracking-wider mb-1">Ödeme Geçmişi</div>
+    ${gecmisHTML}
+  </div>`;
+}
+
+function odemeGirModalAc(ogrenciId) {
+  const m = document.getElementById('odeme-gir-modal');
+  m.dataset.ogrenciId = ogrenciId;
+  const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
+  document.getElementById('odeme-gir-ogrenci-ad').textContent = ogr ? `${ogr.ad_soyad} (${ogr.sinif || '—'})` : ogrenciId;
+  document.getElementById('odeme-gir-tarih').value = yerelISO(new Date());
+  document.getElementById('odeme-gir-sayi').value = '';
+  document.getElementById('odeme-gir-aciklama').value = '';
+  m.classList.remove('hidden');
+  document.getElementById('odeme-gir-sayi').focus();
+}
+
+async function odemeKaydet() {
+  const m = document.getElementById('odeme-gir-modal');
+  const ogrenciId = m.dataset.ogrenciId;
+  const tarih = document.getElementById('odeme-gir-tarih').value || yerelISO(new Date());
+  const sayi  = parseInt(document.getElementById('odeme-gir-sayi').value, 10);
+  const aciklama = document.getElementById('odeme-gir-aciklama').value.trim();
+  if (!ogrenciId) { showToast('⚠️ Öğrenci seçilemedi'); return; }
+  if (!Number.isFinite(sayi) || sayi < 1) { showToast('⚠️ Ders sayısı en az 1 olmalı'); return; }
+
+  const btn = document.getElementById('odeme-gir-btn');
+  btn.disabled = true;
+  const { error } = await sb.from('ders_odemeleri').insert({
+    ogrenci_id: ogrenciId,
+    ogretmen_id: state.ogretmen_id,
+    tarih,
+    ders_sayisi: sayi,
+    aciklama: aciklama || null,
+  });
+  btn.disabled = false;
+  if (error) { showToast('❌ ' + error.message); return; }
+  m.classList.add('hidden');
+  showToast(`✅ ${sayi} ders ödemesi kaydedildi`);
+  await _odemeGorunumleriYenile(ogrenciId);
+}
+
+async function odemeSil(id, ogrenciId) {
+  if (!confirm('Bu ödeme kaydını silmek istediğinize emin misiniz? Bakiye yeniden hesaplanacak.')) return;
+  const { error } = await sb.from('ders_odemeleri').delete().eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑️ Ödeme kaydı silindi');
+  await _odemeGorunumleriYenile(ogrenciId);
+}
+
+// Dashboard "Toplam Borçlu Ders" kartı → borçlu öğrenci listesi
+async function acBorcluDersModal() {
+  if (state.rol !== 'ogretmen') return;
+  const modal = document.getElementById('borclu-ders-modal');
+  const liste = document.getElementById('bdm-liste');
+  modal.classList.remove('hidden');
+  liste.innerHTML = '<div class="flex justify-center py-12"><div class="spinner"></div></div>';
+
+  await loadDersBakiyeleri();
+  const adMap = {};
+  state.ogrenciler.forEach(o => { adMap[o.ogrenci_id] = o.ad_soyad; });
+  const borclular = Object.values(state.dersBakiyeMap)
+    .filter(r => Number(r.bakiye) < 0)
+    .sort((a, b) => a.bakiye - b.bakiye);
+
+  document.getElementById('bdm-sayac').textContent = borclular.length;
+  if (!borclular.length) {
+    liste.innerHTML = '<div class="flex flex-col items-center justify-center py-16 text-outline"><div class="text-4xl mb-3">🎉</div><div class="text-sm font-semibold">Borçlu öğrenci yok</div></div>';
+    return;
+  }
+  liste.innerHTML = '<div class="divide-y divide-outline-variant/15">' + borclular.map(r => `
+    <div onclick="document.getElementById('borclu-ders-modal').classList.add('hidden');goRaporFor('${r.ogrenci_id}')"
+      class="flex items-center justify-between py-3 cursor-pointer hover:opacity-75 transition-opacity">
+      <div class="min-w-0">
+        <div class="text-sm font-semibold text-on-surface truncate">${adMap[r.ogrenci_id] || r.ad_soyad || r.ogrenci_id}</div>
+        <div class="text-xs text-outline">${r.odenen_ders} ödendi • ${r.islenen_ders} işlendi</div>
+      </div>
+      <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-error/10 text-error flex-shrink-0">🔴 ${-Number(r.bakiye)} ders</span>
+    </div>`).join('') + '</div>';
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function loadDashboard() {
   document.getElementById('dash-welcome').textContent = state.user.ad || 'Öğretmen';
@@ -2026,6 +2201,12 @@ async function loadDashboard() {
     .gte('tarih', `${buAy.getFullYear()}-${String(buAy.getMonth()+1).padStart(2,'0')}-01`);
   const benzersiz = new Set((dersler||[]).map(d => d.kayit_id)).size;
   document.getElementById('stat-ders').textContent = benzersiz || (dersler||[]).length;
+
+  // Toplam borçlu ders (tüm öğrenciler genelinde negatif bakiye toplamı)
+  loadDersBakiyeleri().then(toplamBorclu => {
+    const borcluEl = document.getElementById('stat-borclu-ders');
+    if (borcluEl) borcluEl.textContent = toplamBorclu;
+  });
 
   // Geciken liste (yalnızca günü geçtiği halde işlenmemiş ödevler)
   const ogrMap = {};
@@ -3940,6 +4121,7 @@ function renderOgrenciler() {
         <div class="flex-1 min-w-0">
           <div class="text-sm font-semibold text-on-surface truncate">${o.ad_soyad||'—'}</div>
           <div class="text-xs text-outline">${o.sinif||'—'} — ${o.ogrenci_id}</div>
+          ${dersBakiyeRozetHTML(o.ogrenci_id) ? `<div class="mt-1">${dersBakiyeRozetHTML(o.ogrenci_id)}</div>` : ''}
         </div>
       </div>
       <button onclick="ogrenciDuzenle('${o.ogrenci_id}')"
@@ -4021,6 +4203,7 @@ async function ogrenciSil() {
   await sb.from('ogrn_kaynak').delete().eq('ogrenci_id', id);
   await sb.from('denemeler').delete().eq('ogrenci_id', id);
   await sb.from('odevler').delete().eq('ogrenci_id', id);
+  await sb.from('ders_odemeleri').delete().eq('ogrenci_id', id);
   await sb.from('dersler').delete().eq('ogrenci_id', id);
   const { error } = await sb.from('ogrenciler').delete().eq('ogrenci_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
@@ -5304,6 +5487,10 @@ async function loadRapor() {
 
   // Öğrencinin Soru Bankası (Yanlış Defteri) — öğretmen onay/düzeltme arayüzü
   loadRaporSoruBankasi(ogrenciId, ogr, kazData);
+
+  // Ders Ödeme Bakiyesi (yalnız öğretmen; yazdırmada gizli)
+  if (state.rol === 'ogretmen') renderOdemeBolumu(ogrenciId);
+  else document.getElementById('rapor-odeme').innerHTML = '';
 
   // Print görünümünü render et
   window._raporRenderArgs = {
@@ -9850,7 +10037,7 @@ function logout() {
   localStorage.removeItem('adaptix_ogretmen_adi');
   localStorage.removeItem('adaptix_admin_token');
   rebuildSb(null);
-  state = { rol:null, user:null, ogretmen_id:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'' };
+  state = { rol:null, user:null, ogretmen_id:null, ogrenciler:[], kazanimlar:[], kaynaklar:[], _odevKazanimlar:[], _odevKaynaklar:[], _odevSinif:'', dersBakiyeMap:{} };
   document.getElementById('appScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'grid';
   document.getElementById('ogr-sifre').value = '';
@@ -10089,6 +10276,54 @@ function showToast(msg) {
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors text-lg font-bold">✕</button>
     </div>
     <div id="ayd-liste" class="overflow-y-auto flex-1"></div>
+  </div>
+</div>
+
+<!-- Ders Ödeme Gir -->
+<div id="odeme-gir-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <div class="bg-surface rounded-2xl shadow-xl w-full max-w-md flex flex-col">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined ico-fill text-primary" style="font-size:20px;">account_balance_wallet</span>
+        <span class="font-headline font-bold text-base text-on-surface">Ödeme Gir</span>
+      </div>
+      <button onclick="document.getElementById('odeme-gir-modal').classList.add('hidden')"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors text-lg font-bold">✕</button>
+    </div>
+    <div class="p-5 flex flex-col gap-3">
+      <div id="odeme-gir-ogrenci-ad" class="text-sm font-semibold text-on-surface"></div>
+      <div>
+        <label class="lbl">Tarih</label>
+        <input type="date" id="odeme-gir-tarih" class="field">
+      </div>
+      <div>
+        <label class="lbl">Kaç ders karşılığı?</label>
+        <input type="number" id="odeme-gir-sayi" min="1" step="1" inputmode="numeric" placeholder="Örn: 4" class="field">
+      </div>
+      <div>
+        <label class="lbl">Not <span style="font-weight:400;color:var(--ink-soft);">(opsiyonel)</span></label>
+        <input type="text" id="odeme-gir-aciklama" maxlength="200" placeholder="nakit / havale / annesi getirdi…" class="field">
+      </div>
+      <button onclick="odemeKaydet()" id="odeme-gir-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Borçlu Ders özeti (dashboard kartından açılır) -->
+<div id="borclu-ders-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <div class="bg-surface rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+    <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <span class="material-symbols-outlined ico-fill text-primary" style="font-size:20px;">account_balance_wallet</span>
+        <span class="font-headline font-bold text-base text-on-surface">Borçlu Ders Özeti</span>
+        <span id="bdm-sayac" class="text-xs font-bold px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container">0</span>
+      </div>
+      <button onclick="document.getElementById('borclu-ders-modal').classList.add('hidden')"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-outline hover:text-on-surface transition-colors text-lg font-bold">✕</button>
+    </div>
+    <div id="bdm-liste" class="overflow-y-auto flex-1 px-5 py-2"></div>
   </div>
 </div>
 

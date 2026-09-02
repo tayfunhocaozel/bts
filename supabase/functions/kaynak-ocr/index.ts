@@ -1,14 +1,33 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // Kamera ile kaynak ekleme akışının OCR fonksiyonu.
-// Kapak, içindekiler ve (varsa) cevap anahtarı fotoğraflarının TAMAMINI TEK bir
-// Gemini isteğinde birlikte alır ve tek bir birleşik JSON sonucu döndürür.
-// ada-chat'teki Anthropic-uyumlu sohbet/tool-calling katmanından bağımsızdır;
-// burada tek turluk, şemayla kısıtlanmış bir çıkarım yeterli.
+//
+// MİMARİ (V4 — fotoğraf başına ayrı istek):
+//  - Kapak, içindekiler ve cevap anahtarı fotoğraflarının HER BİRİ kendi bağımsız
+//    Gemini isteği olarak işlenir. Tek dev "parts" isteği yerine küçük, şemayla
+//    kısıtlanmış çok sayıda istek → uzun listelerde kesilme/başarısızlık biter.
+//  - İçindekiler/cevap anahtarı fotoğrafları gruplar halinde paralel işlenir
+//    (PARALEL_LIMIT) — Gemini rate limit'ine takılmamak için.
+//  - Sonuçlar burada birleştirilir, frontend'e ESKİSİYLE AYNI formatta döner:
+//      { kaynak_adi, yayin_evi, sinif, konu_listesi:[{konu_adi,sayfa_no}],
+//        cevap_anahtari:[{test_no,sayfa_no,cevaplar:[...]}], uyarilar:[], hatalar:[] }
+//  - Kısmi hata yönetimi: bir fotoğraf başarısız olursa yalnızca o fotoğraf için
+//    "hatalar" dizisine mesaj eklenir, diğerlerinin sonucu korunur. Yalnızca HİÇBİR
+//    istek başarılı olmadıysa üst düzey { error } (502) döner.
+//  - Eksiksiz çıkarma: her içindekiler/cevap isteği kendi "toplam_satir_sayisi"
+//    değerini döndürür; liste uzunluğu bu sayıyla uyuşmazsa 1 kez otomatik retry
+//    yapılır, hâlâ uyuşmazsa "uyarilar" dizisine "eksik olabilir" notu eklenir.
+//
+// ada-chat'teki Anthropic-uyumlu sohbet/tool-calling katmanından bağımsızdır.
 
 const GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// Bir "Tümünü Analiz Et" çağrısında Gemini'ye aynı anda gönderilecek en fazla istek.
+const PARALEL_LIMIT = 4;
+// Fotoğraf başına çıktı zaten küçük; 65536 pratik olarak hiç zorlanmayacak, güvenlik payı.
+const MAX_OUTPUT_TOKENS = 65536;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,30 +35,44 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SISTEM_PROMPT =
-  "Sen bir ders kaynağı (soru bankası/deneme kitabı) kataloglama asistanısın. Aşağıda gruplar " +
-  "halinde fotoğraf verilecek; her grubun başında hangi gruba ait olduğunu belirten bir metin " +
-  "etiketi var. Gruplar arasındaki ve her grup içindeki fotoğraf sırası (sayfa sırası) önemlidir. " +
-  "Tek bir JSON nesnesi olarak şunları çıkar:\n" +
-  "- KAPAK fotoğrafından: kaynağın adı (kaynak_adi), yayınevi/yazarı (yayin_evi), hedeflediği " +
-  "sınıf (sinif, '5. Sınıf' - '8. Sınıf' formatında).\n" +
-  "- İÇİNDEKİLER fotoğraflarının TAMAMINI birlikte değerlendirerek: TEK, sıralı, birleşik bir " +
-  "konu listesi (konu_listesi) — ana konu başlıkları ve yanlarındaki sayfa numaraları. Alt " +
-  "başlıkları değil ana başlıkları al; sayfalar arasında tekrar eden başlıkları bir kez say; " +
-  "sayfa numarası okunamıyorsa null bırak.\n" +
-  "- CEVAP ANAHTARI fotoğrafları verildiyse TAMAMINI birlikte değerlendirerek: TEK birleşik bir " +
-  "test listesi (cevap_anahtari) — test numarası, bulunduğu sayfa numarası, sıradaki cevaplar " +
-  "(A/B/C/D/E) dizisi. Aynı test birden fazla fotoğrafta görünüyorsa tekrar etme. Cevap anahtarı " +
-  "fotoğrafı verilmediyse boş dizi döndür.\n" +
-  "Emin olmadığın alanları boş/null bırak, uydurma.";
+// ── Prompt & şemalar (fotoğraf türü başına ayrı) ──────────────────────────────
 
-const SCHEMA = {
+const SAYIM_KURALI =
+  "\n\nKURAL: Fotoğrafta gördüğün HER SATIRI, HER KONUYU, HER TEST SORUSUNU eksiksiz çıkar. " +
+  "Asla 'örnek olarak birkaçını' listeleme, asla özetleme, asla 'vb.' ile kısaltma yapma. " +
+  "Görüntüde 40 öğe varsa 40 öğe döndür, 5 değil. Bu kritik bir gereksinimdir.\n" +
+  "Adım 1: Önce fotoğrafta kaç satır/konu/soru gördüğünü say ve bu sayıyı toplam_satir_sayisi alanına yaz.\n" +
+  "Adım 2: Tam olarak o sayıda öğe içeren bir liste döndür.\n" +
+  "Liste uzunluğun toplam_satir_sayisi ile eşleşmiyorsa tekrar say ve düzelt.";
+
+const KAPAK_PROMPT =
+  "Sen bir ders kaynağı (soru bankası / deneme kitabı) kataloglama asistanısın. " +
+  "Verilen KAPAK fotoğrafından kaynağın adını (kaynak_adi), yayınevini/yazarını (yayin_evi) ve " +
+  "hedeflediği sınıfı (sinif, '5. Sınıf' - '8. Sınıf' formatında) çıkar. " +
+  "Emin olmadığın alanı boş bırak, uydurma.";
+
+const KAPAK_SCHEMA = {
   type: "OBJECT",
   properties: {
     kaynak_adi: { type: "STRING" },
     yayin_evi: { type: "STRING" },
     sinif: { type: "STRING" },
-    konu_listesi: {
+  },
+  required: ["kaynak_adi"],
+};
+
+const ICINDEKILER_PROMPT =
+  "Sen bir ders kaynağı kataloglama asistanısın. Verilen TEK bir İÇİNDEKİLER fotoğrafından " +
+  "ana konu başlıklarını ve yanlarındaki sayfa numaralarını çıkar (konular dizisi). " +
+  "Alt başlıkları değil ana başlıkları al; sayfa numarası okunamıyorsa sayfa_no'yu boş bırak. " +
+  "'Cevap Anahtarı', 'Önsöz', 'İçindekiler', 'Kaynakça' gibi konu olmayan satırları listeye ekleme." +
+  SAYIM_KURALI;
+
+const ICINDEKILER_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    toplam_satir_sayisi: { type: "INTEGER" },
+    konular: {
       type: "ARRAY",
       items: {
         type: "OBJECT",
@@ -50,7 +83,21 @@ const SCHEMA = {
         required: ["konu_adi"],
       },
     },
-    cevap_anahtari: {
+  },
+  required: ["konular", "toplam_satir_sayisi"],
+};
+
+const CEVAP_PROMPT =
+  "Sen bir ders kaynağı kataloglama asistanısın. Verilen TEK bir CEVAP ANAHTARI fotoğrafından " +
+  "her testi çıkar (testler dizisi): test numarası (test_no), bulunduğu sayfa numarası (sayfa_no) ve " +
+  "sıradaki cevaplar (A/B/C/D/E) dizisi (cevaplar). Okunamayan alanı boş bırak." +
+  SAYIM_KURALI;
+
+const CEVAP_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    toplam_satir_sayisi: { type: "INTEGER" },
+    testler: {
       type: "ARRAY",
       items: {
         type: "OBJECT",
@@ -62,12 +109,129 @@ const SCHEMA = {
       },
     },
   },
-  required: ["kaynak_adi", "konu_listesi"],
+  required: ["testler", "toplam_satir_sayisi"],
 };
 
-function gecerliGorselDizisi(v: unknown): v is { mimeType: string; data: string }[] {
+// ── Yardımcılar ──────────────────────────────────────────────────────────────
+
+type Gorsel = { mimeType: string; data: string };
+
+function gecerliGorselDizisi(v: unknown): v is Gorsel[] {
   return Array.isArray(v) && v.every((img: any) => img?.mimeType && img?.data);
 }
+
+function hataYaniti(mesaj: string, status: number) {
+  return new Response(JSON.stringify({ error: mesaj }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// Tek fotoğraf + tek şema için tek Gemini isteği. Hata durumunda anlamlı mesajla throw eder.
+async function geminiCagir(
+  apiKey: string,
+  sistemPrompt: string,
+  schema: unknown,
+  img: Gorsel,
+): Promise<any> {
+  const body = {
+    contents: [{
+      role: "user",
+      parts: [
+        { text: sistemPrompt },
+        { inlineData: { mimeType: img.mimeType, data: img.data } },
+      ],
+    }],
+    generationConfig: {
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      responseMimeType: "application/json",
+      responseSchema: schema,
+    },
+  };
+
+  const response = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify(body),
+  });
+
+  const responseData = await response.json();
+  if (!response.ok) {
+    throw new Error(responseData?.error?.message || "Gemini API hatası");
+  }
+
+  const candidate = responseData?.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text;
+  if (!text) {
+    const reason = responseData?.promptFeedback?.blockReason ||
+      candidate?.finishReason || "bilinmeyen neden";
+    throw new Error(`Gemini yanıt üretmedi (${reason})`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(
+      candidate?.finishReason === "MAX_TOKENS"
+        ? "Gemini yanıtı çok uzun olduğu için kesildi"
+        : "Gemini yanıtı geçerli JSON değil",
+    );
+  }
+}
+
+// Sayım doğrulamalı çağrı: liste uzunluğu toplam_satir_sayisi ile uyuşmazsa 1 kez retry;
+// retry daha çok öğe çıkarırsa onu kullanır. Sonuç hâlâ kendi sayımıyla uyuşmazsa eksik=true.
+async function sayimliCagir(
+  apiKey: string,
+  prompt: string,
+  schema: unknown,
+  img: Gorsel,
+  listeAlani: "konular" | "testler",
+): Promise<{ liste: any[]; eksik: boolean }> {
+  const listeOf = (r: any) => (Array.isArray(r?.[listeAlani]) ? r[listeAlani] : []);
+  const uyumlu = (r: any) => {
+    const beklenen = Number(r?.toplam_satir_sayisi) || 0;
+    return beklenen > 0 && listeOf(r).length === beklenen;
+  };
+
+  const ilk = await geminiCagir(apiKey, prompt, schema, img);
+  let secili = ilk;
+
+  if (!uyumlu(ilk)) {
+    try {
+      const tekrar = await geminiCagir(
+        apiKey,
+        prompt +
+          "\n\nUYARI: Önceki denemende liste eksikti (sayım ile liste uzunluğu uyuşmadı). " +
+          "Bu sefer istisnasız TÜM satırları çıkar.",
+        schema,
+        img,
+      );
+      if (listeOf(tekrar).length >= listeOf(secili).length) secili = tekrar;
+    } catch {
+      // retry başarısız — ilk sonucu koru
+    }
+  }
+
+  return { liste: listeOf(secili), eksik: !uyumlu(secili) };
+}
+
+// items'ı limit boyutlu gruplara böler, her grubu Promise.all ile paralel işler.
+async function gruplarHalinde<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const sonuc: R[] = [];
+  for (let i = 0; i < items.length; i += limit) {
+    const grup = items.slice(i, i + limit);
+    const grupSonuc = await Promise.all(grup.map((item, j) => fn(item, i + j)));
+    sonuc.push(...grupSonuc);
+  }
+  return sonuc;
+}
+
+// ── HTTP handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -77,111 +241,141 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "GEMINI_API_KEY ortam değişkeni tanımlı değil." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return hataYaniti("GEMINI_API_KEY ortam değişkeni tanımlı değil.", 500);
     }
 
     const body = await req.json();
     const { kapak, icindekiler, cevap_anahtari } = body;
 
-    if (!gecerliGorselDizisi(kapak) || kapak.length !== 1) {
-      return new Response(
-        JSON.stringify({ error: "kapak: tam olarak 1 fotoğraf ({ mimeType, data }) gerekli." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    // kapak: yeni-kaynak akışında tam 1 foto; "zenginleştirme" akışında (Bölüm 4)
+    // hiç gönderilmeyebilir. Verildiyse dizi ve en fazla 1 öğe olmalı.
+    if (kapak !== undefined && (!gecerliGorselDizisi(kapak) || kapak.length > 1)) {
+      return hataYaniti("kapak: en fazla 1 fotoğraf ({ mimeType, data }) olmalı.", 400);
     }
     if (!gecerliGorselDizisi(icindekiler) || !icindekiler.length) {
-      return new Response(
-        JSON.stringify({ error: "icindekiler: en az 1 fotoğraf ({ mimeType, data }) gerekli." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return hataYaniti("icindekiler: en az 1 fotoğraf ({ mimeType, data }) gerekli.", 400);
     }
     if (cevap_anahtari !== undefined && !gecerliGorselDizisi(cevap_anahtari)) {
-      return new Response(
-        JSON.stringify({ error: "cevap_anahtari: { mimeType, data } öğelerinden oluşan bir dizi olmalı." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    const cevapAnahtariGorselleri = cevap_anahtari || [];
-
-    const gorselPart = (img: { mimeType: string; data: string }) => ({
-      inlineData: { mimeType: img.mimeType, data: img.data },
-    });
-
-    const parts: any[] = [
-      { text: SISTEM_PROMPT },
-      { text: "--- KAPAK FOTOĞRAFI ---" },
-      ...kapak.map(gorselPart),
-      { text: "--- İÇİNDEKİLER FOTOĞRAFLARI (sırasıyla) ---" },
-      ...icindekiler.map(gorselPart),
-    ];
-    if (cevapAnahtariGorselleri.length) {
-      parts.push({ text: "--- CEVAP ANAHTARI FOTOĞRAFLARI (sırasıyla) ---" });
-      parts.push(...cevapAnahtariGorselleri.map(gorselPart));
+      return hataYaniti("cevap_anahtari: { mimeType, data } öğelerinden oluşan bir dizi olmalı.", 400);
     }
 
-    const geminiBody = {
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        maxOutputTokens: 8192,
-        responseMimeType: "application/json",
-        responseSchema: SCHEMA,
-      },
-    };
+    const kapakGorselleri: Gorsel[] = Array.isArray(kapak) ? kapak : [];
+    const icindekilerGorselleri: Gorsel[] = icindekiler;
+    const cevapGorselleri: Gorsel[] = cevap_anahtari || [];
 
-    const response = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify(geminiBody),
-    });
+    const hatalar: string[] = [];
+    const uyarilar: string[] = [];
+    let basariliCagri = 0;
 
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      return new Response(
-        JSON.stringify({ error: responseData?.error?.message || "Gemini API hatası", details: responseData }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    // 1) KAPAK — tek istek
+    let kaynakAdi = "", yayinEvi = "", sinif = "";
+    if (kapakGorselleri.length) {
+      try {
+        const k = await geminiCagir(apiKey, KAPAK_PROMPT, KAPAK_SCHEMA, kapakGorselleri[0]);
+        kaynakAdi = k?.kaynak_adi || "";
+        yayinEvi = k?.yayin_evi || "";
+        sinif = k?.sinif || "";
+        basariliCagri++;
+      } catch (e) {
+        hatalar.push(`Kapak fotoğrafı okunamadı: ${(e as Error).message}`);
+      }
     }
 
-    const candidate = responseData?.candidates?.[0];
-    const text = candidate?.content?.parts?.[0]?.text;
-    if (!text) {
-      const reason = responseData?.promptFeedback?.blockReason || candidate?.finishReason || "bilinmeyen neden";
-      return new Response(
-        JSON.stringify({ error: `Gemini yanıt üretmedi (${reason})` }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      const kesikMi = candidate?.finishReason === "MAX_TOKENS";
-      return new Response(
-        JSON.stringify({
-          error: kesikMi
-            ? "Gemini yanıtı çok uzun olduğu için yarıda kesildi. Daha az fotoğrafla tekrar deneyin."
-            : "Gemini yanıtı geçerli JSON değil.",
-          raw: text,
-        }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message || "Beklenmeyen hata" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    // 2) İÇİNDEKİLER — her foto ayrı istek, gruplar halinde paralel, foto sırası korunur
+    const icSonuclar = await gruplarHalinde(
+      icindekilerGorselleri,
+      PARALEL_LIMIT,
+      (img, i) =>
+        sayimliCagir(apiKey, ICINDEKILER_PROMPT, ICINDEKILER_SCHEMA, img, "konular")
+          .then((r) => ({ i, ...r }))
+          .catch((e) => ({ i, hata: (e as Error).message })),
     );
+
+    const konuListesi: { konu_adi: string; sayfa_no: number | null }[] = [];
+    icSonuclar
+      .sort((a: any, b: any) => a.i - b.i)
+      .forEach((r: any) => {
+        if (r.hata) {
+          hatalar.push(`İçindekiler fotoğraf ${r.i + 1} okunamadı: ${r.hata}`);
+          return;
+        }
+        basariliCagri++;
+        if (r.eksik) {
+          uyarilar.push(
+            `İçindekiler fotoğraf ${r.i + 1}: bazı satırlar eksik çıkarılmış olabilir, kontrol edin.`,
+          );
+        }
+        (r.liste || []).forEach((k: any) => {
+          konuListesi.push({ konu_adi: k?.konu_adi || "", sayfa_no: k?.sayfa_no ?? null });
+        });
+      });
+
+    // 3) CEVAP ANAHTARI — her foto ayrı istek; test_no'ya göre birleştir + sırala
+    const cevapAnahtari: { test_no: number | null; sayfa_no: number | null; cevaplar: string[] }[] = [];
+    if (cevapGorselleri.length) {
+      const caSonuclar = await gruplarHalinde(
+        cevapGorselleri,
+        PARALEL_LIMIT,
+        (img, i) =>
+          sayimliCagir(apiKey, CEVAP_PROMPT, CEVAP_SCHEMA, img, "testler")
+            .then((r) => ({ i, ...r }))
+            .catch((e) => ({ i, hata: (e as Error).message })),
+      );
+
+      const testMap = new Map<string, any>();
+      caSonuclar
+        .sort((a: any, b: any) => a.i - b.i)
+        .forEach((r: any) => {
+          if (r.hata) {
+            hatalar.push(`Cevap anahtarı fotoğraf ${r.i + 1} okunamadı: ${r.hata}`);
+            return;
+          }
+          basariliCagri++;
+          if (r.eksik) {
+            uyarilar.push(
+              `Cevap anahtarı fotoğraf ${r.i + 1}: bazı testler eksik olabilir, kontrol edin.`,
+            );
+          }
+          (r.liste || []).forEach((t: any) => {
+            const anahtar = t?.test_no != null ? `t${t.test_no}` : `_${testMap.size}`;
+            if (!testMap.has(anahtar)) {
+              testMap.set(anahtar, {
+                test_no: t?.test_no ?? null,
+                sayfa_no: t?.sayfa_no ?? null,
+                cevaplar: Array.isArray(t?.cevaplar) ? t.cevaplar : [],
+              });
+            }
+          });
+        });
+
+      cevapAnahtari.push(
+        ...[...testMap.values()].sort(
+          (a, b) => (a.test_no ?? Number.MAX_SAFE_INTEGER) - (b.test_no ?? Number.MAX_SAFE_INTEGER),
+        ),
+      );
+    }
+
+    // Hiçbir istek başarılı olmadıysa üst düzey hata
+    if (basariliCagri === 0) {
+      return hataYaniti(
+        hatalar.length ? hatalar.join(" · ") : "Hiçbir fotoğraf işlenemedi.",
+        502,
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        kaynak_adi: kaynakAdi,
+        yayin_evi: yayinEvi,
+        sinif: sinif,
+        konu_listesi: konuListesi,
+        cevap_anahtari: cevapAnahtari,
+        uyarilar,
+        hatalar,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  } catch (err) {
+    return hataYaniti((err as Error).message || "Beklenmeyen hata", 500);
   }
 });

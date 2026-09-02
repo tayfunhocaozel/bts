@@ -4526,6 +4526,9 @@ async function kkmAnalizEt() {
     if (data.sinif) k.sonuc.sinif = data.sinif;
     k.sonuc.konu_listesi = (data.konu_listesi || []).map(x => ({ _cid: kkmCid(), konu_adi: x.konu_adi || '', sayfa_no: x.sayfa_no ?? null }));
     k.sonuc.cevap_anahtari = (data.cevap_anahtari || []).map(x => ({ _cid: kkmCid(), test_no: x.test_no ?? null, sayfa_no: x.sayfa_no ?? null, cevaplar: (x.cevaplar || []).join(', ') }));
+    // Edge function fotoğraf başına işliyor; okunamayan foto ("hatalar") ve eksik satır
+    // şüphesi olan foto ("uyarilar") mesajları önizleme ekranında gösterilir.
+    k.sonuc._uyarilar = [...(data.hatalar || []), ...(data.uyarilar || [])];
 
     kkmRenderOnizleme();
   } catch (err) {
@@ -4594,8 +4597,17 @@ function kkmRenderOnizleme() {
   const govde = document.getElementById('kkm-govde');
   const sinifOpts = ['5. Sınıf','6. Sınıf','7. Sınıf','8. Sınıf'].map(sn => `<option ${s.sinif===sn?'selected':''}>${sn}</option>`).join('');
 
+  const uyariBandi = (s._uyarilar && s._uyarilar.length) ? `
+    <div style="background:rgba(217,52,43,.08);border:1px solid var(--error);border-radius:12px;padding:10px 12px;margin-bottom:14px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:12px;color:var(--error);margin-bottom:4px;">⚠️ Analiz uyarıları — kontrol edin</div>
+      <ul style="margin:0;padding-left:18px;font-size:12px;color:var(--ink);line-height:1.55;">
+        ${s._uyarilar.map(u => `<li>${kkmEsc(u)}</li>`).join('')}
+      </ul>
+    </div>` : '';
+
   govde.innerHTML = `
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Bilgileri kontrol edip düzenleyin, ardından kaydedin.</div>
+    ${uyariBandi}
     <label class="lbl">Kaynak Adı *</label>
     <input type="text" id="kkm-o-ad" class="field" value="${kkmEsc(s.kaynak_adi)}"/>
     <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">

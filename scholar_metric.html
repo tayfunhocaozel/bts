@@ -585,6 +585,7 @@ tailwind.config = {
           <button onclick="odevSave()" id="btn-tum-kaydet" disabled class="btn btn-primary" style="width:100%;justify-content:center;margin-top:14px;">
             <span class="material-symbols-outlined" style="font-size:18px;">save</span> Tümünü Kaydet
           </button>
+          <div id="kapsam-onay" style="display:none;margin-top:12px;"></div>
         </div>
 
         <!-- ÖDEV EKLEME FORMU -->
@@ -756,6 +757,9 @@ tailwind.config = {
           </button>
           <button onclick="kameraKaynakModalAc()" class="btn btn-ghost" style="width:100%;justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:18px;">photo_camera</span> Kamera ile Ekle
+          </button>
+          <button onclick="kaynakImportAc()" class="btn btn-ghost" style="width:100%;justify-content:center;">
+            <span class="material-symbols-outlined" style="font-size:18px;">upload_file</span> Excel / CSV ile İçe Aktar
           </button>
           <button onclick="gecmisOdevEslestirAc()" class="btn btn-ghost" style="width:100%;justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:18px;">history</span> Geçmiş Ödevleri Eşleştir
@@ -1457,6 +1461,32 @@ tailwind.config = {
       </button>
     </div>
     <div id="god-govde"></div>
+  </div>
+</div>
+
+<!-- ── V4 Bölüm 7.2: Kaynak düzenleme modalı ────────────────── -->
+<div id="kden-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);">✏️ Kaynağı Düzenle</div>
+      <button onclick="kdenKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div id="kden-govde"></div>
+  </div>
+</div>
+
+<!-- ── V4 Bölüm 8: Excel/CSV içe aktarma modalı ────────────── -->
+<div id="kimp-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(1,49,73,.45);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(1,49,73,.25);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div id="kimp-baslik" style="font-family:Manrope;font-weight:800;font-size:16px;color:var(--ink);">📄 Excel / CSV ile İçe Aktar</div>
+      <button onclick="kimpKapat()" style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div id="kimp-govde"></div>
   </div>
 </div>
 
@@ -2820,13 +2850,16 @@ async function odevSave() {
     sayfa_bitis: t.sayfa_bitis ?? null
   }));
 
-  const { error } = await sb.from('odevler').insert(rows);
+  const { data: eklenen, error } = await sb.from('odevler').insert(rows)
+    .select('odev_id, kaynak_id, kaynak_konu_id, test_no, odev_detay, konu');
   if (error) { showToast('❌ ' + error.message); return; }
 
   showToast(`✅ ${rows.length} ödev kaydedildi!`);
   state._odevTaslaklari = [];
   renderTaslakTablo();
   loadBekleyenOdevlerForOgrenci(ogrenciId);
+  // Bölüm 2.9 — legacy-mod ödevler için kapsam onay chip'i
+  kapsamOnayHazirla(eklenen || []);
 }
 
 // ── ÖDEV GİR: bekleyen + tamamlanan ödevleri göster ─────────
@@ -4327,10 +4360,16 @@ function renderKaynaklar() {
           <div class="text-sm font-semibold text-on-surface">${k.kaynak_adi}</div>
           <div class="text-xs text-outline">${k.yayin_evi||'—'} — ${k.sinif}</div>
           ${konuluSet.has(k.kaynak_id) ? '' : `
-          <button onclick="kameraKaynakModalAc('${k.kaynak_id}', this.dataset.adi)" data-adi="${kkmEsc(k.kaynak_adi)}"
-            style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;color:var(--primary);background:none;border:none;padding:2px 0;cursor:pointer;font-size:11.5px;font-weight:600;">
-            <span class="material-symbols-outlined" style="font-size:14px;">photo_camera</span> İçindekiler / Cevap Anahtarı Ekle
-          </button>`}
+          <div style="margin-top:4px;display:flex;gap:12px;flex-wrap:wrap;">
+            <button onclick="kameraKaynakModalAc('${k.kaynak_id}', this.dataset.adi)" data-adi="${kkmEsc(k.kaynak_adi)}"
+              style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);background:none;border:none;padding:2px 0;cursor:pointer;font-size:11.5px;font-weight:600;">
+              <span class="material-symbols-outlined" style="font-size:14px;">photo_camera</span> Kamera ile Ekle
+            </button>
+            <button onclick="kaynakImportAc('${k.kaynak_id}', this.dataset.adi)" data-adi="${kkmEsc(k.kaynak_adi)}"
+              style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);background:none;border:none;padding:2px 0;cursor:pointer;font-size:11.5px;font-weight:600;">
+              <span class="material-symbols-outlined" style="font-size:14px;">upload_file</span> Excel/CSV ile Ekle
+            </button>
+          </div>`}
         </div>
         <select onchange="kaynakTurGuncelle('${k.kaynak_id}', this.value)"
           class="text-xs font-bold px-2 py-1 rounded-full border-none appearance-none cursor-pointer"
@@ -4342,7 +4381,402 @@ function renderKaynaklar() {
           ${k.zorluk_derecesi||'—'}
         </span>
         <span class="text-xs text-outline">${k.konu_sayisi||'—'} konu</span>
+        <button onclick="kaynakDuzenleAc('${k.kaynak_id}')" title="Düzenle"
+          style="background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:2px;">
+          <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
+        </button>
+        <button onclick="kaynakKatalogSil('${k.kaynak_id}')" title="Sil"
+          style="background:none;border:none;cursor:pointer;color:var(--error);padding:2px;">
+          <span class="material-symbols-outlined" style="font-size:18px;">delete</span>
+        </button>
       </div>`).join('');
+}
+
+// ── Bölüm 7.2 — Kaynak düzenleme / silme (katalogdan; ogrn_kaynak'taki kaynakSil AYRI) ──
+async function kaynakKatalogSil(kaynakId) {
+  const k = (state.kaynaklar || []).find(x => x.kaynak_id === kaynakId);
+  const { count } = await sb.from('odevler').select('odev_id', { count: 'exact', head: true })
+    .eq('kaynak_id', kaynakId);
+  const uyari = count
+    ? `\n\nBu kaynağa bağlı ${count} ödev var — silerseniz bu ödevlerin kaynak/konu bağlantısı kopar (ödevler silinmez).`
+    : '';
+  if (!confirm(`"${k?.kaynak_adi || kaynakId}" kaynağını, tüm konu ve cevap anahtarı satırlarıyla birlikte silmek istediğinize emin misiniz?${uyari}`)) return;
+
+  // Bağlı ödevlerin kaynak alanlarını temizle + onların kapsam satırlarını sil
+  const { data: bagliOdevler } = await sb.from('odevler').select('odev_id').eq('kaynak_id', kaynakId);
+  const odevIds = (bagliOdevler || []).map(o => o.odev_id);
+  if (odevIds.length) {
+    await sb.from('odev_kaynak_kapsam').delete().in('odev_id', odevIds);
+    await sb.from('odevler').update({
+      kaynak_id: null, kaynak_konu_id: null, test_no: null, sayfa_baslangic: null, sayfa_bitis: null
+    }).eq('kaynak_id', kaynakId);
+  }
+  // kaynak_konulari / kaynak_cevap_anahtari ON DELETE CASCADE ile gider
+  const { error } = await sb.from('kaynaklar').delete().eq('kaynak_id', kaynakId);
+  if (error) { showToast('❌ ' + error.message); return; }
+
+  showToast('✅ Kaynak silindi');
+  const { data } = await sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi');
+  state.kaynaklar = data || [];
+  await kaynakKonuluIdleriYukle();
+  renderKaynaklar();
+}
+
+async function kaynakDuzenleAc(kaynakId) {
+  const [{ data: k }, { data: konular }, { data: testler }] = await Promise.all([
+    sb.from('kaynaklar').select('*').eq('kaynak_id', kaynakId).single(),
+    sb.from('kaynak_konulari').select('*').eq('kaynak_id', kaynakId).order('sira'),
+    sb.from('kaynak_cevap_anahtari').select('*').eq('kaynak_id', kaynakId).order('test_no')
+  ]);
+  if (!k) { showToast('❌ Kaynak bulunamadı'); return; }
+  state._kden = {
+    kaynakId,
+    bilgi: { kaynak_adi: k.kaynak_adi || '', yayin_evi: k.yayin_evi || '', sinif: k.sinif || '8. Sınıf' },
+    konular: (konular || []).map(x => ({ _cid: kkmCid(), id: x.id, konu_adi: x.konu_adi || '', sayfa_no: x.sayfa_no ?? null })),
+    testler: (testler || []).map(x => ({ _cid: kkmCid(), id: x.id, test_no: x.test_no ?? null, sayfa_no: x.sayfa_no ?? null, cevaplar: (x.cevaplar || []).join(', ') })),
+    silinenKonu: [], silinenTest: []
+  };
+  document.getElementById('kden-modal').style.display = 'flex';
+  kdenRender();
+}
+
+function kdenRender() {
+  const d = state._kden;
+  const sinifOpts = ['5. Sınıf','6. Sınıf','7. Sınıf','8. Sınıf'].map(s => `<option ${d.bilgi.sinif===s?'selected':''}>${s}</option>`).join('');
+  document.getElementById('kden-govde').innerHTML = `
+    <label class="lbl">Kaynak Adı *</label>
+    <input type="text" id="kden-ad" class="field" value="${kkmEsc(d.bilgi.kaynak_adi)}"/>
+    <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      <input type="text" id="kden-yayinevi" placeholder="Yayınevi" class="field" value="${kkmEsc(d.bilgi.yayin_evi)}"/>
+      <select id="kden-sinif" class="field">${sinifOpts}</select>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;margin-bottom:8px;">
+      <div class="lbl" style="margin:0;">Konular (${d.konular.length})</div>
+      <button onclick="kdenKonuEkle()" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">+ Satır</button>
+    </div>
+    ${d.konular.map(o => `
+      <div style="display:flex;gap:6px;align-items:center;padding:4px 0;">
+        <input type="text" value="${kkmEsc(o.konu_adi)}" onchange="kdenAlan('konular','${o._cid}','konu_adi',this.value)" placeholder="Konu adı" style="flex:1;padding:7px 10px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;"/>
+        <input type="number" value="${o.sayfa_no ?? ''}" onchange="kdenAlan('konular','${o._cid}','sayfa_no',this.value)" placeholder="sf." style="width:56px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
+        <button onclick="kdenSil('konular','${o._cid}')" class="text-error" style="background:none;border:none;cursor:pointer;font-size:16px;font-weight:700;">×</button>
+      </div>`).join('') || '<div style="font-size:12px;color:var(--ink-soft);padding:4px 0;">Konu yok</div>'}
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;margin-bottom:8px;">
+      <div class="lbl" style="margin:0;">Cevap Anahtarı — Testler (${d.testler.length})</div>
+      <button onclick="kdenTestEkle()" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">+ Test</button>
+    </div>
+    ${d.testler.map(o => `
+      <div style="display:flex;gap:6px;align-items:center;padding:4px 0;">
+        <input type="number" value="${o.test_no ?? ''}" onchange="kdenAlan('testler','${o._cid}','test_no',this.value)" placeholder="Test #" style="width:64px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
+        <input type="number" value="${o.sayfa_no ?? ''}" onchange="kdenAlan('testler','${o._cid}','sayfa_no',this.value)" placeholder="sf." style="width:56px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
+        <input type="text" value="${kkmEsc(o.cevaplar)}" onchange="kdenAlan('testler','${o._cid}','cevaplar',this.value)" placeholder="A, C, B, ..." style="flex:1;padding:7px 10px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;"/>
+        <button onclick="kdenSil('testler','${o._cid}')" class="text-error" style="background:none;border:none;cursor:pointer;font-size:16px;font-weight:700;">×</button>
+      </div>`).join('') || '<div style="font-size:12px;color:var(--ink-soft);padding:4px 0;">Test yok</div>'}
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button onclick="kdenKapat()" class="btn btn-ghost" style="flex:1;justify-content:center;">Vazgeç</button>
+      <button onclick="kdenKaydet()" id="kden-kaydet-btn" class="btn btn-primary" style="flex:2;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
+      </button>
+    </div>
+    <div id="kden-durum" style="margin-top:10px;font-size:13px;color:var(--ink-soft);min-height:18px;"></div>`;
+}
+
+function kdenAlan(liste, cid, alan, val) {
+  const o = state._kden[liste].find(x => x._cid === cid);
+  if (!o) return;
+  o[alan] = (alan === 'sayfa_no' || alan === 'test_no') ? (parseInt(val) || null) : val;
+}
+function kdenKonuEkle() { state._kden.konular.push({ _cid: kkmCid(), konu_adi: '', sayfa_no: null }); kdenRender(); }
+function kdenTestEkle() { state._kden.testler.push({ _cid: kkmCid(), test_no: null, sayfa_no: null, cevaplar: '' }); kdenRender(); }
+function kdenSil(liste, cid) {
+  const arr = state._kden[liste];
+  const o = arr.find(x => x._cid === cid);
+  if (o && o.id) state._kden[liste === 'konular' ? 'silinenKonu' : 'silinenTest'].push(o.id);
+  state._kden[liste] = arr.filter(x => x._cid !== cid);
+  kdenRender();
+}
+function kdenKapat() { document.getElementById('kden-modal').style.display = 'none'; state._kden = null; }
+
+async function kdenKaydet() {
+  const d = state._kden;
+  const ad = document.getElementById('kden-ad').value.trim();
+  if (!ad) { showToast('⚠️ Kaynak adı zorunlu'); return; }
+  d.bilgi.kaynak_adi = ad;
+  d.bilgi.yayin_evi = document.getElementById('kden-yayinevi').value.trim();
+  d.bilgi.sinif = document.getElementById('kden-sinif').value;
+  const btn = document.getElementById('kden-kaydet-btn');
+  const durum = document.getElementById('kden-durum');
+  if (btn) btn.disabled = true;
+  if (durum) durum.textContent = 'Kaydediliyor...';
+  try {
+    const gecerliKonu = d.konular.filter(o => (o.konu_adi || '').trim());
+    const { error: kErr } = await sb.from('kaynaklar').update({
+      kaynak_adi: d.bilgi.kaynak_adi, yayin_evi: d.bilgi.yayin_evi, sinif: d.bilgi.sinif,
+      konu_sayisi: gecerliKonu.length
+    }).eq('kaynak_id', d.kaynakId);
+    if (kErr) throw new Error(kErr.message);
+
+    if (d.silinenKonu.length) await sb.from('kaynak_konulari').delete().in('id', d.silinenKonu);
+    if (d.silinenTest.length) await sb.from('kaynak_cevap_anahtari').delete().in('id', d.silinenTest);
+
+    // güncellenecek (id'li) ve yeni (id'siz) konular
+    for (let i = 0; i < gecerliKonu.length; i++) {
+      const o = gecerliKonu[i];
+      const veri = { kaynak_id: d.kaynakId, konu_adi: o.konu_adi.trim(), sayfa_no: o.sayfa_no, sira: i };
+      if (o.id) await sb.from('kaynak_konulari').update(veri).eq('id', o.id);
+      else await sb.from('kaynak_konulari').insert(veri);
+    }
+    for (const o of d.testler) {
+      if (o.test_no == null && !(o.cevaplar || '').trim()) continue;
+      const veri = {
+        kaynak_id: d.kaynakId, test_no: o.test_no, sayfa_no: o.sayfa_no,
+        cevaplar: (o.cevaplar || '').split(',').map(c => c.trim()).filter(Boolean)
+      };
+      if (o.id) await sb.from('kaynak_cevap_anahtari').update(veri).eq('id', o.id);
+      else await sb.from('kaynak_cevap_anahtari').insert(veri);
+    }
+
+    showToast('✅ Kaynak güncellendi');
+    const { data } = await sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi');
+    state.kaynaklar = data || [];
+    await kaynakKonuluIdleriYukle();
+    renderKaynaklar();
+    kdenKapat();
+  } catch (err) {
+    if (durum) durum.textContent = '❌ ' + err.message;
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── Bölüm 10 — kazanım haritasıyla konu eşleştirme (bigram Dice benzerliği) ──
+function _bigramlar(s) {
+  s = (s || '').toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim();
+  const b = [];
+  for (let i = 0; i < s.length - 1; i++) b.push(s.slice(i, i + 2));
+  return b;
+}
+function _diceBenzerlik(a, b) {
+  const ba = _bigramlar(a), bb = _bigramlar(b);
+  if (!ba.length || !bb.length) return 0;
+  const say = {};
+  ba.forEach(x => { say[x] = (say[x] || 0) + 1; });
+  let kesisim = 0;
+  bb.forEach(x => { if (say[x] > 0) { say[x]--; kesisim++; } });
+  return (2 * kesisim) / (ba.length + bb.length);
+}
+// Ham konu adı → kazanimlar listesindeki en yakın kanonik konu (eşik altındaysa '').
+function kazanimKonuOner(hamKonuAdi, kazanimKonulari, esik = 0.55) {
+  let enIyi = '', skor = 0;
+  (kazanimKonulari || []).forEach(k => {
+    const s = _diceBenzerlik(hamKonuAdi, k);
+    if (s > skor) { skor = s; enIyi = k; }
+  });
+  return skor >= esik ? enIyi : '';
+}
+// state.brans için kazanimlar.konu distinct listesi (oturum cache'i).
+async function kazanimKonulariGetir() {
+  if (state._kazanimKonuAdlari) return state._kazanimKonuAdlari;
+  const { data } = await sb.from('kazanimlar').select('konu').eq('ders', state.brans || 'İlköğretim Matematik');
+  state._kazanimKonuAdlari = [...new Set((data || []).map(r => r.konu).filter(Boolean))];
+  return state._kazanimKonuAdlari;
+}
+
+// ── Bölüm 8 — Excel/CSV ile toplu içe aktarma ──────────────────────────────
+// CSV/TSV yerleşik parse edilir; .xlsx için SheetJS CDN'den lazy yüklenir,
+// yüklenemezse (çevrimdışı) kullanıcı CSV'ye yönlendirilir.
+function _csvParse(metin) {
+  const satirlar = [];
+  let alan = '', satir = [], tirnak = false;
+  const s = metin.replace(/\r\n?/g, '\n');
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (tirnak) {
+      if (c === '"') { if (s[i + 1] === '"') { alan += '"'; i++; } else tirnak = false; }
+      else alan += c;
+    } else if (c === '"') tirnak = true;
+    else if (c === ',' || c === '\t' || c === ';') { satir.push(alan); alan = ''; }
+    else if (c === '\n') { satir.push(alan); satirlar.push(satir); satir = []; alan = ''; }
+    else alan += c;
+  }
+  if (alan.length || satir.length) { satir.push(alan); satirlar.push(satir); }
+  return satirlar.filter(r => r.some(x => (x || '').trim()));
+}
+function _sutunEsle(basliklar) {
+  const norm = basliklar.map(h => (h || '').toLocaleLowerCase('tr').replace(/[\s_]+/g, ''));
+  const bul = (...adaylar) => norm.findIndex(h => adaylar.some(a => h.includes(a)));
+  return {
+    konu_adi: bul('konuadi', 'konu', 'baslik'),
+    sayfa_no: bul('sayfano', 'sayfa', 'sf'),
+    test_no: bul('testno', 'test'),
+    cevaplar: bul('cevaplar', 'cevap', 'anahtar'),
+    tema: bul('tema')
+  };
+}
+let _kimpXlsxYukleniyor = null;
+async function _xlsxYukle() {
+  if (window.XLSX) return window.XLSX;
+  if (!_kimpXlsxYukleniyor) {
+    _kimpXlsxYukleniyor = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      sc.onload = () => res(window.XLSX);
+      sc.onerror = () => rej(new Error('SheetJS yüklenemedi'));
+      document.head.appendChild(sc);
+    });
+  }
+  return _kimpXlsxYukleniyor;
+}
+async function _dosyadanSatirlar(file) {
+  const ad = (file.name || '').toLowerCase();
+  if (ad.endsWith('.xlsx') || ad.endsWith('.xls')) {
+    const XLSX = await _xlsxYukle();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
+  }
+  return _csvParse(await file.text());
+}
+
+// kaynakId verilirse zenginleştirme (mevcut kaynağa ekleme), yoksa yeni kaynak.
+function kaynakImportAc(kaynakId, kaynakAdi) {
+  state._kimp = { kaynakId: kaynakId || null, kaynakAdi: kaynakAdi || '', konular: [], testler: [] };
+  document.getElementById('kimp-baslik').textContent = kaynakId
+    ? `📄 "${kaynakAdi}" — Excel/CSV ile Zenginleştir` : '📄 Excel / CSV ile Yeni Kaynak';
+  document.getElementById('kimp-modal').style.display = 'flex';
+  kimpRenderGiris();
+}
+function kimpKapat() { document.getElementById('kimp-modal').style.display = 'none'; state._kimp = null; }
+
+function kimpRenderGiris() {
+  const yeni = !state._kimp.kaynakId;
+  document.getElementById('kimp-govde').innerHTML = `
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;">
+      <b>Konular</b> sütunları: <code>konu_adi, sayfa_no</code> (opsiyonel <code>tema</code>).<br>
+      <b>Cevap anahtarı</b> sütunları: <code>test_no, sayfa_no, cevaplar</code> ("A,C,B,..."). <br>
+      İki dosya ayrı ayrı yüklenebilir; başlık satırı gerekli. Excel'de "Farklı Kaydet → CSV" de çalışır.
+    </div>
+    ${yeni ? `
+    <label class="lbl">Kaynak Adı *</label>
+    <input type="text" id="kimp-ad" class="field" placeholder="örn. Fenomen 7A Matematik SB"/>
+    <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      <input type="text" id="kimp-yayinevi" placeholder="Yayınevi" class="field"/>
+      <select id="kimp-sinif" class="field">${['5. Sınıf','6. Sınıf','7. Sınıf','8. Sınıf'].map(s=>`<option ${s==='8. Sınıf'?'selected':''}>${s}</option>`).join('')}</select>
+    </div>` : ''}
+    <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+      <label class="btn btn-ghost" style="justify-content:center;cursor:pointer;">
+        <span class="material-symbols-outlined" style="font-size:18px;">table_rows</span> Konular dosyası seç
+        <input type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none;" onchange="kimpDosya(this,'konular')"/>
+      </label>
+      <label class="btn btn-ghost" style="justify-content:center;cursor:pointer;">
+        <span class="material-symbols-outlined" style="font-size:18px;">key</span> Cevap anahtarı dosyası seç (opsiyonel)
+        <input type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" style="display:none;" onchange="kimpDosya(this,'testler')"/>
+      </label>
+    </div>
+    <div id="kimp-onizleme" style="margin-top:14px;"></div>
+    <div id="kimp-durum" style="margin-top:10px;font-size:13px;color:var(--ink-soft);min-height:18px;"></div>`;
+}
+
+async function kimpDosya(inputEl, tur) {
+  const file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  const durum = document.getElementById('kimp-durum');
+  if (durum) durum.textContent = 'Dosya okunuyor…';
+  try {
+    const satirlar = await _dosyadanSatirlar(file);
+    if (satirlar.length < 2) throw new Error('Dosyada başlık + en az bir veri satırı olmalı');
+    const map = _sutunEsle(satirlar[0]);
+    const govde = satirlar.slice(1);
+    if (tur === 'konular') {
+      if (map.konu_adi < 0) throw new Error('"konu_adi" sütunu bulunamadı');
+      state._kimp.konular = govde.map(r => ({
+        konu_adi: (r[map.konu_adi] || '').trim(),
+        sayfa_no: map.sayfa_no >= 0 ? (parseInt(r[map.sayfa_no]) || null) : null,
+        tema: map.tema >= 0 ? (r[map.tema] || '').trim() : ''
+      })).filter(x => x.konu_adi);
+    } else {
+      if (map.test_no < 0 && map.cevaplar < 0) throw new Error('"test_no" veya "cevaplar" sütunu bulunamadı');
+      state._kimp.testler = govde.map(r => ({
+        test_no: map.test_no >= 0 ? (parseInt(r[map.test_no]) || null) : null,
+        sayfa_no: map.sayfa_no >= 0 ? (parseInt(r[map.sayfa_no]) || null) : null,
+        cevaplar: map.cevaplar >= 0 ? String(r[map.cevaplar] || '').split(/[,\s;]+/).map(c => c.trim()).filter(Boolean) : []
+      })).filter(x => x.test_no != null || x.cevaplar.length);
+    }
+    if (durum) durum.textContent = '';
+    kimpRenderOnizleme();
+  } catch (err) {
+    if (durum) durum.textContent = '❌ ' + err.message + (/SheetJS/.test(err.message) ? ' — dosyayı CSV olarak kaydedip tekrar deneyin.' : '');
+  }
+}
+
+function kimpRenderOnizleme() {
+  const d = state._kimp;
+  const el = document.getElementById('kimp-onizleme');
+  if (!el) return;
+  if (!d.konular.length && !d.testler.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    ${d.konular.length ? `<div style="font-size:12px;color:var(--ink);margin-bottom:6px;"><b>${d.konular.length}</b> konu okundu — ilk 5: ${d.konular.slice(0,5).map(x => kkmEsc(x.konu_adi + (x.sayfa_no ? ` (sf.${x.sayfa_no})` : ''))).join(', ')}${d.konular.length>5?'…':''}</div>` : ''}
+    ${d.testler.length ? `<div style="font-size:12px;color:var(--ink);margin-bottom:10px;"><b>${d.testler.length}</b> test okundu — ilk 5: ${d.testler.slice(0,5).map(x => kkmEsc('Test ' + (x.test_no ?? '—'))).join(', ')}${d.testler.length>5?'…':''}</div>` : ''}
+    <button onclick="kimpKaydet()" id="kimp-kaydet-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
+      <span class="material-symbols-outlined" style="font-size:18px;">save</span> ${d.kaynakId ? 'Kaynağa Ekle' : 'Kaynağı Oluştur'}
+    </button>`;
+}
+
+async function kimpKaydet() {
+  const d = state._kimp;
+  if (!d.konular.length && !d.testler.length) { showToast('⚠️ Önce dosya yükleyin'); return; }
+  const btn = document.getElementById('kimp-kaydet-btn');
+  const durum = document.getElementById('kimp-durum');
+  if (btn) btn.disabled = true;
+  if (durum) durum.textContent = 'Kaydediliyor…';
+  let kaynakId = d.kaynakId;
+  try {
+    if (!kaynakId) {
+      const ad = document.getElementById('kimp-ad').value.trim();
+      if (!ad) throw new Error('Kaynak adı zorunlu');
+      kaynakId = 'KYN-' + Date.now();
+      const { error } = await sb.from('kaynaklar').insert({
+        kaynak_adi: ad, kaynak_id: kaynakId,
+        yayin_evi: document.getElementById('kimp-yayinevi').value.trim(),
+        sinif: document.getElementById('kimp-sinif').value,
+        zorluk_derecesi: 'Orta', konu_sayisi: d.konular.length,
+        tur: 'Soru Bankası', ders: state.brans || 'İlköğretim Matematik'
+      });
+      if (error) throw new Error(error.message);
+    } else if (d.konular.length) {
+      await sb.from('kaynaklar').update({ konu_sayisi: d.konular.length }).eq('kaynak_id', kaynakId);
+    }
+
+    if (d.konular.length) {
+      const kzList = await kazanimKonulariGetir();
+      const { error } = await sb.from('kaynak_konulari').insert(
+        d.konular.map((o, i) => ({
+          kaynak_id: kaynakId, konu_adi: o.konu_adi, sayfa_no: o.sayfa_no, sira: i,
+          kazanim_konu_adi: kazanimKonuOner(o.konu_adi, kzList) || null
+        }))
+      );
+      if (error) throw new Error('Konular: ' + error.message);
+    }
+    if (d.testler.length) {
+      const { error } = await sb.from('kaynak_cevap_anahtari').insert(
+        d.testler.map(o => ({ kaynak_id: kaynakId, test_no: o.test_no, sayfa_no: o.sayfa_no, cevaplar: o.cevaplar }))
+      );
+      if (error) throw new Error('Cevap anahtarı: ' + error.message);
+    }
+
+    showToast(d.kaynakId ? '✅ Kaynak zenginleştirildi!' : '✅ Kaynak oluşturuldu!');
+    if (d.kaynakId) { try { await kapsamOlustur(kaynakId, { sessiz: true }); } catch (e) {} }
+    const { data } = await sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi');
+    state.kaynaklar = data || [];
+    await kaynakKonuluIdleriYukle();
+    renderKaynaklar();
+    kimpKapat();
+  } catch (err) {
+    if (durum) durum.textContent = '❌ ' + err.message;
+    if (btn) btn.disabled = false;
+  }
 }
 
 async function kaynakTurGuncelle(kaynakId, tur) {
@@ -4575,11 +5009,17 @@ async function kkmAnalizEt() {
     k.sonuc.kaynak_adi = data.kaynak_adi || k.sonuc.kaynak_adi;
     k.sonuc.yayin_evi  = data.yayin_evi || k.sonuc.yayin_evi;
     if (data.sinif) k.sonuc.sinif = data.sinif;
-    k.sonuc.konu_listesi = (data.konu_listesi || []).map(x => ({ _cid: kkmCid(), konu_adi: x.konu_adi || '', sayfa_no: x.sayfa_no ?? null }));
+    k.sonuc.konu_listesi = (data.konu_listesi || []).map(x => ({ _cid: kkmCid(), konu_adi: x.konu_adi || '', sayfa_no: x.sayfa_no ?? null, kazanim_konu_adi: '' }));
     k.sonuc.cevap_anahtari = (data.cevap_anahtari || []).map(x => ({ _cid: kkmCid(), test_no: x.test_no ?? null, sayfa_no: x.sayfa_no ?? null, cevaplar: (x.cevaplar || []).join(', ') }));
     // Edge function fotoğraf başına işliyor; okunamayan foto ("hatalar") ve eksik satır
     // şüphesi olan foto ("uyarilar") mesajları önizleme ekranında gösterilir.
     k.sonuc._uyarilar = [...(data.hatalar || []), ...(data.uyarilar || [])];
+
+    // Bölüm 10 — ham konu adları için kazanım haritasından öneri
+    try {
+      const kzList = await kazanimKonulariGetir();
+      k.sonuc.konu_listesi.forEach(o => { o.kazanim_konu_adi = kazanimKonuOner(o.konu_adi, kzList); });
+    } catch (e) { console.warn('kazanım önerisi:', e); }
 
     clearInterval(sayacId);
     kkmRenderOnizleme();
@@ -4594,10 +5034,16 @@ function kkmKonuTabloHTML() {
   const s = state._kkm.sonuc;
   if (!s.konu_listesi.length) return `<div style="padding:12px 0;text-align:center;font-size:13px;color:var(--ink-soft);">Henüz konu eklenmedi</div>`;
   return s.konu_listesi.map(o => `
-    <div style="display:flex;gap:6px;align-items:center;padding:5px 0;">
-      <input type="text" value="${kkmEsc(o.konu_adi)}" onchange="kkmKonuAlanGuncelle('${o._cid}','konu_adi',this.value)" placeholder="Konu adı" style="flex:1;padding:7px 10px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;"/>
-      <input type="number" value="${o.sayfa_no ?? ''}" onchange="kkmKonuAlanGuncelle('${o._cid}','sayfa_no',this.value)" placeholder="sf." style="width:56px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
-      <button onclick="kkmKonuSil('${o._cid}')" class="text-error" style="background:none;border:none;cursor:pointer;font-size:16px;font-weight:700;">×</button>
+    <div style="padding:5px 0;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" value="${kkmEsc(o.konu_adi)}" onchange="kkmKonuAlanGuncelle('${o._cid}','konu_adi',this.value)" placeholder="Konu adı" style="flex:1;padding:7px 10px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;"/>
+        <input type="number" value="${o.sayfa_no ?? ''}" onchange="kkmKonuAlanGuncelle('${o._cid}','sayfa_no',this.value)" placeholder="sf." style="width:56px;padding:7px 6px;border-radius:9px;background:var(--surface-container-low);border:none;font-size:13px;text-align:center;"/>
+        <button onclick="kkmKonuSil('${o._cid}')" class="text-error" style="background:none;border:none;cursor:pointer;font-size:16px;font-weight:700;">×</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:3px;padding-left:2px;">
+        <span class="material-symbols-outlined" style="font-size:13px;color:var(--ink-soft);">link</span>
+        <input type="text" list="kkm-kazanim-list" value="${kkmEsc(o.kazanim_konu_adi || '')}" onchange="kkmKonuAlanGuncelle('${o._cid}','kazanim_konu_adi',this.value)" placeholder="kazanım konusu (öneri — değiştirilebilir)" style="flex:1;padding:5px 8px;border-radius:8px;background:var(--surface-container-low);border:none;font-size:11.5px;color:var(--ink-soft);"/>
+      </div>
     </div>`).join('');
 }
 
@@ -4672,7 +5118,10 @@ function kkmRenderOnizleme() {
       </ul>
     </div>` : '';
 
+  const kzOpts = (state._kazanimKonuAdlari || []).map(x => `<option value="${kkmEsc(x)}">`).join('');
+
   govde.innerHTML = `
+    <datalist id="kkm-kazanim-list">${kzOpts}</datalist>
     <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Bilgileri kontrol edip düzenleyin, ardından kaydedin.</div>
     ${uyariBandi}
     ${kaynakBilgiAlani}
@@ -4734,7 +5183,10 @@ async function kkmKaydet() {
     }
 
     const { error: kkErr } = await sb.from('kaynak_konulari').insert(
-      s.konu_listesi.map((o, i) => ({ kaynak_id: kaynakId, konu_adi: o.konu_adi, sayfa_no: o.sayfa_no, sira: i }))
+      s.konu_listesi.map((o, i) => ({
+        kaynak_id: kaynakId, konu_adi: o.konu_adi, sayfa_no: o.sayfa_no, sira: i,
+        kazanim_konu_adi: (o.kazanim_konu_adi || '').trim() || null
+      }))
     );
     if (kkErr) throw new Error('Konular kaydedilemedi: ' + kkErr.message);
 
@@ -4905,6 +5357,43 @@ function parseKapsamSelfTest() {
   return { gecti: senaryo.length - hatalar.length, toplam: senaryo.length, hatalar };
 }
 
+// Bir kaynağın konu/test kapsam eşleştirmesi için hazır veri: sayfa_no'ya göre
+// sıralı konu listesi (her konuya "_son" bitiş sayfası atanmış) + test_no kümesi.
+async function _kaynakKapsamKaynagi(kaynakId) {
+  const [{ data: konular }, { data: testler }] = await Promise.all([
+    sb.from('kaynak_konulari').select('id, konu_adi, sayfa_no').eq('kaynak_id', kaynakId),
+    sb.from('kaynak_cevap_anahtari').select('test_no').eq('kaynak_id', kaynakId)
+  ]);
+  const konuList = (konular || []).filter(k => k.sayfa_no != null && !KAYNAK_KONU_DISI.test(k.konu_adi || ''))
+    .sort((a, b) => a.sayfa_no - b.sayfa_no);
+  konuList.forEach((k, i) => { k._son = (i + 1 < konuList.length) ? konuList[i + 1].sayfa_no - 1 : Infinity; });
+  return { konuList, testSet: new Set((testler || []).map(t => t.test_no).filter(v => v != null)) };
+}
+
+// odev_detay serbest metni + kaynak verisi → eşleşen konu/testler. Eşleşme yoksa null.
+function _odevKapsamEslesme(odevDetay, konuList, testSet) {
+  const kap = parseKapsam(odevDetay);
+  if (!kap) return null;
+  if (kap.tip === 'sayfa_araligi' && konuList.length) {
+    const idSet = new Set();
+    kap.araliklar.forEach(a => konuList.forEach(k => {
+      if (k.sayfa_no <= a.bitis && k._son >= a.baslangic) idSet.add(k.id);
+    }));
+    if (!idSet.size) return null;
+    const ids = [...idSet];
+    return {
+      konuIds: ids, testNos: [],
+      etiketler: ids.map(id => (konuList.find(k => k.id === id) || {}).konu_adi).filter(Boolean)
+    };
+  }
+  if (kap.tip === 'test' && testSet.size) {
+    const tns = kap.degerler.filter(tn => testSet.has(tn));
+    if (!tns.length) return null;
+    return { konuIds: [], testNos: tns, etiketler: tns.map(t => 'Test ' + t) };
+  }
+  return null;
+}
+
 // Adım B — kaynak_id'si dolu ödevlerin odev_detay'ını parse edip odev_kaynak_kapsam'a yazar.
 // Idempotent: bu kaynağın ödevleri için önce mevcut kapsam satırları silinir.
 // odevler.kaynak_konu_id / test_no ZATEN dolu olan (checkbox modu) ödevler atlanır —
@@ -4916,16 +5405,7 @@ async function kapsamOlustur(kaynakId, opts = {}) {
     .eq('kaynak_id', kaynakId).eq('ogretmen_id', state.ogretmen_id);
   if (!odevler || !odevler.length) return bos;
 
-  const [{ data: konular }, { data: testler }] = await Promise.all([
-    sb.from('kaynak_konulari').select('id, konu_adi, sayfa_no').eq('kaynak_id', kaynakId),
-    sb.from('kaynak_cevap_anahtari').select('test_no').eq('kaynak_id', kaynakId)
-  ]);
-  // Sayfa aralığından konu bulma: her konuya bitiş sayfası ata (sonraki konunun sayfa_no - 1)
-  const konuList = (konular || []).filter(k => k.sayfa_no != null && !KAYNAK_KONU_DISI.test(k.konu_adi || ''))
-    .sort((a, b) => a.sayfa_no - b.sayfa_no);
-  konuList.forEach((k, i) => { k._son = (i + 1 < konuList.length) ? konuList[i + 1].sayfa_no - 1 : Infinity; });
-  const testSet = new Set((testler || []).map(t => t.test_no).filter(v => v != null));
-
+  const { konuList, testSet } = await _kaynakKapsamKaynagi(kaynakId);
   await sb.from('odev_kaynak_kapsam').delete().in('odev_id', odevler.map(o => o.odev_id));
 
   const yeniSatirlar = [], anlasilamayan = [];
@@ -4933,21 +5413,11 @@ async function kapsamOlustur(kaynakId, opts = {}) {
 
   odevler.forEach(o => {
     if (o.kaynak_konu_id || o.test_no != null) { eslesenOdev++; return; }  // checkbox modu — atla
-    const kap = parseKapsam(o.odev_detay);
-    let eklendi = 0;
-    if (kap && kap.tip === 'sayfa_araligi' && konuList.length) {
-      const idSet = new Set();
-      kap.araliklar.forEach(a => konuList.forEach(k => {
-        if (k.sayfa_no <= a.bitis && k._son >= a.baslangic) idSet.add(k.id);
-      }));
-      idSet.forEach(id => { yeniSatirlar.push({ odev_id: o.odev_id, kaynak_konu_id: id, test_no: null }); eklendi++; });
-    } else if (kap && kap.tip === 'test' && testSet.size) {
-      kap.degerler.forEach(tn => {
-        if (testSet.has(tn)) { yeniSatirlar.push({ odev_id: o.odev_id, kaynak_konu_id: null, test_no: tn }); eklendi++; }
-      });
-    }
-    if (eklendi) eslesenOdev++;
-    else anlasilamayan.push({ odev_id: o.odev_id, odev_detay: o.odev_detay || '' });
+    const e = _odevKapsamEslesme(o.odev_detay, konuList, testSet);
+    if (!e) { anlasilamayan.push({ odev_id: o.odev_id, odev_detay: o.odev_detay || '' }); return; }
+    e.konuIds.forEach(id => yeniSatirlar.push({ odev_id: o.odev_id, kaynak_konu_id: id, test_no: null }));
+    e.testNos.forEach(tn => yeniSatirlar.push({ odev_id: o.odev_id, kaynak_konu_id: null, test_no: tn }));
+    eslesenOdev++;
   });
 
   if (yeniSatirlar.length) {
@@ -4958,6 +5428,70 @@ async function kapsamOlustur(kaynakId, opts = {}) {
     }
   }
   return { odev: odevler.length, eslesenOdev, kapsamSatiri: yeniSatirlar.length, anlasilamayan };
+}
+
+// Bölüm 2.9 — "Ödev Gir" akışında legacy-mod (kaynak_id var ama kaynak_konu_id/test_no
+// YOK) yeni kaydedilen ödevlerin odev_detay'ından kapsam çıkarıp öğretmene ONAYLATIR.
+// Checkbox-modu ödevlerine dokunmaz. Bölüm 5 Adım B ile aynı eşleşme mantığı, tek ödevde.
+async function kapsamOnayHazirla(eklenenOdevler) {
+  const panel = document.getElementById('kapsam-onay');
+  if (!panel) return;
+  const legacy = (eklenenOdevler || []).filter(o => o.kaynak_id && !o.kaynak_konu_id && o.test_no == null);
+  const kapat = () => { panel.style.display = 'none'; panel.innerHTML = ''; state._kapsamOnerileri = null; };
+  if (!legacy.length) { kapat(); return; }
+
+  const kaynakVeri = {};
+  for (const kid of [...new Set(legacy.map(o => o.kaynak_id))]) {
+    kaynakVeri[kid] = await _kaynakKapsamKaynagi(kid);
+  }
+
+  const oneriler = [];
+  legacy.forEach(o => {
+    const kv = kaynakVeri[o.kaynak_id];
+    if (!kv) return;
+    const e = _odevKapsamEslesme(o.odev_detay, kv.konuList, kv.testSet);
+    if (!e) return;
+    oneriler.push({
+      etiket: o.konu || o.odev_detay || '—',
+      kapsam: e.etiketler,
+      satirlar: [
+        ...e.konuIds.map(id => ({ odev_id: o.odev_id, kaynak_konu_id: id, test_no: null })),
+        ...e.testNos.map(tn => ({ odev_id: o.odev_id, kaynak_konu_id: null, test_no: tn }))
+      ]
+    });
+  });
+
+  if (!oneriler.length) { kapat(); return; }
+  state._kapsamOnerileri = oneriler;
+  panel.style.display = 'block';
+  panel.innerHTML = `
+    <div style="background:var(--surface-container-low);border:1px solid var(--line);border-radius:12px;padding:12px 14px;">
+      <div style="font-family:Manrope;font-weight:700;font-size:12.5px;color:var(--ink);margin-bottom:6px;">
+        📎 Serbest metinden çıkarılan kapsam — onaylıyor musunuz?
+      </div>
+      <ul style="margin:0 0 10px;padding-left:18px;font-size:12px;color:var(--ink);line-height:1.6;">
+        ${oneriler.map(o => `<li>${kkmEsc(o.etiket)}: <b>${o.kapsam.map(kkmEsc).join(', ')}</b></li>`).join('')}
+      </ul>
+      <div style="display:flex;gap:8px;">
+        <button onclick="kapsamOnayKaydet()" class="btn btn-primary" style="flex:2;justify-content:center;padding:6px 12px;font-size:12px;">Kapsamı Kaydet</button>
+        <button onclick="kapsamOnayGec()" class="btn btn-ghost" style="flex:1;justify-content:center;padding:6px 12px;font-size:12px;">Şimdilik Geç</button>
+      </div>
+    </div>`;
+}
+
+async function kapsamOnayKaydet() {
+  const satirlar = (state._kapsamOnerileri || []).flatMap(o => o.satirlar);
+  if (!satirlar.length) { kapsamOnayGec(); return; }
+  const { error } = await sb.from('odev_kaynak_kapsam').insert(satirlar);
+  if (error) { showToast('❌ Kapsam yazılamadı: ' + error.message); return; }
+  showToast(`✅ ${satirlar.length} kapsam satırı kaydedildi`);
+  kapsamOnayGec();
+}
+
+function kapsamOnayGec() {
+  state._kapsamOnerileri = null;
+  const panel = document.getElementById('kapsam-onay');
+  if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
 }
 
 // Adım A — "Geçmiş Ödevleri Eşleştir" modalı (Kaynaklar bölümü).

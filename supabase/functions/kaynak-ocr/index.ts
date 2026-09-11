@@ -24,7 +24,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 //
 // ada-chat'teki Anthropic-uyumlu sohbet/tool-calling katmanından bağımsızdır.
 
-const GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_MODEL = "gemini-3.8-flash";
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -146,11 +146,18 @@ function geciciHataMi(status: number | null, mesaj: string): boolean {
 
 // Tek fotoğraf + tek şema için tek Gemini isteği. Geçici yoğunluk hatalarında
 // artan bekleme ile en fazla 3 kez dener. Kalıcı hatada anlamlı mesajla throw eder.
+// sonlanmaZamani: bu istek zincirinin (deneme + backoff dahil) asla aşamayacağı
+// bütçe — her denemenin timeout'u ve backoff'u kalan süreyle sınırlanır, bütçe
+// neredeyse dolmuşsa yeni deneme hiç başlatılmaz. Bunsuz, 3 deneme × 70 sn +
+// backoff ~222 sn'ye kadar sürebilir ve fonksiyonun kendi 110 sn'lik bütçesini
+// (ve Supabase'in platform duvar-saati sınırını) aşıp 546 WORKER_RESOURCE_LIMIT
+// ile sert şekilde öldürülmesine yol açabilirdi.
 async function geminiCagir(
   apiKey: string,
   sistemPrompt: string,
   schema: unknown,
   img: Gorsel,
+  sonlanmaZamani: number,
 ): Promise<any> {
   const body = {
     contents: [{
@@ -168,11 +175,20 @@ async function geminiCagir(
   };
 
   const DENEME = 3;
+  // Kalan süre bundan azsa yeni bir deneme/bekleme başlatılmaz — anlamsızca kısa
+  // bir istek atıp zaman kaybetmek yerine kontrollü şekilde hata fırlatılır.
+  const MIN_DENEME_MS = 3000;
   let sonHata = "Gemini API hatası";
 
   for (let deneme = 1; deneme <= DENEME; deneme++) {
+    const kalanSure = sonlanmaZamani - Date.now();
+    if (kalanSure < MIN_DENEME_MS) {
+      throw new Error(`${sonHata} (süre bütçesi doldu)`);
+    }
+    const istekTimeout = Math.min(ISTEK_TIMEOUT_MS, kalanSure);
+
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), ISTEK_TIMEOUT_MS);
+    const timer = setTimeout(() => ac.abort(), istekTimeout);
     let response: Response;
     try {
       response = await fetch(GEMINI_URL, {
@@ -186,7 +202,11 @@ async function geminiCagir(
         ? "Gemini isteği zaman aşımına uğradı"
         : `Gemini isteği başarısız: ${(e as Error).message}`;
       clearTimeout(timer);
-      if (deneme < DENEME) { await uyu(deneme * 4000); continue; }
+      const kalanBekleme = sonlanmaZamani - Date.now();
+      if (deneme < DENEME && kalanBekleme >= MIN_DENEME_MS) {
+        await uyu(Math.min(deneme * 4000, kalanBekleme - MIN_DENEME_MS));
+        continue;
+      }
       throw new Error(sonHata);
     } finally {
       clearTimeout(timer);
@@ -195,8 +215,12 @@ async function geminiCagir(
     const responseData = await response.json();
     if (!response.ok) {
       sonHata = responseData?.error?.message || "Gemini API hatası";
-      if (deneme < DENEME && geciciHataMi(response.status, sonHata)) {
-        await uyu(deneme * 4000);
+      const kalanBekleme = sonlanmaZamani - Date.now();
+      if (
+        deneme < DENEME && geciciHataMi(response.status, sonHata) &&
+        kalanBekleme >= MIN_DENEME_MS
+      ) {
+        await uyu(Math.min(deneme * 4000, kalanBekleme - MIN_DENEME_MS));
         continue;
       }
       throw new Error(sonHata);
@@ -241,7 +265,7 @@ async function sayimliCagir(
     return beklenen > 0 && listeOf(r).length === beklenen;
   };
 
-  const ilk = await geminiCagir(apiKey, prompt, schema, img);
+  const ilk = await geminiCagir(apiKey, prompt, schema, img, sonlanmaZamani);
   let secili = ilk;
 
   if (!uyumlu(ilk) && Date.now() < sonlanmaZamani) {
@@ -253,6 +277,7 @@ async function sayimliCagir(
           "Bu sefer istisnasız TÜM satırları çıkar.",
         schema,
         img,
+        sonlanmaZamani,
       );
       if (listeOf(tekrar).length >= listeOf(secili).length) secili = tekrar;
     } catch {
@@ -326,7 +351,7 @@ Deno.serve(async (req) => {
     let kaynakAdi = "", yayinEvi = "", sinif = "";
     if (kapakGorselleri.length) {
       try {
-        const k = await geminiCagir(apiKey, KAPAK_PROMPT, KAPAK_SCHEMA, kapakGorselleri[0]);
+        const k = await geminiCagir(apiKey, KAPAK_PROMPT, KAPAK_SCHEMA, kapakGorselleri[0], sonlanmaZamani);
         kaynakAdi = k?.kaynak_adi || "";
         yayinEvi = k?.yayin_evi || "";
         sinif = k?.sinif || "";

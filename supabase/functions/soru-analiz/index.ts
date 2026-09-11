@@ -5,7 +5,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // kazanim_kodu SEÇTİRİR, güven skoru ve (cevabı vermeyen) bir ipucu ürettirir.
 // kaynak-ocr ile aynı desen: tek turluk, responseSchema ile kısıtlanmış JSON çıktı.
 
-const GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_MODEL = "gemini-3.8-flash";
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 

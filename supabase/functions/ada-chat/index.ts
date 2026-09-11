@@ -6,7 +6,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // çağırır. Frontend kodu (adaAPICall/adaToolLoop) bu sayede değişmeden kalır;
 // çeviri tamamen burada yapılır.
 
-const GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_MODEL = "gemini-3.8-flash";
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 

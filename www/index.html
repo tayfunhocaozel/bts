@@ -4995,13 +4995,23 @@ async function kkmAnalizEt() {
       }
     });
     if (error) {
-      let msg = error.message || 'OCR başarısız';
+      // Edge function düzgün bir JSON hata gövdesi döndürdüyse (örn. 400 doğrulama,
+      // ya da hiçbir fotoğraf işlenemediğinde 502) onu göster — en spesifik mesaj budur.
+      let msg = null;
       try {
         if (error.context && typeof error.context.json === 'function') {
           const errBody = await error.context.json();
-          msg = errBody?.error || msg;
+          msg = errBody?.error || null;
         }
       } catch(e) {}
+      // Gövde parse edilemediyse fonksiyon büyük olasılıkla platform tarafından
+      // zaman aşımı/kaynak sınırı nedeniyle sert şekilde durdurulmuştur (örn. Gemini
+      // aşırı yoğunken) — SDK'nin genel "non-2xx status code" mesajını göstermek yerine
+      // kullanıcıya somut, eyleme dönüştürülebilir bir açıklama ver.
+      if (!msg) {
+        console.warn('kaynak-ocr invoke hatası (ham):', error);
+        msg = 'Sunucu zaman aşımına uğradı — OCR servisi şu anda yoğun olabilir. Birkaç dakika sonra veya daha az fotoğrafla tekrar deneyin.';
+      }
       throw new Error(msg);
     }
     if (data?.error) throw new Error(data.error);

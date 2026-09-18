@@ -1,0 +1,9 @@
+# Supabase yerel yedekleri — öğrenci/kurum verisi içerir, asla commit edilmez
+/Supabase Yedek/
+/supabase/.temp/
+
+# Yedek script'inin okuduğu veritabanı şifresi
+.env
+
+# pg_dump/pg_dumpall için indirilen taşınabilir PostgreSQL binary'leri
+/.pgtools/

@@ -6417,6 +6417,8 @@ async function loadRapor() {
     </div>
   </div>` : ''}
 
+  ${renderKonuSiralamaKarti(allKonular, konuMap, state.rol === 'ogretmen' ? uyariSonuclari : null)}
+
   <!-- Konu Bazlı Performans Takibi -->
   <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] mt-5 border border-outline-variant/20">
     <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
@@ -7148,6 +7150,84 @@ function uyariRozetHtml(tip) {
   return `<span class="text-[9px] px-1 py-0.5 rounded-full font-bold flex-shrink-0 ${m.css}">${m.e}</span>`;
 }
 
+// ── KAZANIM BAZLI KIRILIM ─────────────────────────────────────
+function kazanimKirilimVerisi(odevListesi, konu) {
+  const map = {};
+  (odevListesi||[]).forEach(o => {
+    if ((o.konu||'').split(' — ')[0] !== konu) return;
+    const kaz = (o.kazanim||'').trim();
+    if (!kaz) return;
+    if (!map[kaz]) map[kaz] = { kazanim: kaz, dogru:0, yanlis:0, bos:0, toplam:0 };
+    map[kaz].dogru  += Number(o.dogru)||0;
+    map[kaz].yanlis += Number(o.yanlis)||0;
+    map[kaz].bos    += Number(o.bos)||0;
+    map[kaz].toplam += Number(o.toplam)||0;
+  });
+  return Object.values(map)
+    .map(r => ({ ...r, pct: r.toplam>0 ? Math.round(r.dogru/r.toplam*100) : 0 }))
+    .sort((a,b) => b.pct - a.pct);
+}
+
+function kazanimKirilimHTML(rows) {
+  if (!rows || !rows.length) return '';
+  return `
+    <div class="mt-3 rounded-xl border border-outline-variant/20 overflow-hidden">
+      <div class="px-3 py-2 bg-surface-container text-[11px] font-bold text-outline uppercase tracking-wider">
+        Kazanım Bazlı Kırılım
+      </div>
+      <table class="w-full text-xs border-collapse">
+        <tbody>
+          ${rows.map(r => {
+            const col = r.pct>=80?'#00661d':r.pct>=60?'#005d8d':'#ba1a1a';
+            return `<tr class="border-t border-outline-variant/10">
+              <td class="px-3 py-2 text-on-surface">${r.kazanim}</td>
+              <td class="px-2 py-2 text-center text-outline whitespace-nowrap">✅${r.dogru} ❌${r.yanlis} ⬜${r.bos}</td>
+              <td class="px-2 py-2 text-center text-outline whitespace-nowrap">${r.toplam} soru</td>
+              <td class="px-3 py-2 text-right font-bold whitespace-nowrap" style="color:${col}">%${r.pct}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ── KONU SIRALAMA KARTI ────────────────────────────────────────
+function renderKonuSiralamaKarti(allKonular, konuMap, uyariSonuclari) {
+  const rows = (allKonular||[])
+    .filter(k => konuMap[k] && konuMap[k].toplam > 0)
+    .map(k => ({ konu: k, ...konuMap[k], pct: Math.round(konuMap[k].dogru/konuMap[k].toplam*100) }))
+    .sort((a,b) => b.pct - a.pct);
+
+  const govde = !rows.length
+    ? '<div class="text-sm text-outline text-center py-6">Henüz veri yok</div>'
+    : rows.map((r,i) => {
+        const col = r.pct>=80?'#00661d':r.pct>=60?'#005d8d':'#ba1a1a';
+        const analiz = uyariSonuclari ? uyariSonuclari[r.konu] : null;
+        return `<div>
+          <div class="flex items-center gap-2 text-xs font-semibold mb-1">
+            <span class="w-4 text-outline text-[10px] flex-shrink-0">${i+1}</span>
+            ${uyariSonuclari ? uyariRozetHtml(analiz?.tip) : ''}
+            <span class="flex-1 text-on-surface truncate">${r.konu}</span>
+            <span class="text-outline font-normal text-[11px]">${r.toplam} soru</span>
+            <span class="w-10 text-right" style="color:${col}">%${r.pct}</span>
+          </div>
+          <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:${r.pct}%;background:${col}"></div>
+          </div>
+        </div>`;
+      }).join('<div class="h-2.5"></div>');
+
+  return `
+    <div class="bg-surface-container-lowest rounded-2xl shadow-[0_4px_16px_rgba(0,29,49,0.06)] overflow-hidden border border-outline-variant/20 mb-5">
+      <div class="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-xl">leaderboard</span>
+        <h2 class="font-headline font-bold text-base text-on-surface">Konu Sıralaması</h2>
+        <span class="ml-auto text-xs text-outline">Başarıya göre</span>
+      </div>
+      <div class="p-5">${govde}</div>
+    </div>`;
+}
+
 function acKonuGrafigi(konu) {
   const data = window._raporData;
   if (!data) return;
@@ -7237,7 +7317,8 @@ function acKonuGrafigi(konu) {
     ${uyariHtml}
     <div style="position:relative;height:190px;">
       <canvas id="konu-zaman-canvas"></canvas>
-    </div>`;
+    </div>
+    ${kazanimKirilimHTML(kazanimKirilimVerisi((data.tumOdevler||[]).filter(o => o.durum === 'TAMAMLANDI' && !o.kaynak_konu_id), konu))}`;
 
   // Chart oluştur
   if (data._chart) { data._chart.destroy(); data._chart = null; }
@@ -7335,7 +7416,8 @@ function _renderSimpleKonuChart(gecmis, konu, panelId, store, pfx) {
           class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-secondary-container/70 text-secondary">🟡 Boş</button>
       </div>
     </div>
-    <div style="position:relative;height:170px;"><canvas id="${pfx}-canvas"></canvas></div>`;
+    <div style="position:relative;height:170px;"><canvas id="${pfx}-canvas"></canvas></div>
+    ${kazanimKirilimHTML(kazanimKirilimVerisi(store.tamamlanan, konu))}`;
 
   if (store._chart) { store._chart.destroy(); store._chart = null; }
   const ctx = document.getElementById(pfx+'-canvas')?.getContext('2d');
@@ -8819,6 +8901,7 @@ async function loadOgrBasari() {
         <div class="text-xs text-outline mt-1">Genel Başarı</div>
       </div>
     </div>
+    ${renderKonuSiralamaKarti(allKonular, konuMap, null)}
     <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
       <h2 class="font-headline font-bold text-base text-on-surface mb-4">📚 ${state.user.sinif} Konu Haritası</h2>`;
 
@@ -8878,7 +8961,7 @@ async function loadOgrBasari() {
   el.innerHTML = html;
 
   // Öğrenci konu verisini kaydet
-  window._ogrKonuData = { konuOdevler: ogrKonuOdevler, _chart: null };
+  window._ogrKonuData = { konuOdevler: ogrKonuOdevler, tamamlanan: odevler, _chart: null };
 }
 
 // ── VELİ PANELİ ──────────────────────────────────────────────
@@ -9153,7 +9236,8 @@ async function loadVeliPanel() {
   // ── BAŞARI TAB ───────────────────────────────────────────────
   document.getElementById('veli-tab-basari').innerHTML = !allKonular.length
     ? '<div class="text-sm text-outline text-center py-8">Henüz veri yok</div>'
-    : `<div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
+    : `${renderKonuSiralamaKarti(allKonular, konuMap, null)}
+      <div class="bg-surface-container-lowest rounded-xl p-5 shadow-[0_4px_16px_rgba(0,29,49,0.05)]">
         <h2 class="font-headline font-bold text-base text-on-surface mb-4">Konu Bazlı Başarı Haritası</h2>
         ${allKonular.map((konu,idx)=>{
           const r=konuMap[konu];
@@ -9205,7 +9289,7 @@ async function loadVeliPanel() {
         </div>
       </div>`;
 
-  window._veliKonuData = { konuOdevler: veliKonuOdevler, _chart: null, _idPrefix: null };
+  window._veliKonuData = { konuOdevler: veliKonuOdevler, tamamlanan, _chart: null, _idPrefix: null };
 
   // Denemeler sekmesi
   const veliDenemeler = denemelerData || [];

@@ -489,6 +489,16 @@ tailwind.config = {
         </div>
       </div>
 
+      <!-- Bugünün Dersleri -->
+      <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;" id="bugunku-dersler-kart">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--primary);">calendar_today</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);" id="bugunku-dersler-baslik">Bugünün Dersleri</h2>
+        </div>
+        <div id="bugunku-dersler-rozetler"></div>
+        <div id="bugunku-dersler-liste"><div class="flex justify-center py-6"><div class="spinner"></div></div></div>
+      </div>
+
       <!-- Sınıf Dağılımı -->
       <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
@@ -2231,6 +2241,7 @@ async function acBorcluDersModal() {
 async function loadDashboard() {
   document.getElementById('dash-welcome').textContent = state.user.ad || 'Öğretmen';
   document.getElementById('stat-ogrenci').textContent = state.ogrenciler.length;
+  loadBugunkuDersler();
 
   // Sınıf dağılımı
   const sinifMap = {};
@@ -2284,6 +2295,102 @@ async function loadDashboard() {
       </div>`).join('') +
       (gecikenler.length > 5 ? `<div class="text-xs text-outline pt-2">+${gecikenler.length-5} daha...</div>` : '');
   }
+}
+
+// ── BUGÜNÜN DERSLERİ ──────────────────────────────────────────
+async function loadBugunkuDersler() {
+  const bugun = new Date();
+  const bugunTarih = yerelISO(bugun);
+  const gunler = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+  const bugunGun = gunler[bugun.getDay()];
+
+  const [{ data: program }, { data: dersKayitlari }] = await Promise.all([
+    sb.from('ders_programi').select('*').eq('ogretmen_id', state.ogretmen_id),
+    sb.from('dersler').select('ogrenci_id').eq('ogretmen_id', state.ogretmen_id).eq('tarih', bugunTarih)
+  ]);
+
+  const ogrMap = {};
+  state.ogrenciler.forEach(o => ogrMap[o.ogrenci_id] = o);
+
+  const seanslar = (program || [])
+    .filter(p => {
+      if (!ogrMap[p.ogrenci_id]) return false;
+      if (!p.tip || p.tip === 'kalici') return p.gun === bugunGun;
+      if (p.tip === 'ek') return p.tarih === bugunTarih;
+      return false;
+    })
+    .sort((a, b) => a.baslangic.localeCompare(b.baslangic));
+
+  const kayitliOgrenciler = new Set((dersKayitlari || []).map(d => d.ogrenci_id));
+  const simdi = bugun.toTimeString().slice(0, 5);
+
+  const sonuc = seanslar.map(s => {
+    let durum;
+    if (kayitliOgrenciler.has(s.ogrenci_id)) durum = 'yapildi';
+    else if (simdi > s.bitis) durum = 'yapilmadi';
+    else durum = 'yapilacak';
+    return { ...s, ogrenci: ogrMap[s.ogrenci_id], durum };
+  });
+
+  renderBugunkuDerslerKarti(sonuc, bugunGun);
+}
+
+function renderBugunkuDerslerKarti(seanslar, bugunGun) {
+  const baslikEl = document.getElementById('bugunku-dersler-baslik');
+  const rozetEl  = document.getElementById('bugunku-dersler-rozetler');
+  const listeEl  = document.getElementById('bugunku-dersler-liste');
+  if (!baslikEl || !rozetEl || !listeEl) return;
+
+  baslikEl.textContent = `Bugünün Dersleri — ${bugunGun} (${seanslar.length} ders)`;
+
+  if (!seanslar.length) {
+    rozetEl.innerHTML = '';
+    listeEl.innerHTML = '<div class="text-tertiary text-sm font-semibold py-2">🎉 Bugün planlı özel dersiniz yok</div>';
+    return;
+  }
+
+  const sayac = { yapildi: 0, yapilacak: 0, yapilmadi: 0 };
+  seanslar.forEach(s => sayac[s.durum]++);
+
+  rozetEl.innerHTML = `
+    <div class="flex gap-2 mb-3 flex-wrap">
+      <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-tertiary/10">
+        <span class="material-symbols-outlined text-tertiary" style="font-size:16px;">check_circle</span>
+        <span class="text-xs font-bold text-tertiary">${sayac.yapildi} Yapıldı</span>
+      </div>
+      <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/10">
+        <span class="material-symbols-outlined text-secondary" style="font-size:16px;">pending</span>
+        <span class="text-xs font-bold text-secondary">${sayac.yapilacak} Yapılacak</span>
+      </div>
+      <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-error/10">
+        <span class="material-symbols-outlined text-error" style="font-size:16px;">cancel</span>
+        <span class="text-xs font-bold text-error">${sayac.yapilmadi} Yapılmadı</span>
+      </div>
+    </div>`;
+
+  const ikon  = { yapildi: 'check_circle', yapilacak: 'pending', yapilmadi: 'cancel' };
+  const renk  = { yapildi: 'text-tertiary', yapilacak: 'text-secondary', yapilmadi: 'text-error' };
+
+  listeEl.innerHTML = seanslar.map(s => `
+    <div onclick="${s.durum === 'yapildi' ? `goRaporFor('${s.ogrenci_id}')` : `gotoDersKaydetIcinOgrenci('${s.ogrenci_id}')`}"
+      class="flex items-center justify-between py-3 px-2 -mx-2 rounded-lg border-b border-outline-variant/20 last:border-0 cursor-pointer hover:bg-surface-container transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="text-xs font-bold text-outline w-24 flex-shrink-0">${s.baslangic?.substring(0,5)}–${s.bitis?.substring(0,5)}</div>
+        <div>
+          <div class="text-sm font-semibold text-on-surface">${s.ogrenci?.ad_soyad || '—'}</div>
+          <div class="text-xs text-outline mt-0.5">${s.ogrenci?.sinif || '—'}</div>
+        </div>
+      </div>
+      <span class="material-symbols-outlined ${renk[s.durum]}">${ikon[s.durum]}</span>
+    </div>`).join('');
+}
+
+function gotoDersKaydetIcinOgrenci(ogrenciId) {
+  goPage('ders');
+  const dt = document.getElementById('ders-tarih');
+  if (dt) dt.value = yerelISO(new Date());
+  document.getElementById('ders-ogrenci').value = ogrenciId;
+  dersOgrenciSecildi();
 }
 
 // ── DERS KAYDET ───────────────────────────────────────────────

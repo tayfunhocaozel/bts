@@ -6047,6 +6047,9 @@ async function denemeKarneEksikKazanimlariKaydet(denemeId, ogrenciId, denemeAdi)
     return;
   }
 
+  const basarisizlar = [];
+  let basariliSayi = 0;
+
   for (const k of secilenler) {
     if (k.kazanim_kodu) {
       const { data: mevcutListe } = await sb.from('yanlis_defteri').select('soru_id, tekrar_sayisi')
@@ -6054,21 +6057,32 @@ async function denemeKarneEksikKazanimlariKaydet(denemeId, ogrenciId, denemeAdi)
         .order('olusturma_tarihi', { ascending: false }).limit(1);
       const mevcut = mevcutListe && mevcutListe[0];
       if (mevcut) {
-        await sb.from('yanlis_defteri').update({
+        const { error: updErr } = await sb.from('yanlis_defteri').update({
           tekrar_sayisi: (mevcut.tekrar_sayisi || 0) + 1,
           son_tekrar_tarihi: yerelISO(new Date())
         }).eq('soru_id', mevcut.soru_id);
+        if (updErr) basarisizlar.push({ k, mesaj: updErr.message });
+        else basariliSayi++;
         continue;
       }
     }
-    await sb.from('yanlis_defteri').insert({
+    const { error: insErr } = await sb.from('yanlis_defteri').insert({
       soru_id: crypto.randomUUID(), ogrenci_id: ogrenciId, fotograf_url: fotoUrl,
       ders: state.brans || null, konu: k.konu || null, kazanim_kodu: k.kazanim_kodu || null,
       durum: 'ogretmen_onayladi',
       soru_metni: `Deneme karnesi: ${denemeAdi} — ${k.kazanim_metni_karne}`
     });
+    if (insErr) basarisizlar.push({ k, mesaj: insErr.message });
+    else basariliSayi++;
   }
-  showToast('📋 Kazanımlar Yanlış Defteri\'ne işlendi');
+
+  if (!basarisizlar.length) {
+    showToast(`📋 ${basariliSayi} kazanım Yanlış Defteri'ne işlendi`);
+  } else if (basariliSayi) {
+    showToast(`⚠️ ${basariliSayi} kazanım işlendi, ${basarisizlar.length} kazanım kaydedilemedi: ${basarisizlar[0].mesaj}`);
+  } else {
+    showToast(`❌ ${basarisizlar.length} kazanım kaydedilemedi: ${basarisizlar[0].mesaj}`);
+  }
 }
 
 function denemeNetHesapla() {

@@ -818,12 +818,21 @@ tailwind.config = {
       <!-- Öğrenci seç + form -->
       <div class="card-2xl" style="padding:22px 24px;margin-bottom:16px;">
         <label class="lbl">Öğrenci</label>
-        <select id="deneme-ogrenci" onchange="loadDenemeler()" class="field" style="margin-bottom:18px;">
+        <select id="deneme-ogrenci" onchange="denemeOgrenciDegisti()" class="field" style="margin-bottom:18px;">
           <option value="">— Öğrenci seçin —</option>
         </select>
 
         <div style="border-top:1px solid var(--line);padding-top:18px;">
           <div style="font-size:11px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">Yeni Deneme Ekle</div>
+
+          <button type="button" onclick="document.getElementById('deneme-karne-input').click()"
+            class="btn btn-ghost" style="width:100%;justify-content:center;margin-bottom:12px;">
+            <span class="material-symbols-outlined" style="font-size:18px;">description</span> Karne ile Doldur (Foto/PDF)
+          </button>
+          <input type="file" id="deneme-karne-input" accept="image/*,application/pdf" capture="environment"
+            style="display:none;" onchange="denemeKarneSecildi(this)">
+          <div id="deneme-karne-durum"></div>
+
           <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
             <div>
               <label class="lbl">Tarih</label>
@@ -869,6 +878,7 @@ tailwind.config = {
               <div style="font-family:Manrope;font-weight:800;" id="deneme-basari-onizleme">—</div>
             </div>
           </div>
+          <div id="deneme-karne-eksik-kazanimlar"></div>
           <button onclick="denemeEkle()" class="btn btn-orange" style="width:100%;justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:18px;">add</span> Deneme Ekle
           </button>
@@ -4984,6 +4994,17 @@ function kkmResimSikistir(file) {
   });
 }
 
+// PDF'ler kkmResimSikistir()'daki Image()/canvas boru hattından geçemez (PDF
+// çözemez) — ham base64'e çevirir, sıkıştırma/yeniden kodlama yapmaz.
+function kkmDosyaBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function kkmFotoSecildi(inputEl) {
   const file = inputEl.files && inputEl.files[0];
   if (!file) return;
@@ -5892,6 +5913,178 @@ function renderTrendChart(liste, canvasId) {
   });
 }
 
+function denemeOgrenciDegisti() {
+  state._denemeKarne = null;
+  const el = document.getElementById('deneme-karne-eksik-kazanimlar');
+  if (el) el.innerHTML = '';
+  loadDenemeler();
+}
+
+// Öğretmenin branşı + seçili öğrencinin sınıfına göre kapalı kazanım listesi
+// (soruBankasiKazanimlariGetir ile aynı desen, sinif+brans bazlı önbellekli).
+async function denemeKarneKazanimlariGetir(sinif) {
+  const sinifNo = (sinif || '').replace(/\D/g, '');
+  const anahtar = (state.brans || '') + '|' + sinifNo;
+  if (!state._denemeKazanimCache) state._denemeKazanimCache = {};
+  if (state._denemeKazanimCache[anahtar]) return state._denemeKazanimCache[anahtar];
+  let q = sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi')
+    .eq('ders', state.brans || 'İlköğretim Matematik');
+  if (sinifNo) q = q.ilike('sinif', `%${sinifNo}%`);
+  const { data } = await q;
+  const liste = (data || []).filter(k => k.kazanim_kodu);
+  state._denemeKazanimCache[anahtar] = liste;
+  return liste;
+}
+
+function denemeKarneEksikKazanimlarRenderla() {
+  const el = document.getElementById('deneme-karne-eksik-kazanimlar');
+  if (!el) return;
+  const liste = (state._denemeKarne && state._denemeKarne.eksikKazanimlar) || [];
+  if (!liste.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;">📋 Bu kazanımlarda zayıflık tespit edildi — Yanlış Defteri'ne eklensin mi?</div>
+      ${liste.map((k, i) => `
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+          <input type="checkbox" data-kkidx="${i}" checked style="margin-top:3px;flex-shrink:0;">
+          <span>${kkmEsc(k.kazanim_metni_karne)}${k.yanlis_sayisi ? ` <span style="color:var(--ink-soft);">(${k.yanlis_sayisi} yanlış)</span>` : ''}${!k.kazanim_kodu ? ' <span style="color:#ba1a1a;">· kazanım listesiyle eşleşmedi</span>' : ''}</span>
+        </label>`).join('')}
+    </div>`;
+}
+
+async function denemeKarneSecildi(inputEl) {
+  const file = inputEl.files && inputEl.files[0];
+  inputEl.value = '';
+  if (!file) return;
+
+  const ogrSel = document.getElementById('deneme-ogrenci');
+  const ogrenciId = ogrSel.value;
+  if (!ogrenciId) { showToast('⚠️ Önce öğrenci seçin'); return; }
+  const sinif = (ogrSel.selectedOptions[0] && ogrSel.selectedOptions[0].dataset.sinif) || '';
+
+  const durumEl = document.getElementById('deneme-karne-durum');
+  const setDurum = t => { if (durumEl) durumEl.innerHTML = t ? `<div class="text-xs text-outline py-2">${t}</div>` : ''; };
+  document.getElementById('deneme-karne-eksik-kazanimlar').innerHTML = '';
+  state._denemeKarne = null;
+
+  try {
+    setDurum('Belge hazırlanıyor…');
+    let mimeType, base64, blob;
+    if (file.type === 'application/pdf') {
+      mimeType = 'application/pdf';
+      base64 = await kkmDosyaBase64(file);
+      blob = file;
+    } else {
+      const foto = await kkmResimSikistir(file);
+      mimeType = foto.mimeType;
+      base64 = foto.base64;
+      blob = await (await fetch(foto.dataUrl)).blob();
+    }
+
+    setDurum('Yapay zekâ karneyi okuyor… (birkaç saniye)');
+    const kazanimlar = await denemeKarneKazanimlariGetir(sinif);
+    const { data, error } = await sb.functions.invoke('deneme-karne-ocr', {
+      body: { belge: { mimeType, data: base64 }, brans: state.brans || '', kazanimlar }
+    });
+    if (error) {
+      let msg = error.message || 'analiz hatası';
+      try { if (error.context?.json) { const eb = await error.context.json(); msg = eb?.error || msg; } } catch (e) {}
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+
+    if (data.deneme_adi) document.getElementById('deneme-adi').value = data.deneme_adi;
+    if (data.tarih) document.getElementById('deneme-tarih').value = data.tarih;
+    document.getElementById('deneme-dogru').value = data.dogru || 0;
+    document.getElementById('deneme-yanlis').value = data.yanlis || 0;
+    document.getElementById('deneme-bos').value = data.bos || 0;
+    denemeNetHesapla();
+
+    state._denemeKarne = {
+      blob, mimeType,
+      eksikKazanimlar: (data.eksik_kazanimlar || []).map(e => ({
+        ...e,
+        konu: (kazanimlar.find(k => k.kazanim_kodu === e.kazanim_kodu) || {}).konu || ''
+      }))
+    };
+    denemeKarneEksikKazanimlarRenderla();
+
+    setDurum('');
+    (data.uyarilar || []).forEach(u => showToast('⚠️ ' + u));
+    showToast('✅ Karne okundu — kontrol edip "Deneme Ekle"ye basın');
+  } catch (e) {
+    setDurum('');
+    showToast('❌ Karne okunamadı: ' + e.message);
+  }
+}
+
+// Deneme başarıyla eklendikten SONRA çağrılır: işaretli kalan eksik kazanımları
+// yanlis_defteri'ne yazar. Karneyi bir kez storage'a yükler, tüm satırlar aynı
+// fotograf_url'i paylaşır. Aynı öğrenci+kazanim_kodu için "hâlâ çözülmemiş" (yanlis_defteri
+// hiçbir durum değeri "çözüldü" anlamına gelmediği için var olan HER satır) kayıt
+// varsa yeni satır AÇMAZ — bunun yerine tekrar_sayisi'ni artırır (mükerrer önleme).
+async function denemeKarneEksikKazanimlariKaydet(denemeId, ogrenciId, denemeAdi) {
+  const karne = state._denemeKarne;
+  if (!karne || !karne.eksikKazanimlar || !karne.eksikKazanimlar.length) return;
+
+  const container = document.getElementById('deneme-karne-eksik-kazanimlar');
+  const secilenler = karne.eksikKazanimlar.filter((_, i) => {
+    const cb = container && container.querySelector(`input[data-kkidx="${i}"]`);
+    return cb && cb.checked;
+  });
+  if (!secilenler.length) return;
+
+  let fotoUrl;
+  try {
+    const ext = karne.mimeType === 'application/pdf' ? 'pdf' : 'jpg';
+    const yol = `${ogrenciId}/karne-${denemeId}.${ext}`;
+    const { error: upErr } = await sb.storage.from('soru-fotograflari')
+      .upload(yol, karne.blob, { contentType: karne.mimeType, upsert: true });
+    if (upErr) throw new Error(upErr.message);
+    fotoUrl = sb.storage.from('soru-fotograflari').getPublicUrl(yol).data.publicUrl;
+  } catch (e) {
+    showToast('⚠️ Karne yüklenemedi, tespit edilen kazanımlar Yanlış Defteri\'ne eklenemedi: ' + e.message);
+    return;
+  }
+
+  const basarisizlar = [];
+  let basariliSayi = 0;
+
+  for (const k of secilenler) {
+    if (k.kazanim_kodu) {
+      const { data: mevcutListe } = await sb.from('yanlis_defteri').select('soru_id, tekrar_sayisi')
+        .eq('ogrenci_id', ogrenciId).eq('kazanim_kodu', k.kazanim_kodu)
+        .order('olusturma_tarihi', { ascending: false }).limit(1);
+      const mevcut = mevcutListe && mevcutListe[0];
+      if (mevcut) {
+        const { error: updErr } = await sb.from('yanlis_defteri').update({
+          tekrar_sayisi: (mevcut.tekrar_sayisi || 0) + 1,
+          son_tekrar_tarihi: yerelISO(new Date())
+        }).eq('soru_id', mevcut.soru_id);
+        if (updErr) basarisizlar.push({ k, mesaj: updErr.message });
+        else basariliSayi++;
+        continue;
+      }
+    }
+    const { error: insErr } = await sb.from('yanlis_defteri').insert({
+      soru_id: crypto.randomUUID(), ogrenci_id: ogrenciId, fotograf_url: fotoUrl,
+      ders: state.brans || null, konu: k.konu || null, kazanim_kodu: k.kazanim_kodu || null,
+      durum: 'ogretmen_onayladi',
+      soru_metni: `Deneme karnesi: ${denemeAdi} — ${k.kazanim_metni_karne}`
+    });
+    if (insErr) basarisizlar.push({ k, mesaj: insErr.message });
+    else basariliSayi++;
+  }
+
+  if (!basarisizlar.length) {
+    showToast(`📋 ${basariliSayi} kazanım Yanlış Defteri'ne işlendi`);
+  } else if (basariliSayi) {
+    showToast(`⚠️ ${basariliSayi} kazanım işlendi, ${basarisizlar.length} kazanım kaydedilemedi: ${basarisizlar[0].mesaj}`);
+  } else {
+    showToast(`❌ ${basarisizlar.length} kazanım kaydedilemedi: ${basarisizlar[0].mesaj}`);
+  }
+}
+
 function denemeNetHesapla() {
   const d   = parseFloat(document.getElementById('deneme-dogru').value)  || 0;
   const y   = parseFloat(document.getElementById('deneme-yanlis').value) || 0;
@@ -5937,10 +6130,13 @@ async function denemeEkle() {
   });
   if (error) { showToast('❌ ' + error.message); return; }
   await puanEkleDeneme(denemeId, ogrenciId, state.ogretmen_id, net);
+  await denemeKarneEksikKazanimlariKaydet(denemeId, ogrenciId, adi);
   showToast('✅ Deneme eklendi!');
   ['deneme-adi','deneme-dogru','deneme-yanlis','deneme-bos'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('deneme-tarih').value = '';
   document.getElementById('deneme-onizleme').classList.add('hidden');
+  document.getElementById('deneme-karne-eksik-kazanimlar').innerHTML = '';
+  state._denemeKarne = null;
   loadDenemeler();
 }
 

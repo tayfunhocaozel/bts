@@ -1769,9 +1769,18 @@ function konuSiraIndex(konuAdi, brans) {
   return Infinity;
 }
 
-// Konu adı dizisini KONU_SIRA'ya göre sıralar (eşleşmeyenler sona, orijinal sırayla)
-function konuSirala(konular, brans) {
-  return [...(konular || [])].sort((a, b) => konuSiraIndex(a, brans) - konuSiraIndex(b, brans));
+// Konu adı dizisini sıralar. kazRows (kazanimlar satırları) verilirse ve satırlarda `sira`
+// (çerçeve plandaki hafta) varsa her konu, kazanımlarının en erken haftasına göre dizilir;
+// yoksa / eşitlikte KONU_SIRA'ya göre (eşleşmeyenler sona, orijinal sırayla)
+function konuSirala(konular, brans, kazRows) {
+  const minSira = {};
+  (kazRows || []).forEach(k => {
+    if (k && k.konu && k.sira != null && !(minSira[k.konu] <= k.sira)) minSira[k.konu] = k.sira;
+  });
+  const siraVar = Object.keys(minSira).length > 0;
+  return [...(konular || [])].sort((a, b) =>
+    (siraVar ? ((minSira[a] ?? Infinity) - (minSira[b] ?? Infinity)) || 0 : 0) ||
+    (konuSiraIndex(a, brans) - konuSiraIndex(b, brans)) || 0);
 }
 
 async function hashSifre(sifre) {
@@ -2047,7 +2056,7 @@ function goPage(id) {
 async function loadMasterData() {
   const [o, k, ky, kk] = await Promise.all([
     sb.from('ogrenciler').select('*').eq('kayit_durumu', 'AKTİF').eq('ogretmen_id', state.ogretmen_id).order('ad_soyad'),
-    sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').order('sinif').order('konu'),
+    sb.from('kazanimlar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('sinif').order('konu'),
     sb.from('kaynaklar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').order('kaynak_adi'),
     sb.from('kaynak_konulari').select('kaynak_id'),
   ]);
@@ -2438,7 +2447,7 @@ async function dersOgrenciSecildi() {
     state._dersKazanimlar = data;
   }
 
-  const konular = konuSirala([...new Set(state._dersKazanimlar.map(k => k.konu))], state.brans);
+  const konular = konuSirala([...new Set(state._dersKazanimlar.map(k => k.konu))], state.brans, state._dersKazanimlar);
   konuSel.innerHTML = '<option value="">— Konu seçin —</option>' +
     konular.map(k => `<option value="${k}">${k}</option>`).join('');
 
@@ -2705,7 +2714,7 @@ async function odevOgrenciSecildi() {
   state._odevKazanimlar = [];
 
   const [kazRes, kayRes] = await Promise.all([
-    sb.from('kazanimlar').select('konu')
+    sb.from('kazanimlar').select('*')
       .eq('ders', state.brans || 'İlköğretim Matematik')
       .eq('sinif', sinif)
       .order('konu'),
@@ -2716,14 +2725,14 @@ async function odevOgrenciSecildi() {
   if (!konularRaw.length && sinif) {
     const sinifNo = sinif.match(/\d+/)?.[0] || '';
     if (sinifNo) {
-      const { data: kazData2 } = await sb.from('kazanimlar').select('konu')
+      const { data: kazData2 } = await sb.from('kazanimlar').select('*')
         .eq('ders', state.brans || 'İlköğretim Matematik')
         .ilike('sinif', `%${sinifNo}%`)
         .order('konu');
       konularRaw = kazData2 || [];
     }
   }
-  state._odevKonular = konuSirala([...new Set(konularRaw.map(k => k.konu).filter(Boolean))], state.brans);
+  state._odevKonular = konuSirala([...new Set(konularRaw.map(k => k.konu).filter(Boolean))], state.brans, konularRaw);
   state._odevKaynaklar = kayRes.data || [];
   state._odevSinif = sinif;
 
@@ -6234,7 +6243,7 @@ async function loadRapor() {
   const ogr = state.ogrenciler.find(o => o.ogrenci_id === ogrenciId);
   const [odevRes, kazRes, dersRes, denemeRes, aiNotuRes] = await Promise.all([
     sb.from('odevler').select('odev_id,ogrenci_id,gun,kaynak,konu,kazanim,durum,verilis_tarihi,dogru,yanlis,bos,toplam,odev_detay,kaynak_konu_id').eq('ogrenci_id', ogrenciId).order('verilis_tarihi', { ascending: false }),
-    sb.from('kazanimlar').select('*').eq('ders', state.brans || 'Matematik').ilike('sinif', ogr?.sinif||''),
+    sb.from('kazanimlar').select('*').eq('ders', state.brans || 'İlköğretim Matematik').ilike('sinif', ogr?.sinif||''),
     sb.from('dersler').select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     sb.from('denemeler').select('*').eq('ogrenci_id', ogrenciId).order('tarih', { ascending: false }),
     state.rol === 'ogretmen'
@@ -6255,7 +6264,7 @@ async function loadRapor() {
   const kazData  = kazRes.data   || [];
   const dersler  = dersRes.data  || [];
   const denemeler = denemeRes.data || [];
-  const konular  = konuSirala([...new Set(kazData.map(k => k.konu))], state.brans);
+  const konular  = konuSirala([...new Set(kazData.map(k => k.konu))], state.brans, kazData);
 
   // Konu istatistikleri
   const konuMap = {};
@@ -6269,7 +6278,7 @@ async function loadRapor() {
     konuMap[konu].toplam += Number(o.toplam)||0;
   });
 
-  const allKonular   = konular.length ? konular : konuSirala(Object.keys(konuMap), state.brans);
+  const allKonular   = konular.length ? konular : konuSirala(Object.keys(konuMap), state.brans, kazData);
   const islenenSayi  = allKonular.filter(k => konuMap[k]).length;
 
   // Ders işleme durumu (her müfredat konusu için en güncel dersler.tamamlama_durumu)
@@ -9049,7 +9058,7 @@ async function loadOgrBasari() {
   ]);
 
   const odevler = raporRes.data || [];
-  const konular = konuSirala([...new Set((kazRes.data||[]).map(k => k.konu))]);
+  const konular = konuSirala([...new Set((kazRes.data||[]).map(k => k.konu))], undefined, kazRes.data);
 
   const konuMap = {};
   odevler.forEach(o => {
@@ -9061,7 +9070,7 @@ async function loadOgrBasari() {
     konuMap[konu].toplam  += Number(o.toplam)||0;
   });
 
-  const allKonular = konular.length ? konular : konuSirala(Object.keys(konuMap));
+  const allKonular = konular.length ? konular : konuSirala(Object.keys(konuMap), undefined, kazRes.data);
   const calisilan  = allKonular.filter(k => konuMap[k]).length;
   const topDogru   = Object.values(konuMap).reduce((s,r)=>s+r.dogru,0);
   const topToplam  = Object.values(konuMap).reduce((s,r)=>s+r.toplam,0);
@@ -9202,7 +9211,7 @@ async function loadVeliPanel() {
 
   const odevler    = tumOdevler || [];
   const dersList   = dersler    || [];
-  const konular    = konuSirala([...new Set((kazData||[]).map(k => k.konu))]);
+  const konular    = konuSirala([...new Set((kazData||[]).map(k => k.konu))], undefined, kazData);
   const bekleyen   = odevler.filter(o => String(o.durum).trim().toUpperCase() === 'BEKLİYOR');
   const tamamlanan = odevler.filter(o => String(o.durum).trim().toUpperCase() === 'TAMAMLANDI');
   const eksik      = odevler.filter(o => ['EKSİK','YAPILMADI'].includes(String(o.durum).trim().toUpperCase()));
@@ -9248,7 +9257,7 @@ async function loadVeliPanel() {
     konuMap[konu].bos     += Number(o.bos)||0;
     konuMap[konu].toplam  += Number(o.toplam)||0;
   });
-  const allKonular = konular.length ? konular : konuSirala(Object.keys(konuMap));
+  const allKonular = konular.length ? konular : konuSirala(Object.keys(konuMap), undefined, kazData);
 
   // Veli zaman serisi
   const veliKonuOdevler = {};

@@ -1,0 +1,3674 @@
+-- 2026-2027 çerçeve planlarına göre kazanimlar tablosunu yeniler.
+-- Üreten: scripts/cerceve_plan_to_kazanim.py — elle düzenlemeyin, betiği yeniden çalıştırın.
+-- Supabase SQL Editor'da tek seferde çalıştırın. Geri almak için: 20260929_kazanimlar_2026_2027_rollback.sql
+
+BEGIN;
+
+-- 1) Tam yedek (bir kez oluşturulur; tekrar çalıştırmada üzerine yazılmaz)
+CREATE TABLE IF NOT EXISTS public.kazanimlar_arsiv_2025_2026 AS TABLE public.kazanimlar;
+ALTER TABLE public.kazanimlar_arsiv_2025_2026 ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS auth_select ON public.kazanimlar_arsiv_2025_2026;
+CREATE POLICY auth_select ON public.kazanimlar_arsiv_2025_2026 FOR SELECT TO authenticated USING (true);
+
+-- 2) Hafta sırası kolonu
+ALTER TABLE public.kazanimlar ADD COLUMN IF NOT EXISTS sira integer;
+
+-- 3) Planın kapsadığı ders/sınıf çiftlerini sil
+DELETE FROM public.kazanimlar WHERE (ders, sinif) IN (
+  ('Din Kültürü ve Ahlak Bilgisi', '5. Sınıf'),
+  ('Din Kültürü ve Ahlak Bilgisi', '6. Sınıf'),
+  ('Din Kültürü ve Ahlak Bilgisi', '7. Sınıf'),
+  ('Din Kültürü ve Ahlak Bilgisi', '8. Sınıf'),
+  ('Fen Bilimleri', '5. Sınıf'),
+  ('Fen Bilimleri', '6. Sınıf'),
+  ('Fen Bilimleri', '7. Sınıf'),
+  ('Fen Bilimleri', '8. Sınıf'),
+  ('Sosyal Bilgiler', '5. Sınıf'),
+  ('Sosyal Bilgiler', '6. Sınıf'),
+  ('Sosyal Bilgiler', '7. Sınıf'),
+  ('T.C. İnkılap Tarihi ve Atatürkçülük', '8. Sınıf'),
+  ('Türkçe', '5. Sınıf'),
+  ('Türkçe', '6. Sınıf'),
+  ('Türkçe', '7. Sınıf'),
+  ('Türkçe', '8. Sınıf'),
+  ('İlköğretim Matematik', '5. Sınıf'),
+  ('İlköğretim Matematik', '6. Sınıf'),
+  ('İlköğretim Matematik', '7. Sınıf'),
+  ('İlköğretim Matematik', '8. Sınıf'),
+  ('İngilizce', '5. Sınıf'),
+  ('İngilizce', '6. Sınıf'),
+  ('İngilizce', '7. Sınıf'),
+  ('İngilizce', '8. Sınıf')
+);
+
+-- 4) Yeni satırlar
+INSERT INTO public.kazanimlar (sinif, unite, konu, kazanim_kodu, kazanim_aciklamasi, ders, sira) VALUES
+('5. Sınıf', 'Allah İnancı', 'Allah İnancı', 'DİN.5.1.1.', 'Evrendeki mükemmel düzene ilişkin akıl yürütebilme
+a) Evrendeki mükemmel düzene ilişkin gözlem yapar.
+b) Evrendeki mükemmel düzenle ilgili örüntüler bulur.
+c) Evrendeki mükemmel düzene dair genellemeler yapar.', 'Din Kültürü ve Ahlak Bilgisi', 1),
+('5. Sınıf', 'Allah İnancı', 'Allah İnancı', 'DİN.5.1.2.', 'Evrendeki mükemmel düzeni gözlem yoluyla fark edip Allah''ın (cc) varlığı ve birliğini gözleme dayalı tahmin edebilme
+a) Evrendeki mükemmel düzene ilişkin ön gözlem veya tecrübeyi Allah''ın (cc) varlığı ve birliği ile ilişkilendirir.
+b) Bu ilişkilerden hareketle Allah''ın (cc) var ve bir olduğuna dair çıkarım yapar.
+c) Tevhit inancına ilişkin sonuç çıkarır.', 'Din Kültürü ve Ahlak Bilgisi', 2),
+('5. Sınıf', 'Allah İnancı', 'Allah İnancı', 'DİN.5.1.3.', 'Allah''ın (cc) güzel isimleri hakkında bilgi toplayabilme
+a) Allah''ın (cc) güzel isimleri konusunu araştırır.
+b) Allah''ın (cc) güzel isimleri hakkında bilgi toplar.
+c) Allah''ın (cc) güzel isimleri hakkında ulaştığı bilgileri doğrular.
+d) Allah''ın (cc) güzel isimleri hakkında ulaştığı bilgileri kaydeder.', 'Din Kültürü ve Ahlak Bilgisi', 3),
+('5. Sınıf', 'Allah İnancı', 'Allah İnancı', 'DİN.5.1.4.', 'İhlas suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) İhlas suresini ve bu surenin anlamını okur.
+b) İhlas suresinin anlamını kendi hayatı için anlamlı bir hâle getirir.
+c) İhlas suresini ve bu surenin anlamını okuyarak yorumlayabilme', 'Din Kültürü ve Ahlak Bilgisi', 4),
+('5. Sınıf', 'Namaz', 'Namaz', 'DİN.5.2.1.', 'Namaz ibadetini özetleyebilme
+a) Namaz ibadetiyle ilgili çözümleme yapar.
+b) Namazı farz, vacip ve nafile olarak sınıflandırır.
+c) Namaz ibadetinin önemini kendi cümleleri ile aktarır.', 'Din Kültürü ve Ahlak Bilgisi', 5),
+('5. Sınıf', 'Namaz', 'Namaz', 'DİN.5.2.2.', 'Namazın kılınışını gözlemleyebilme
+a) Namazın kılınışını gözlemlemek için hazırlık ve kılınış şartlarını ölçüt olarak açıklar.
+b) Namazın kılınışı hakkında öğretmen rehberliğinde bilgi toplar.
+c) Namazın kılınışı hakkında topladığı bilgileri sınıflandırır ve kaydeder.', 'Din Kültürü ve Ahlak Bilgisi', 6),
+('5. Sınıf', 'Namaz', 'Namaz', 'DİN.5.2.3.', 'Namazın insan hayatına etkileri hakkında düşünebilme
+a) Namazın insan hayatına etkilerini araştırır.
+b) Namazın insana kazandırdıkları hakkında sonuç çıkarır.
+c) Namazın insana kazandırdıkları hakkında ulaştığı çıkarımları davranışlarına yansıtır.', 'Din Kültürü ve Ahlak Bilgisi', 7),
+('5. Sınıf', 'Namaz', 'Namaz', 'DİN.5.2.4.', 'Tahiyyat duasını ve bu duanın anlamını okuyarak yorumlayabilme
+a) Tahiyyat duasını ve bu duanın anlamını okur.
+b) Tahiyyat duasının anlamını kendi hayatı için anlamlı bir hâle getirir.
+c) Tahiyyat duasının anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 8),
+('5. Sınıf', 'Kur''an-ı Kerim', 'Kur''an-ı Kerim', 'DİN.5.3.1.', 'Kur''an-ı Kerim''in iç düzenini çözümleyebilme
+a) Kur''an-ı Kerim''in iç düzenini inceler.
+b) Ayet, sure ve cüz arasındaki ilişkileri inceler.', 'Din Kültürü ve Ahlak Bilgisi', 9),
+('5. Sınıf', 'Kur''an-ı Kerim', 'Kur''an-ı Kerim', 'DİN.5.3.2.', 'Kur''an-ı Kerim''in temel özellikleri hakkında bilgi toplayabilme
+a) Kur''an-ı Kerim''in temel özellikleri konusunu araştırır.
+b) Kur''an-ı Kerim''in temel özellikleri hakkında bilgi toplar.
+c) Kur''an-ı Kerim''in temel özellikleri hakkında ulaştığı bilgileri öğretmen rehberliğinde doğrular.
+d) Kur''an-ı Kerim''in temel özellikleri hakkında ulaştığı bilgileri kaydeder.', 'Din Kültürü ve Ahlak Bilgisi', 10),
+('5. Sınıf', 'Kur''an-ı Kerim', 'Kur''an-ı Kerim', 'DİN.5.3.3.', 'Kuran-ı Kerim''in ana konularını sınıflandırabilme
+a) Kur''an-ı Kerim''i, hayatı tüm yönleriyle ele alan bir ölçüt olarak kabul eder.
+b) Kur''an-ı Kerim''in ana konularını bölümlere ayırır.
+c) Kur''an-ı Kerim''in ana konularını tasnif eder.
+d) Kur''an-ı Kerim''in ana konularını listeler.', 'Din Kültürü ve Ahlak Bilgisi', 11),
+('5. Sınıf', 'Kur''an-ı Kerim', 'Kur''an-ı Kerim', 'DİN.5.3.4.', 'Kevser suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) Kevser suresini ve bu surenin anlamını okur.
+b) Kevser suresinin anlamını kendi hayatı için anlamlı bir hâle getirir.
+c) Kevser suresinin anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 12),
+('5. Sınıf', 'Peygamber Kıssaları', 'Peygamber Kıssaları', 'DİN.5.4.1.', 'Peygamberlik hakkında akıl yürütebilme
+a) Peygamberlerin görevlerini araştırır.
+b) Peygamberlerin görevleri ile örnek olmaları arasında parça - bütün ilişkisi kurar.
+c) Peygamberlerin görevleriyle ilgili çıkarım yapar.', 'Din Kültürü ve Ahlak Bilgisi', 13),
+('5. Sınıf', 'Peygamber Kıssaları', 'Peygamber Kıssaları', 'DİN.5.4.2.', 'Peygamber kıssalarında verilen öğütleri sentezleyebilme
+a) Peygamber kıssalarında verilen öğütleri inceler.
+b) Peygamber kıssalarında verilen öğütler arasında ilişki kurar.
+c) Peygamber kıssalarında verilen öğütleri birleştirerek bunlar hakkında özgün bir bütün oluşturur.', 'Din Kültürü ve Ahlak Bilgisi', 14),
+('5. Sınıf', 'Peygamber Kıssaları', 'Peygamber Kıssaları', 'DİN.5.4.3.', 'Kureyş suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) Kureyş suresini ve bu surenin anlamını okur.
+b) Kureyş suresinin anlamını kendi hayatı için anlamlı bir hâle getirir.
+c) Kureyş suresinin anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 15),
+('5. Sınıf', 'Mimarimizde Dinî Motifler', 'Mimarimizde Dinî Motifler', 'DİN.5.5.1.', 'Dinin mimarimize etkisini çözümleyebilme
+a) Dinin mimariye etki ettiği hususları araştırır.
+b) Dinin mimariye etki ettiği hususlar arasındaki ilişkiyi inceler.', 'Din Kültürü ve Ahlak Bilgisi', 16),
+('5. Sınıf', 'Mimarimizde Dinî Motifler', 'Mimarimizde Dinî Motifler', 'DİN.5.5.2.', 'Camilerin bölümlerini tanıyabilme
+a) Camilerin bölümleri ile ilgili ölçüt belirler.
+b) Camilerin bölümlerini ayrıştırır.
+c) Camilerin bölümlerini iç ve dış olarak tasnif eder.
+d) Camilerin iç ve dış bölümlerini listeler.', 'Din Kültürü ve Ahlak Bilgisi', 17),
+('5. Sınıf', 'Mimarimizde Dinî Motifler', 'Mimarimizde Dinî Motifler', 'DİN.5.5.3.', 'Kültürümüzde yer alan cami örneklerini karşılaştırabilme
+a) Kültürümüzde yer alan cami örneklerinin özelliklerini araştırır.
+b) Kültürümüzde yer alan cami örneklerinin benzer özelliklerini listeler.
+c) Kültürümüzde yer alan cami örneklerinin farklı özelliklerini listeler.', 'Din Kültürü ve Ahlak Bilgisi', 18),
+('6. Sınıf', 'Peygamber ve İlahi Kitap İnancı', 'Peygamber ve İlahi Kitap İnancı', 'DİN.6.1.1.', 'Peygamberlerin insanlara rehber olarak gönderilmesi hakkında bilgi toplayabilme
+a) Peygamber inancı konusunu araştırır.
+b) Peygamber inancıyla ilgili bilgileri bulur.
+c) Peygamber inancıyla ilgili ulaştığı bilgileri öğretmen rehberliğinde doğrular.
+d) Peygamber inancıyla ilgili ulaştığı bilgileri kaydeder.', 'Din Kültürü ve Ahlak Bilgisi', 1),
+('6. Sınıf', 'Peygamber ve İlahi Kitap İnancı', 'Peygamber ve İlahi Kitap İnancı', 'DİN.6.1.2.', 'Vahiylerin insanlara ilettiği mesajları yapılandırabilme
+a) Vahyin gönderiliş amacıyla ilgili nedensel ilişkiler ortaya koyar.
+b) Vahyin gönderiliş amacıyla ilgili nedensel ilişkilere dayalı unsurlardan hareketle uyumlu bir bakış açısı geliştirir.', 'Din Kültürü ve Ahlak Bilgisi', 2),
+('6. Sınıf', 'Peygamber ve İlahi Kitap İnancı', 'Peygamber ve İlahi Kitap İnancı', 'DİN.6.1.3.', 'İlahi kitaplarla ilgili bilgileri çözümleyebilme
+a) Temel İslam kaynaklarından hareketle ilahi kitapların Tevrat, Zebur, İncil ve Kur''an-ı Kerim olduğunu öğretmen rehberliğinde açıklar.
+b) İlahi kitaplar arasındaki kronolojik ilişkiyi inceler.', 'Din Kültürü ve Ahlak Bilgisi', 3),
+('6. Sınıf', 'Peygamber ve İlahi Kitap İnancı', 'Peygamber ve İlahi Kitap İnancı', 'DİN.6.1.4.', 'Felak suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) Felak suresini ve bu surenin anlamını okur.
+b) Felak suresinin anlamını kendi hayatı için anlamlı hâle getirir.
+c) Felak suresinin anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 4),
+('6. Sınıf', 'Ramazan ve Oruç', 'Ramazan ve Oruç', 'DİN.6.2.1.', 'Ramazan ayının oruç ve Kur''an ayı olduğunu çözümleyebilme
+a) Temel İslam kaynaklarından hareketle ramazan ayını oruç ve Kur''an ayı olarak öğretmen rehberliğinde açıklar.
+b) Ramazan ayı ile oruç ve Kur''an okuma ibadeti arasındaki ilişkiyi inceler.', 'Din Kültürü ve Ahlak Bilgisi', 5),
+('6. Sınıf', 'Ramazan ve Oruç', 'Ramazan ve Oruç', 'DİN.6.2.2.', 'Oruç ibadeti hakkında bilgi toplayabilme
+a) Oruç ibadeti konusunu araştırır.
+b) Oruç ibadeti hakkında bilgiler bulur.
+c) Oruç ibadeti hakkında elde ettiği bilgileri öğretmen rehberliğinde doğrular.
+d) Oruç ibadeti hakkında elde ettiği bilgileri kaydeder.', 'Din Kültürü ve Ahlak Bilgisi', 6),
+('6. Sınıf', 'Ramazan ve Oruç', 'Ramazan ve Oruç', 'DİN.6.2.3.', 'Oruç ibadetinin insana kazandırdıklarını yapılandırabilme
+a) Oruç ibadetinin insana kazandırdıklarını inceleyerek mantıksal ilişkiler kurar.
+b) Oruç ibadetinin insana kazandırdıkları hakkında kendi elde ettiği bilgilerden hareketle uyumlu bir bakış açısı geliştirir.', 'Din Kültürü ve Ahlak Bilgisi', 7),
+('6. Sınıf', 'Ramazan ve Oruç', 'Ramazan ve Oruç', 'DİN.6.2.4.', 'İftar duasını ve bu duanın anlamını okuyarak yorumlayabilme
+a) İftar duasını ve bu duanın anlamını okur.
+b) İftar duasının anlamını kendi hayatı için anlamlı hâle getirir.
+c) İftar duasının anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 8),
+('6. Sınıf', 'Ahlaki Davranışlar', 'Ahlaki Davranışlar', 'DİN.6.3.1.', 'Doğru sözlü olmayı kendi hayatına yansıtabilme
+a) Doğru sözlü olmanın önemini kendisinden ve çevresinden hareketle gözden geçirir.
+b) Doğru sözlü olmanın bireysel ve toplumsal açıdan önemine dair çıkarımda bulunur.
+c) Doğru sözlü olmanın önemiyle ilgili ulaştığı çıkarımları değerlendirir.', 'Din Kültürü ve Ahlak Bilgisi', 9),
+('6. Sınıf', 'Ahlaki Davranışlar', 'Ahlaki Davranışlar', 'DİN.6.3.2.', 'Merhametli olmayı yorumlayabilme
+a) Merhametli olmanın bireysel ve toplumsal boyutlarını inceler.
+b) Merhametli olmayı kendi hayatı için anlamlı hâle getirir.
+c) Merhametli olmanın önemini kendi cümleleriyle yeniden ifade eder.', 'Din Kültürü ve Ahlak Bilgisi', 10),
+('6. Sınıf', 'Ahlaki Davranışlar', 'Ahlaki Davranışlar', 'DİN.6.3.3.', 'Adap ve nezaket kurallarını özetleyebilme
+a) Adap ve nezaket kurallarını çözümler.
+b) Adap ve nezaket kurallarını sınıflandırır.
+c) Adap ve nezaket kurallarını yorumlar.', 'Din Kültürü ve Ahlak Bilgisi', 11),
+('6. Sınıf', 'Ahlaki Davranışlar', 'Ahlaki Davranışlar', 'DİN.6.3.4.', 'Vatanını sevmenin önemi hakkında çıkarım yapabilme
+a) Vatanını sevmenin önemi hakkında mevcut bilgisi dâhilinde varsayımda bulunur.
+b) Vatan sevgisiyle ilişkili kavramları listeler.
+c) Vatan sevgisiyle ilişkili kavramları birbirleriyle ilişkisi açısından karşılaştırır.
+d) Vatan sevgisinin önemi hakkında önermeler sunar.
+e) Vatan sevgisinin önemi hakkında önermelerle ilgili değerlendirmede bulunur.', 'Din Kültürü ve Ahlak Bilgisi', 12),
+('6. Sınıf', 'Ahlaki Davranışlar', 'Ahlaki Davranışlar', 'DİN.6.3.5.', 'Kunut dualarını ve bu duaların anlamlarını okuyarak yorumlayabilme
+a) Kunut dualarını ve bu duaların anlamlarını okur.
+b) Kunut dualarının anlamlarını kendi hayatı için anlamlı hâle getirir.
+c) Kunut dualarının anlamlarını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 13),
+('6. Sınıf', 'Peygamberliğinden Önce Hz. Muhammed', 'Peygamberliğinden Önce Hz. Muhammed', 'DİN.6.4.1.', 'Hz. Muhammed''in (sav) doğduğu çevreyi tarihsel bağlamda değerlendirebilme
+a) Hz. Muhammed''in (sav) doğduğu çevre hakkındaki bilgileri temel kaynaklardan hareketle farkeder.
+b) Hz. Muhammed''in (sav) doğduğu çevreyi koşulları içerisinde açıklar.
+c) Hz. Muhammed''in (sav) doğduğu çevreyi koşulları içerisinde açıklar.
+d) Hz. Muhammed''in (sav) doğduğu çevrenin koşullarını günümüz koşullarıyla karşılaştırır.', 'Din Kültürü ve Ahlak Bilgisi', 14),
+('6. Sınıf', 'Peygamberliğinden Önce Hz. Muhammed', 'Peygamberliğinden Önce Hz. Muhammed', 'DİN.6.4.2.', 'Hz. Muhammed''in (sav) çocukluk yılları hakkında verilen bilgileri yorumlayabilme
+a) Hz. Muhammed''in (sav) çocukluk yıllarında yaşadıklarını inceler.
+b) Hz. Muhammed''in (sav) çocukluk yıllarında yaşadıklarını kendi ifadeleriyle, doğru ve bilgiyi değiştirmeyecek şekilde yeniden ifade eder.', 'Din Kültürü ve Ahlak Bilgisi', 15),
+('6. Sınıf', 'Peygamberliğinden Önce Hz. Muhammed', 'Peygamberliğinden Önce Hz. Muhammed', 'DİN.6.4.3.', 'Hz. Muhammed''in (sav) gençlik yılları hakkında verilen bilgileri yapılandırabilme
+a) Hz. Muhammed''in (sav) gençlik yıllarında yaşadıklarından hareketle çıkarımda bulunur.
+b) Hz. Muhammed''in (sav) gençlik yıllarına dair öğrendikleri üzerine düşüncelerini ifade eder.', 'Din Kültürü ve Ahlak Bilgisi', 16),
+('6. Sınıf', 'Peygamberliğinden Önce Hz. Muhammed', 'Peygamberliğinden Önce Hz. Muhammed', 'DİN.6.4.4.', 'Fil suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) Fil suresini ve bu surenin anlamını okur.
+b) Fil suresinin anlamını kendi hayatı için anlamlı hâle getirir.
+c) Fil suresinin anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 17),
+('6. Sınıf', 'Kültürümüzdeki Dinî Motifler', 'Kültürümüzdeki Dinî Motifler', 'DİN.6.5.1.', 'Geleneğimizde, edebiyatımızda ve musikimizde dinin izlerini özetleyebilme
+a) Geleneğimizde, edebiyatımızda ve musikimizde dinin izleriyle ilgili çözümleme yapar.
+b) Din ve kültür ilişkisini gelenek, edebiyat ve musiki örneklerinden hareketle sınıflandırır.
+c) Dinin geleneğimiz, edebiyatımız ve musikimize etkisini yorumlar.', 'Din Kültürü ve Ahlak Bilgisi', 18),
+('7. Sınıf', 'Melek ve Ahiret İnancı', 'Melek ve Ahiret İnancı', 'DİN.7.1.1.', 'Melekleri sınıflandırabilme
+a) Görülen ve görülemeyen varlıkları öğretmen rehberliğinde araştırır.
+b) Temel İslam kaynaklarından hareketle meleklerin yaratılan diğer varlıklardan farklı özelliklerini ayrıştırır.
+c) Melekleri ve onların görevlerini listeler.', 'Din Kültürü ve Ahlak Bilgisi', 1),
+('7. Sınıf', 'Melek ve Ahiret İnancı', 'Melek ve Ahiret İnancı', 'DİN.7.1.2.', 'Ahiret hayatının aşamalarını çözümleyebilme
+a) Ahiret hayatının aşamalarına ilişkin unsurları inceler.
+b) Ahiret hayatının aşamalarına ilişkin unsurlar arasındaki ilişkileri açıklar.', 'Din Kültürü ve Ahlak Bilgisi', 2),
+('7. Sınıf', 'Melek ve Ahiret İnancı', 'Melek ve Ahiret İnancı', 'DİN.7.1.3.', 'Melek ve ahiret inancının insan davranışına etkisi hakkında düşünebilme
+a) Melek ve ahiret inancının insan davranışına etkisini inceler.
+b) Melek ve ahiret inancının insan davranışına etkisiyle ilgili sonuç çıkarır.
+c) Melek ve ahiret inancının insan davranışına etkisiyle ilgili ulaştığı çıkarımları davranışlarına yansıtır.', 'Din Kültürü ve Ahlak Bilgisi', 3),
+('7. Sınıf', 'Melek ve Ahiret İnancı', 'Melek ve Ahiret İnancı', 'DİN.7.1.4.', 'Nâs suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) Nâs suresini ve bu surenin anlamını okur.
+b) Nâs suresinin anlamını kendi hayatı için anlamlı bir hâle getirir.
+c) Nâs suresinin anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 4),
+('7. Sınıf', 'Hac, Umre ve Kurban', 'Hac, Umre ve Kurban', 'DİN.7.2.1.', 'Hac ve umre ibadetlerini inceleyebilme
+a) Temel İslam kaynaklarından hareketle hac ve umre ibadetleriyle ilgili unsurları inceler.
+b) Hac ve umre ibadetleriyle ilgili unsurlar arasındaki ilişkileri bulur.', 'Din Kültürü ve Ahlak Bilgisi', 5),
+('7. Sınıf', 'Hac, Umre ve Kurban', 'Hac, Umre ve Kurban', 'DİN.7.2.2.', 'Kurban ibadetini yapılandırabilme
+a) Kurban ibadetiyle Hz. İsmail kıssası arasında nedensel ilişki ortaya koyar.
+b) Kurban ibadeti hakkında temel İslam kaynaklarından elde ettiği bilgilerden hareketle uyumlu bir bakış açısı geliştirir.', 'Din Kültürü ve Ahlak Bilgisi', 6),
+('7. Sınıf', 'Hac, Umre ve Kurban', 'Hac, Umre ve Kurban', 'DİN.7.2.3.', 'Hac ve kurban ibadetinin kültürümüze yansımalarını gözleme dayalı tahmin edebilme
+a) Hac ve kurban ibadetlerinin kültürümüze yansımasına ilişkin ön gözlem veya tecrübelerini ilişkilendirir.
+b) Hac ve kurban ibadetlerinin kültürümüze yansımasına ilişkin çıkarımlar yapar.
+c) Hac ve kurban ibadetlerinin kültürümüze yansımasına ilişkin sonuç çıkarır.', 'Din Kültürü ve Ahlak Bilgisi', 7),
+('7. Sınıf', 'Hac, Umre ve Kurban', 'Hac, Umre ve Kurban', 'DİN.7.2.4.', 'Kâfirun suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) Kâfirun suresini ve bu surenin anlamını okur.
+b) Kâfirun suresinin anlamını kendi hayatı için anlamlı bir hâle getirir.
+c) Kâfirun suresinin anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 8),
+('7. Sınıf', 'İslam Düşüncesinde Yorumlar', 'İslam Düşüncesinde Yorumlar', 'DİN.7.3.1.', 'Din anlayışındaki yorum farklılıklarının sebeplerini sorgulayabilme
+a) Din ve din anlayışı kavramlarını tanımlar.
+b) Din ve din anlayışı arasındaki farklara dair sorular sorar.
+c) Dinin farklı yorumlanma sebeplerine dair bilgi toplar.
+d) Dinin farklı yorumlanma sebeplerine dair topladığı bilgilerin doğruluğunu değerlendirir.
+e) Dinin farklı yorumlanma sebeplerine ilişkin topladığı bilgilerden yola çıkarak dinin neden farklı yorumlandığına dair çıkarım yapar.', 'Din Kültürü ve Ahlak Bilgisi', 9),
+('7. Sınıf', 'İslam Düşüncesinde Yorumlar', 'İslam Düşüncesinde Yorumlar', 'DİN.7.3.2.', 'İslam düşüncesindeki yorum biçimlerini sınıflandırabilme
+a) İslam düşüncesindeki yorum biçimlerini araştırır.
+b) İslam düşüncesindeki yorum biçimlerini itikadi, fıkhi ve tasavvufi yorumlar olarak ayrıştırır.
+c) İslam düşüncesindeki yorum biçimlerini itikadi, fıkhi ve tasavvufi yorumlar şeklinde tasnif eder.
+d) İslam düşüncesindeki yorum biçimlerini itikadi, fıkhi ve tasavvufi yorumlar şeklinde listeler.', 'Din Kültürü ve Ahlak Bilgisi', 10),
+('7. Sınıf', 'İslam Düşüncesinde Yorumlar', 'İslam Düşüncesinde Yorumlar', 'DİN.7.3.3.', 'Kültürümüzdeki tasavvufi yorumları çözümleyebilme
+a) Kültürümüzdeki tasavvufi yorumları inceler.
+b) Kültürümüzdeki tasavvufi yorumlar arasındaki ilişkileri bulur.', 'Din Kültürü ve Ahlak Bilgisi', 11),
+('7. Sınıf', 'İslam Düşüncesinde Yorumlar', 'İslam Düşüncesinde Yorumlar', 'DİN.7.3.4.', 'Alevilik Bektaşilik ile ilgili temel kavramlar ve cem erkânları hakkında bilgi toplayabilme
+a) Alevilik Bektaşilik ile ilgili temel kavramlar ve cem erkânları konusunu araştırır.
+b) Alevilik Bektaşilik ile ilgili temel kavramlar ve cem erkânları hakkında bilgileri bulur.
+c) Alevilik Bektaşilik ile ilgili temel kavramlar ve cem erkânları hakkında ulaştığı bilgileri kontrol eder.
+d) Alevilik Bektaşilik ile ilgili temel kavram ve erkânlar hakkında ulaşılan bilgileri kaydeder.', 'Din Kültürü ve Ahlak Bilgisi', 12),
+('7. Sınıf', 'Peygamber Olarak Hz. Muhammed', 'Peygamber Olarak Hz. Muhammed', 'DİN.7.4.1.', 'Hz. Muhammed''in (sav) Mekke''de yaşadıklarını yorumlayabilme
+a) Hz. Muhammed''in (sav) Mekke''de yaşadıklarını inceler.
+b) Hz. Muhammed''in (sav) Mekke''de yaşadıklarını kendi ifadeleriyle, doğru ve bilgiyi değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 13),
+('7. Sınıf', 'Peygamber Olarak Hz. Muhammed', 'Peygamber Olarak Hz. Muhammed', 'DİN.7.4.2.', 'Hicret konusunu tarihsel bağlamda değerlendirebilme
+a) Hz. Muhammed''in (sav) Hicret''te yaşadıklarını temel kaynaklardan hareketle fark eder.
+b) Hicret''in yaşandığı dönemi koşulları içerisinde açıklar.
+c) Hicret''in yaşandığı dönemi analiz eder.
+d) Hicret''in yaşandığı dönemi günümüz koşullarıyla karşılaştırır.', 'Din Kültürü ve Ahlak Bilgisi', 14),
+('7. Sınıf', 'Peygamber Olarak Hz. Muhammed', 'Peygamber Olarak Hz. Muhammed', 'DİN.7.4.3.', 'Hz. Muhammed''in (sav) Medine Dönemi konusunu yapılandırabilme
+a) Hz. Muhammed''in (sav) Medine''de yaşadıklarını inceleyerek çıkarımda bulunur.
+b) Hz. Muhammed''in (sav) Medine hayatı hakkında yaptığı çıkarımları ifade eder.', 'Din Kültürü ve Ahlak Bilgisi', 15),
+('7. Sınıf', 'Peygamber Olarak Hz. Muhammed', 'Peygamber Olarak Hz. Muhammed', 'DİN.7.4.4.', 'Nasr suresini ve bu surenin anlamını okuyarak yorumlayabilme
+a) Nasr suresini ve bu surenin anlamını okur.
+b) Nasr suresinin anlamını kendi hayatı için anlamlı bir hâle getirir.
+c) Nasr suresinin anlamını değiştirmeyecek şekilde özetler.', 'Din Kültürü ve Ahlak Bilgisi', 16),
+('7. Sınıf', 'Yaşayan Dünya Dinleri', 'Yaşayan Dünya Dinleri', 'DİN.7.5.1.', 'Yahudilik, Hristiyanlık, Hinduizm ve Budizm dinleri hakkında bilgi toplayabilme
+a) Yahudilik, Hristiyanlık, Hinduizm ve Budizm dinlerini araştırır.
+b) Yahudilik, Hristiyanlık, Hinduizm ve Budizm dinleri hakkında bilgiler bulur.
+c) Yahudilik, Hristiyanlık, Hinduizm ve Budizm dinleri hakkında edindiği bilgileri doğrular.
+d) Yahudilik, Hristiyanlık, Hinduizm ve Budizm dinleri hakkında edindiği bilgileri kaydeder.', 'Din Kültürü ve Ahlak Bilgisi', 17),
+('8. Sınıf', 'Kader İnancı', 'Kader İnancı', 'DİN.8.1.1.', 'Kader ve kaza inancını ayet ve hadislerle açıklar', 'Din Kültürü ve Ahlak Bilgisi', 1),
+('8. Sınıf', 'Kader İnancı', 'Kader İnancı', 'DİN.8.1.2.', 'İnsanın ilmi, iradesi, sorumluluğu ile kader arasında ilişki kurar.', 'Din Kültürü ve Ahlak Bilgisi', 2),
+('8. Sınıf', 'Kader İnancı', 'Kader İnancı', 'DİN.8.1.3.', 'Kaza ve kader ile ilgili kavramları analiz eder.', 'Din Kültürü ve Ahlak Bilgisi', 3),
+('8. Sınıf', 'Kader İnancı', 'Kader İnancı', 'DİN.8.1.4.', 'Toplumda kader ve kaza ile ilgili yaygın olan yanlış anlayışları sorgular.', 'Din Kültürü ve Ahlak Bilgisi', 4),
+('8. Sınıf', 'Kader İnancı', 'Kader İnancı', 'DİN.8.1.5.', 'Hz. Musa''nın (a.s.) hayatını ana hatlarıyla tanır.', 'Din Kültürü ve Ahlak Bilgisi', 5),
+('8. Sınıf', 'Kader İnancı', 'Kader İnancı', 'DİN.8.1.6.', 'Ayet el-Kürsi''yi okur, anlamını söyler', 'Din Kültürü ve Ahlak Bilgisi', 6),
+('8. Sınıf', 'Zekât ve Sadaka', 'Zekât ve Sadaka', 'DİN.8.2.1.', 'İslam''ın paylaşma ve yardımlaşmaya verdiği önemi ayet ve hadisler ışığında yorumlar.', 'Din Kültürü ve Ahlak Bilgisi', 7),
+('8. Sınıf', 'Zekât ve Sadaka', 'Zekât ve Sadaka', 'DİN.8.2.2.', 'Zekât ve sadaka ibadetini ayet ve hadislerle açıklar.', 'Din Kültürü ve Ahlak Bilgisi', 8),
+('8. Sınıf', 'Zekât ve Sadaka', 'Zekât ve Sadaka', 'DİN.8.2.3.', 'Zekât, infak ve sadakanın bireysel ve toplumsal önemini fark eder.', 'Din Kültürü ve Ahlak Bilgisi', 9),
+('8. Sınıf', 'Zekât ve Sadaka', 'Zekât ve Sadaka', 'DİN.8.2.4.', 'Hz. Şuayb''in (a.s.) hayatını ana hatlarıyla tanır.', 'Din Kültürü ve Ahlak Bilgisi', 10),
+('8. Sınıf', 'Zekât ve Sadaka', 'Zekât ve Sadaka', 'DİN.8.2.5.', 'Maûn suresini okur, anlamını söyler.', 'Din Kültürü ve Ahlak Bilgisi', 11),
+('8. Sınıf', 'Din ve Hayat', 'Din ve Hayat', 'DİN.8.3.1.', 'Din, birey ve toplum arasındaki ilişkiyi yorumlar.', 'Din Kültürü ve Ahlak Bilgisi', 12),
+('8. Sınıf', 'Din ve Hayat', 'Din ve Hayat', 'DİN.8.3.2.', 'İslam dininin can, nesil, akıl, mal ve din emniyetiyle ilgili ortaya koyduğu ilke ve hedefleri analiz eder.', 'Din Kültürü ve Ahlak Bilgisi', 13),
+('8. Sınıf', 'Din ve Hayat', 'Din ve Hayat', 'DİN.8.3.3.', 'Hz. Yusuf''un (a.s.) örnek hayatından ilkeler çıkarır.', 'Din Kültürü ve Ahlak Bilgisi', 14),
+('8. Sınıf', 'Din ve Hayat', 'Din ve Hayat', 'DİN.8.3.4.', 'Asr suresini okur, anlamını söyler.', 'Din Kültürü ve Ahlak Bilgisi', 15),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.1.', 'Hz. Muhammed''in (s.a.v.) doğruluğu ve güvenilir kişiliği ile peygamberlerin özellikleri arasında ilişki kurar', 'Din Kültürü ve Ahlak Bilgisi', 16),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.2.', 'Hz. Muhammed''in (s.a.v.) merhametli ve affedici oluşunu davranışlarında yansıtmaya özen gösterir.', 'Din Kültürü ve Ahlak Bilgisi', 17),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.3.', 'Hz. Muhammed''in (s.a.v.) istişareye verdiği önemi ortaya koyan örnek olaylardan hareketle gündelik hayatla ilgili çıkarımlarda bulunur', 'Din Kültürü ve Ahlak Bilgisi', 18),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.4.', 'Hz. Muhammed''in (s.a.v.) cesaret ve kararlılığını örnek olaylarla açıklar', 'Din Kültürü ve Ahlak Bilgisi', 19),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.5.', 'Hz. Muhammed''in (s.a.v.) hakkı gözetmedeki hassasiyetine örnekler verir.', 'Din Kültürü ve Ahlak Bilgisi', 20),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.6.', 'Hz. Muhammed''in (s.a.v.) insanlara verdiği değeri örneklerle açıklar.', 'Din Kültürü ve Ahlak Bilgisi', 21),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.7.', 'Hz. Muhammed''in (s.a.v.) örnek davranışlarının toplumsal hayattaki önemini değerlendirir.', 'Din Kültürü ve Ahlak Bilgisi', 22),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.8.', 'Hz. Muhammed''in (s.a.v.) hikmetli söz ve davranışlarıyla insanları iyiye ve güzele yönlendirdiğini fark eder.', 'Din Kültürü ve Ahlak Bilgisi', 23),
+('8. Sınıf', 'Hz. Muhammed''in Örnekliği', 'Hz. Muhammed''in Örnekliği', 'DİN.8.4.9.', 'Kureyş suresini okur, anlamını söyler.', 'Din Kültürü ve Ahlak Bilgisi', 24),
+('5. Sınıf', 'Gökyüzündeki Komşularımız ve Biz', 'Gökyüzündeki Komşumuz: Güneş', 'FB.5.1.1.', 'Güneş''in yapısı ve dönme hareketi ile ilgili bilgileri toplayabilme
+a) Güneş''in yapısı ve dönme hareketi ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Belirlediği araçları kullanarak Güneş''in yapısı ve dönme hareketi hakkında bilgileri bulur.
+c) Güneş''in yapısı ve dönme hareketi hakkında bulduğu bilgileri doğrular.
+ç) Güneş''in yapısı ve dönme hareketi hakkında ulaşılan bilgileri kaydeder.', 'Fen Bilimleri', 2),
+('5. Sınıf', 'Gökyüzündeki Komşularımız ve Biz', 'Gökyüzündeki Komşumuz: Ay', 'FB.5.1.2.', 'Ay''ın özellikleri, dönme ve dolanma hareketleri ile ilgili bilimsel çıkarım yapabilme
+a) Ay''ın özellikleri, dönme ve dolanma hareketleri ile ilgili nitelikleri tanımlar.
+b) Ay''ın özellikleri, dönme ve dolanma hareketleri ile ilgili topladığı verileri kaydeder.
+c) Ay''ın özellikleri, dönme ve dolanma hareketleri ile ilgili verileri yorumlar ve değerlendirir.', 'Fen Bilimleri', 4),
+('5. Sınıf', 'Gökyüzündeki Komşularımız ve Biz', 'Gökyüzündeki Komşumuz: Ay', 'FB.5.1.3.', 'Ay''ın evrelerini temsil eden bilimsel model oluşturabilme
+a) Ay''ın evrelerini temsil eden bir model önerir.
+b) Ay''ın evrelerini temsil eden modelini yeni kanıtlara bağlı olarak yeniler.', 'Fen Bilimleri', 5),
+('5. Sınıf', 'Gökyüzündeki Komşularımız ve Biz', 'Dünya''mız ve Gökyüzündeki Komşularımız', 'FB.5.1.4.', 'Güneş, Dünya ve Ay''ın birbirlerine göre hareketlerini ve hacimsel büyüklüklerini temsil eden bilimsel model oluşturabilme
+a) Güneş, Dünya ve Ay''ın birbirlerine göre hareketlerini ve hacimsel büyüklüklerini temsil eden bir model önerir.
+b) Güneş, Dünya ve Ay''ın birbirlerine göre hareketlerini ve büyüklüklerini temsil eden modelini yeni kanıtlara göre yeniler.', 'Fen Bilimleri', 6),
+('5. Sınıf', 'Kuvveti Tanıyalım', 'Kuvvet ve Kuvvetin Ölçülmesi', 'FB.5.2.1.', 'Kuvveti büyüklüğü ile operasyonel tanımlayabilme
+a) Kuvvetin niteliklerini tanımlar.
+b) Kuvvetin büyüklüğünü dinamometre ile ölçer.
+c) Kuvvetin büyüklüğünü Newton (N) birimi ile tanımlar.', 'Fen Bilimleri', 7),
+('5. Sınıf', 'Kuvveti Tanıyalım', 'Kuvvet ve Kuvvetin Ölçülmesi', 'FB.5.2.2.', 'Basit araç gereçle bilimsel bir dinamometre modeli oluşturabilme
+a) Basit araç gereçle bir dinamometre modeli önerir.
+b) Tasarladığı dinamometre modelini yeni kanıtlara göre yeniler', 'Fen Bilimleri', 9),
+('5. Sınıf', 'Kuvveti Tanıyalım', 'Kütle ve Ağırlık İlişkisi', 'FB.5.2.3.', 'Kütle ve ağırlık kavramlarını karşılaştırabilme
+a) Kütle ve ağırlığa ilişkin özellikleri belirler.
+b) Belirlenen özelliklere ilişkin benzerlikleri listeler.
+c) Belirlenen özelliklere ilişkin farklılıkları listeler.', 'Fen Bilimleri', 10),
+('5. Sınıf', 'Kuvveti Tanıyalım', 'Sürtünme Kuvveti', 'FB.5.2.4.', 'Sürtünme kuvvetinin çeşitli ortamlardaki etkilerine yönelik tümevarımsal akıl yürütebilme
+a) Sürtünme kuvveti ile ilgili günlük yaşamdan ön bilgilerini kullanarak örüntü oluşturur.
+b) Sürtünme kuvvetinin çeşitli ortamlardaki etkilerine yönelik genelleme yapar.', 'Fen Bilimleri', 12),
+('5. Sınıf', 'Canlıların Yapısına Yolculuk', 'Hücre ve Organelleri', 'FB.5.3.1.', 'Bitki ve hayvan hücrelerini temel kısımları ve özellikleri açısından karşılaştırabilme
+a) Bitki ve hayvan hücrelerinin özelliklerini belirler.
+b) Bitki ve hayvan hücrelerinin benzer özelliklerini listeler.
+c) Bitki ve hayvan hücrelerinin farklı özelliklerini listeler.', 'Fen Bilimleri', 13),
+('5. Sınıf', 'Canlıların Yapısına Yolculuk', 'Hücre ve Organelleri', 'FB.5.3.2.', 'Hücre-doku-organ-sistem-organizma kavramlarını yapılandırabilme
+a) Hücre-doku-organ-sistem-organizma kavramlarına ilişkin hiyerarşik ilişkileri ortaya koyar.
+b) Hücre-doku-organ-sistem-organizma kavramlarına ilişkin elde ettiği bilgileri uyumlu bir bütün olarak ortaya koyar.', 'Fen Bilimleri', 15),
+('5. Sınıf', 'Canlıların Yapısına Yolculuk', 'Destek ve Hareket Sistemi', 'FB.5.3.3.', 'Destek ve hareket sistemine ait yapıları sınıflandırabilme
+a) Destek ve hareket sistemine ait yapıların niteliklerini tanımlar.
+b) Destek ve hareket sistemine ait yapıları niteliklerine göre ayrıştırır.
+c) Destek ve hareket sistemine ait yapıları gruplandırır.
+ç) Destek ve hareket sistemine ait yapıları etiketler.', 'Fen Bilimleri', 16),
+('5. Sınıf', 'Canlıların Yapısına Yolculuk', 'Destek ve Hareket Sistemi', 'FB.5.3.4.', 'Destek ve hareket sisteminin sağlığı için yapılması gerekenler konusunda bilgi toplayabilme
+a) Destek ve hareket sisteminin sağlığı ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Belirlediği araçları kullanarak destek ve hareket sisteminin sağlığı hakkında bilgiler bulur.
+c) Destek ve hareket sisteminin sağlığı hakkında bulduğu bilgileri doğrular.
+ç) Ulaştığı bilgileri kaydeder.', 'Fen Bilimleri', 18),
+('5. Sınıf', 'Işığın Dünyası', 'Işığın Yayılması', 'FB.5.4.1.', 'Bir kaynaktan çıkan ışığın her yönde doğrusal bir yol izlediğini bilimsel olarak gözlemleyebilme
+a) Bir kaynaktan çıkan ışığın izlediği yolu gözlemleyerek niteliklerini tanımlar.
+b) Gözlemleri sonucunda ışığın izlediği yola ilişkin elde edilen verileri kaydeder.
+c) Işığın her yönde doğrusal bir yol izlediğini açıklar.', 'Fen Bilimleri', 20),
+('5. Sınıf', 'Işığın Dünyası', 'Madde ve Işık', 'FB.5.4.2.', 'Maddeleri ışığı geçirme durumlarına göre sınıflandırabilme
+a) Maddelerin ışığı geçirme durumlarına göre niteliklerini belirler.
+b) Maddeleri ışığı geçirme durumlarına göre ayrıştırır.
+c) Maddeleri ışığı geçirme durumlarına göre gruplandırır.
+ç) Maddeleri ışığı geçirme durumlarına göre etiketler.', 'Fen Bilimleri', 21),
+('5. Sınıf', 'Işığın Dünyası', 'Tam Gölgenin Oluşumu', 'FB.5.4.3.', 'Tam gölgeyi bilimsel olarak gözlemleyebilme
+a) Tam gölgenin nitelikleri tanımlar.
+b) Tam gölgeye ait elde ettiği verileri kaydeder.
+c) Tam gölgeyi etkileyen değişkenleri açıklar.', 'Fen Bilimleri', 22),
+('5. Sınıf', 'Maddenin Doğası', 'Maddenin Tanecikli Yapısı', 'FB.5.5.1.', 'Maddeleri tanecikli, boşluklu ve hareketli yapısına göre sınıflandırabilme
+a) Maddelerin tanecikli, boşluklu ve hareketli yapısının niteliklerini belirler.
+b) Maddeleri tanecikli, boşluklu ve hareketli yapısına göre ayrıştırır.
+c) Maddeleri tanecikli, boşluklu ve hareketli yapısına göre katı, sıvı ve gaz olarak gruplandırır.
+ç) Maddeleri tanecikli, boşluklu ve hareketli yapılarına göre farklı gruplar altında etiketler.', 'Fen Bilimleri', 23),
+('5. Sınıf', 'Maddenin Doğası', 'Isı ve Sıcaklık', 'FB.5.5.2.', 'Isı ve sıcaklık kavramlarını karşılaştırabilme
+a) Isı ve sıcaklık kavramlarının özelliklerini belirler.
+b) Isı ve sıcaklık kavramlarının özelliklerine ilişkin benzerlikleri listeler.
+c) Isı ve sıcaklık kavramlarının özelliklerine ilişkin farklılıkları listeler.', 'Fen Bilimleri', 25),
+('5. Sınıf', 'Maddenin Doğası', 'Isı ve Sıcaklık', 'FB.5.5.3.', 'Sıcaklığı farklı olan sıvıların karıştırılması sonucu ısı alışverişi olduğuna yönelik bilimsel çıkarım yapabilme
+a) Sıvılar arasındaki ısı alışverişinin niteliklerini tanımlar.
+b) Sıvıların karıştırılmadan önceki ve sonraki sıcaklıklarına dair verileri toplar ve kaydeder.
+c) Karıştırılan sıvılar arasında ısı alışverişi olduğunu yorumlayarak değerlendirir.', 'Fen Bilimleri', 26),
+('5. Sınıf', 'Maddenin Doğası', 'Maddenin Hâl Değişimi', 'FB.5.5.4.', 'Maddenin ısı etkisiyle hâl değiştirebileceğini bilimsel gözleme dayalı tahmin edebilme
+a) Maddenin ısı etkisiyle hâl değiştirebileceğine ilişkin ön bilgi ve deneyimlerine dayalı önerme oluşturur.
+b) Gözleme dayalı olan ve olmayan önermeleri karşılaştırır.
+c) Maddenin ısı etkisiyle hâl değiştirebileceğini temellendirebilmek için gözlem verilerinden sonuç çıkarır.
+ç) Gözlemlenmemiş duruma ilişkin tahminde bulunur.
+d) Tahminlerinin geçerliğini sorgular.', 'Fen Bilimleri', 27),
+('5. Sınıf', 'Maddenin Doğası', 'Madde ve Isı', 'FB.5.5.5.', 'Maddeleri ısı iletimi bakımından sınıflandırabilme
+a) Maddeleri ısı iletimi bakımından niteliklerini belirler.
+b) Maddeleri ısı iletkeni veya yalıtkanı olarak ayrıştırır.
+c) Maddeleri ısı iletkeni veya yalıtkanı olarak gruplandırır.
+ç) Maddeleri ısı iletkeni veya yalıtkanı olarak etiketler.', 'Fen Bilimleri', 28),
+('5. Sınıf', 'Maddenin Doğası', 'Madde ve Isı', 'FB.5.5.6.', 'Isı yalıtımını gösteren model oluşturabilme
+a) Isı yalıtımı ile ilgili model önerir.
+b) Yeni kanıtlarla modeli yeniler.', 'Fen Bilimleri', 29),
+('5. Sınıf', 'Yaşamımızdaki Elektrik', 'Devre Elemanlarının Sembollerle Gösterimi ve Devre Şemaları', 'FB.5.6.1.', 'Bir elektrik devresindeki elemanları sembollerinin olup olmamasına göre sınıflandırabilme
+a) Bir elektrik devresindeki elemanların sembollerini belirler.
+b) Bir elektrik devresindeki elemanları sembollerinin olup olmamasına göre ayrıştırır.
+c) Bir elektrik devresindeki elemanları sembollerinin olup olmamasına göre gruplandırır.
+ç) Bir elektrik devresindeki elemanların sembollerini niteliklerine göre etiketler.', 'Fen Bilimleri', 30),
+('5. Sınıf', 'Yaşamımızdaki Elektrik', 'Devre Elemanlarının Sembollerle Gösterimi ve Devre Şemaları', 'FB.5.6.2.', 'Şemasını çizdiği elektrik devresine uygun deney yapabilme
+a) Çizdiği elektrik devresine uygun deney düzeneği tasarlar.
+b) Deney ile ilgili ölçme ve veri analizi yapar.', 'Fen Bilimleri', 31),
+('5. Sınıf', 'Yaşamımızdaki Elektrik', 'Basit Bir Elektrik Devresinde Ampul Parlaklığını Etkileyen Değişkenler', 'FB.5.6.3.', 'Bir elektrik devresindeki ampul parlaklığını etkileyen değişkenlerin neler olduğuna ilişkin hipotez oluşturabilme
+a) Elektrik devrelerindeki ampul parlaklığını etkileyen değişkenleri tanımlar.
+b) Pil ve ampul sayısını değiştirerek ampul parlaklığındaki değişimi neden-sonuç ilişkisi bağlamında belirler.
+c) Ampul parlaklığındaki bağımlı, bağımsız ve kontrol edilen değişkenleri belirler.
+ç) Bağımsız değişken olarak pil sayısı ve ampul sayısını kontrol eder.
+d) Farklı elektrik devreleri üzerinden ampul parlaklığının pil sayısı ve ampul sayısına bağlı olarak değiştiğine yönelik önermelerde bulunur.', 'Fen Bilimleri', 32),
+('5. Sınıf', 'Sürdürülebilir Yaşam ve Geri Dönüşüm', 'Evsel Atıklar ve Geri Dönüşüm', 'FB.5.7.1.', 'Evsel atıklarda geri dönüştürülebilen ve dönüştürülemeyen maddeleri sınıflandırabilme
+a) Evsel atıkların niteliklerini tanımlar.
+b) Evsel atıkları geri dönüştürülebilen ve dönüştürülemeyen olarak ayrıştırır.
+c) Evsel atıkları geri dönüştürülebilen ve dönüştürülemeyen olarak gruplandırır.
+ç) Evsel atıkları geri dönüştürülebilen ve dönüştürülemeyen olarak etiketler.', 'Fen Bilimleri', 34),
+('5. Sınıf', 'Sürdürülebilir Yaşam ve Geri Dönüşüm', 'Evsel Atıklar ve Geri Dönüşüm', 'FB.5.7.2.', 'Kaynakların etkili kullanımı konusunda geri dönüşümün önemli olduğuna yönelik bilimsel çıkarımda bulunabilme
+a) Kaynakların etkili kullanımı ve geri dönüşüme ait nitelikleri tanımlar.
+b) Kaynakların etkili kullanımı konusunda geri dönüşümün önemine ilişkin topladığı verileri kaydeder.
+c) Kaynakların etkili kullanımı konusunda geri dönüşümün önemine ilişkin verileri değerlendirir.', 'Fen Bilimleri', 35),
+('5. Sınıf', 'Sürdürülebilir Yaşam ve Geri Dönüşüm', 'Evsel Atıklar ve Geri Dönüşüm', 'FB.5.7.3.', 'Yakın çevresinde atık yönetiminin uygulanabilirliğine ilişkin deneyimlerini yansıtabilme
+a) Yakın çevresinde atık yönetimine ilişkin deneyimlerini gözden geçirir.
+b) Yakın çevresinde atık yönetimine ilişkin deneyimlerine dayalı çıkarım yapar.
+c) Yakın çevresinde atık yönetimine ilişkin ulaşılan çıkarımları değerlendirir.', 'Fen Bilimleri', 36),
+('6. Sınıf', 'Güneş Sistemi ve Tutulmalar', 'Güneş Sistemi', 'FB.6.1.1.', 'Güneş sistemindeki gezegenleri niteliklerine göre sınıflandırabilme
+a) Güneş sistemindeki gezegenlerin niteliklerini belirler.
+b) Güneş sistemindeki gezegenleri niteliklerine göre ayrıştırır.
+c) Güneş sistemindeki gezegenleri niteliklerine göre gruplandırır.
+ç) Güneş sistemindeki gezegenleri niteliklerine göre etiketler.', 'Fen Bilimleri', 1),
+('6. Sınıf', 'Güneş Sistemi ve Tutulmalar', 'Güneş Sistemi', 'FB.6.1.2.', 'Güneş sistemi ile ilgili bilimsel model oluşturabilme
+a) Güneş sistemi ile ilgili model önerir.
+b) Güneş sistemi ile ilgili hazırladığı modelini yeni kanıtlarla yeniler.', 'Fen Bilimleri', 2),
+('6. Sınıf', 'Güneş Sistemi ve Tutulmalar', 'Güneş ve Ay Tutulmaları', 'FB.6.1.3.', 'Güneş ve Ay tutulması ile ilgili bilimsel çıkarım yapabilme
+a) Güneş ve Ay tutulmasının niteliklerini tanımlar.
+b) Güneş ve Ay tutulması ile ilgili veri toplar ve kaydeder.
+c) Güneş ve Ay tutulmasını değerlendirir.', 'Fen Bilimleri', 2),
+('6. Sınıf', 'Güneş Sistemi ve Tutulmalar', 'Güneş ve Ay Tutulmaları', 'FB.6.1.4.', 'Güneş ve Ay tutulması ile ilgili bilimsel model oluşturabilme
+a) Güneş ve Ay tutulması ile ilgili model önerir.
+b) Güneş ve Ay tutulması ile ilgili modelini yeniler.', 'Fen Bilimleri', 3),
+('6. Sınıf', 'Kuvvetin Etkisinde Hareket', 'Bileşke Kuvvet', 'FB.6.2.1.', 'Bir cisme etki eden aynı doğrultudaki kuvvetler arasındaki ilişkileri açıklayarak bileşke kuvveti yapılandırabilme
+a) Bir cisme etki eden aynı doğrultudaki kuvvetleri inceleyerek aralarındaki mantıksal ilişkileri ortaya koyar.
+b) Bir cisme etki eden aynı doğrultudaki kuvvetler arasındaki ilişkileri bileşke kuvvet olarak açıklar.', 'Fen Bilimleri', 4),
+('6. Sınıf', 'Kuvvetin Etkisinde Hareket', 'Bileşke Kuvvet', 'FB.6.2.2.', 'Dengelenmiş ve dengelenmemiş kuvvetlerin etkisi altındaki bir cismin hareketine yönelik deney yapabilme
+a) Dengelenmiş ve dengelenmemiş kuvvetlerin bir cismin hareketine etkisini gösteren deney düzeneği tasarlar.
+b) Deney ile ilgili ölçme ve veri analizi yapar.', 'Fen Bilimleri', 5),
+('6. Sınıf', 'Kuvvetin Etkisinde Hareket', 'Sabit Süratli ve Sabit Hızlı Hareket', 'FB.6.2.3.', 'Sürat ve hız kavramlarını karşılaştırabilme
+a) Sürat ve hız kavramlarına ilişkin özellikleri belirler.
+b) Sürat ve hız kavramlarına ilişkin benzerlikleri listeler.
+c) Sürat ve hız kavramlarına ilişkin farklılıkları listeler.', 'Fen Bilimleri', 6),
+('6. Sınıf', 'Canlılarda Sistemler', 'Bitki ve Hayvanlarda Üreme, Büyüme ve Gelişme', 'FB.6.3.1.', 'Eşeyli ve eşeysiz üremeyi karşılaştırabilme
+a) Eşeyli ve eşeysiz üreme ile ilgili özellikleri belirler.
+b) Eşeyli ve eşeysiz üreme ile benzerlikleri listeler.
+c) Eşeyli ve eşeysiz üreme ile ilgili farklılıkları listeler.', 'Fen Bilimleri', 7),
+('6. Sınıf', 'Canlılarda Sistemler', 'Bitki ve Hayvanlarda Üreme, Büyüme ve Gelişme', 'FB.6.3.2.', 'Bitkilerde üreme, büyüme ve gelişme hakkında bilimsel çıkarım yapabilme
+a) Bitkilerde üreme, büyüme ve gelişmeye etki eden temel faktörlere ait nitelikleri tanımlar.
+b) Bitkilerde üreme, büyüme ve gelişmeye etki eden temel faktörlere ilişkin veri toplar ve kaydeder.
+c) Bitkilerde üreme, büyüme ve gelişmeye etki eden temel faktörlere ilişkin verileri yorumlar ve değerlendirir.', 'Fen Bilimleri', 8),
+('6. Sınıf', 'Canlılarda Sistemler', 'Bitki ve Hayvanlarda Üreme, Büyüme ve Gelişme', 'FB.6.3.3.', 'Tohumun çimlenmesine etki eden faktörlere ilişkin hipotez oluşturabilme
+a) Tohumun çimlenmesine etki eden faktörleri tanımlar.
+b) Tohumun çimlenmesine etki eden faktörlerin neden sonuç ilişkilerini belirler.
+c) Tohumun çimlenmesine etki eden faktörlere ait değişkenleri belirler.
+ç) Tohumun çimlenmesine etki eden faktörlere ait belirlediği değişkenleri kontrol eder.
+d) Tohumun çimlenmesine etki eden faktörlere ait önerme sunar.', 'Fen Bilimleri', 9),
+('6. Sınıf', 'Canlılarda Sistemler', 'Bitki ve Hayvanlarda Üreme, Büyüme ve Gelişme', 'FB.6.3.4.', 'Hayvanlarda üreme, büyüme ve gelişme hakkında bilimsel çıkarım yapabilme
+a) Hayvanlarda üreme, büyüme ve gelişmeye etki eden temel faktörlere ait nitelikleri tanımlar.
+b) Hayvanlarda üreme, büyüme ve gelişmeye etki eden temel faktörlere ilişkin veri toplar ve kaydeder.
+c) Hayvanlarda üreme, büyüme ve gelişmeye etki eden temel faktörlere ilişkin verileri yorumlar ve değerlendirir.', 'Fen Bilimleri', 10),
+('6. Sınıf', 'Canlılarda Sistemler', 'Bitki ve Hayvanlarda Üreme, Büyüme ve Gelişme', 'FB.6.3.5.', 'İnsanda üremeyi sağlayan yapı ve organlar arasındaki ilişkileri çözümleyebilme
+a) İnsanda üremeyi sağlayan yapı ve organları poster/şema üzerinde belirler.
+b) İnsanda üremeyi sağlayan yapı ve organlar arasındaki ilişkileri belirler.', 'Fen Bilimleri', 10),
+('6. Sınıf', 'Canlılarda Sistemler', 'Denetleyici ve Düzenleyici Sistemler', 'FB.6.3.6.', 'Sinir sisteminin görevlerini model üzerinde bilimsel olarak gözlemleyebilme
+a) Sinir sisteminin özelliklerini tanımlar.
+b) Sinir sistemini model üzerinde inceler.
+c) Sinir sisteminin görevlerini açıklar.', 'Fen Bilimleri', 11),
+('6. Sınıf', 'Canlılarda Sistemler', 'Denetleyici ve Düzenleyici Sistemler', 'FB.6.3.7.', 'İç salgı bezlerinin vücut için önemini yapılandırabilme
+a) İç salgı bezlerini inceleyerek mantıksal ilişkiler ortaya koyar.
+b) İç salgı bezlerinin vücut için önemini uyumlu bir bütün olarak açıklar.', 'Fen Bilimleri', 12),
+('6. Sınıf', 'Canlılarda Sistemler', 'Denetleyici ve Düzenleyici Sistemler', 'FB.6.3.8.', 'Çocukluktan ergenliğe geçişte oluşan bedensel ve ruhsal değişimleri genelleyebilme
+a) Çocukluktan ergenliğe geçişte oluşan değişimler hakkında bilgi toplar.
+b) Çocukluktan ergenliğe geçişte oluşan değişimlerden ortak olanları belirler.
+c) Çocukluktan ergenliğe geçişte oluşan değişimlerden ortak olmayanları belirler.
+ç) Çocukluktan ergenliğe geçişte oluşan değişimlerle ilgili örüntüler üzerinden genellemede bulunur.', 'Fen Bilimleri', 12),
+('6. Sınıf', 'Canlılarda Sistemler', 'Denetleyici ve Düzenleyici Sistemler', 'FB.6.3.9.', 'Denetleyici ve düzenleyici sistemlerin sağlığı için yapılması gerekenlerle ilgili bilgi toplayabilme
+a) Denetleyici ve düzenleyici sistemlerin sağlığı ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Denetleyici ve düzenleyici sağlığı hakkında bilgiler bulur.
+c) Denetleyici ve düzenleyici sağlığı konusunda bulduğu bilgileri doğrular.
+ç) Denetleyici ve düzenleyici sağlığı konusunda ulaştığı bilgileri kaydeder.', 'Fen Bilimleri', 13),
+('6. Sınıf', 'Işığın Yansıması ve Renkler', 'Işığın Yansıması', 'FB.6.4.1.', 'Işığın farklı yüzeylerdeki yansıma olaylarına ilişkin bilimsel çıkarım yapabilme
+a) Işığın farklı yüzeylerdeki yansıma olaylarının niteliklerini tanımlar.
+b) Işığın farklı yüzeylerdeki yansıma olayları ile ilgili veri toplar ve kaydeder.
+c) Işığın farklı yüzeylerdeki yansımasını düzgün ve dağınık yansıma olarak yorumlar ve değerlendirir.', 'Fen Bilimleri', 13),
+('6. Sınıf', 'Işığın Yansıması ve Renkler', 'Işığın Yansıması', 'FB.6.4.2.', 'Işığın yansımasında gelen ışın, yansıyan ışın ve yüzeyin normali arasındaki ilişki ile ilgili kanıt kullanabilme
+a) Işığın yansımasına ilişkin deneysel verileri kaydeder.
+b) Işığın yansımasına ilişkin veri setleri oluşturur.
+c) Işığın yansımasına dair topladığı verilere dayalı açıklama yapar.', 'Fen Bilimleri', 14),
+('6. Sınıf', 'Işığın Yansıması ve Renkler', 'Aynalar', 'FB.6.4.3.', 'Günlük hayattaki ayna çeşitlerine ilişkin bilimsel çıkarım yapabilme
+a) Ayna çeşitlerinin niteliklerini deneyerek tanımlar.
+b) Ayna çeşitlerini kullanarak özelliklerine yönelik veri toplar ve kaydeder.
+c) Günlük yaşamdaki aynaları düz, çukur ve tümsek ayna olarak özelliklerine göre yorumlar ve değerlendirir.', 'Fen Bilimleri', 15),
+('6. Sınıf', 'Işığın Yansıması ve Renkler', 'Işığın Soğurulması', 'FB.6.4.4.', 'Işığın madde ile etkileşimi sonucunda soğurulabileceğini bilimsel olarak gözlemleyebilme
+a) Işığın madde ile etkileşimine yönelik nitelikleri tanımlar.
+b) Işığın madde ile etkileşimine yönelik topladığı verileri kaydeder.
+c) Işığın madde tarafından soğurulabileceğini elde ettiği veriler doğrultusunda açıklar.', 'Fen Bilimleri', 16),
+('6. Sınıf', 'Işığın Yansıması ve Renkler', 'Işığın Soğurulması', 'FB.6.4.5.', 'Beyaz ışığın tüm ışık renklerinin bileşiminden oluştuğuna ilişkin bilimsel çıkarım yapabilme
+a) Beyaz ışığı oluşturan nitelikleri tanımlar.
+b) Beyaz ışığın oluşumuna ilişkin topladığı verileri kaydeder.
+c) Beyaz ışığın oluşumuna dair verileri yorumlar ve değerlendirir.', 'Fen Bilimleri', 17),
+('6. Sınıf', 'Işığın Yansıması ve Renkler', 'Işığın Soğurulması', 'FB.6.4.6.', 'Cisimlerin siyah, beyaz ve renkli görünmesini bilimsel olarak gözlemleyebilme
+a) Cisimlerin siyah, beyaz ve renkli görünmesine yönelik nitelikleri tanımlar.
+b) Cisimlerin siyah, beyaz ve renkli görünmesine yönelik veri toplar ve kaydeder.
+c) Cisimlerin siyah, beyaz ve renkli görünmesine yönelik verileri açıklar.', 'Fen Bilimleri', 18),
+('6. Sınıf', 'Işığın Yansıması ve Renkleri', 'Işığın Soğurulması', 'FB.6.4.7.', 'Güneş enerjisinin günlük hayat ve teknolojideki yenilikçi uygulamalarına ilişkin eleştirel düşünebilme
+a) Güneş enerjisinin günlük yaşam ve teknolojideki yenilikçi uygulamalarına ilişkin fikirleri sorgular.
+b) Güneş enerjisinin günlük yaşam ve teknolojideki yenilikçi uygulamalarına ilişkin akıl yürütür.
+c) Güneş enerjisinin günlük yaşam ve teknolojideki yenilikçi uygulamalarına ilişkin ulaştığı çıkarımları yansıtır.', 'Fen Bilimleri', 19),
+('6. Sınıf', 'MADDENİN AYIRT EDİCİ ÖZELLİKLERi', 'Genleşme ve Büzülme', 'FB.6.5.1.', 'Isı etkisiyle maddelerin genleşip büzüleceğine yönelik bilimsel gözleme dayalı tahmin edebilme
+a) Ön bilgi ve deneyimiyle maddelerin genleşip büzüleceğine yönelik önerme oluşturur.
+b) Gözleme dayalı olan ve olmayan günlük yaşam ile ilişkili önermeleri karşılaştırır.
+c) Tahminlerini temellendirmek için gözlem verilerinden sonuç çıkarır.
+ç) Günlük yaşam ile ilişkili gözlemlenmemiş duruma ilişkin tahminde bulunur.
+d) Tahminlerin geçerliğini sorgular.', 'Fen Bilimleri', 19),
+('6. Sınıf', 'Maddenin Ayırt Edici Özellikleri', 'Maddenin Hâl Değişim Noktaları', 'FB.6.5.2.', 'Maddelerin erime, donma ve kaynama noktasını gösteren deney yapabilme
+a) Maddelerin erime, donma ve kaynama noktasını gösteren deney tasarlar.
+b) Deney ile ilgili ölçme ve veri analizi yapar.', 'Fen Bilimleri', 21),
+('6. Sınıf', 'Maddenin Ayırt Edici Özellikleri', 'Yoğunluk', 'FB.6.5.3.', 'Yoğunluğa ilişkin hesaplamalar yaparak bilimsel veriye dayalı tahmin edebilme
+a) Yoğunluğa ilişkin verilere veya ön bilgilerine dayalı önerme oluşturur.
+b) Yoğunluğa ilişkin veriye dayalı ve dayalı olmayan önermeleri karşılaştırır.
+c) Yoğunluğa ilişkin hesaplama ve tahmin yapar.
+ç) Tahminlerin geçerliğini sorgular.', 'Fen Bilimleri', 23),
+('6. Sınıf', 'Maddenin Ayırt Edici Özellikleri', 'Yoğunluk', 'FB.6.5.4.', 'Deneyler sonucunda çeşitli maddelerin yoğunluklarına ilişkin tümdengelimsel akıl yürütebilme
+a) Çeşitli maddelerin yoğunluklarına ilişkin hipotezler kurarak test eder.
+b) Geçerli hipotezleri yeni durumları açıklamak için kullanır.', 'Fen Bilimleri', 25),
+('6. Sınıf', 'Maddenin Ayırt Edici Özellikleri', 'Yoğunluk', 'FB.6.5.5.', 'Suyun katı ve sıvı hâllerine ait yoğunlukları karşılaştırarak bu durumun canlılar için önemi hakkında bilimsel çıkarımlar yapabilme
+a) Suyun katı ve sıvı hâlleri ile ilgili nitelikleri tanımlar.
+b) Suyun katı ve sıvı hâllerine ait yoğunlukları ile ilgili topladığı verileri kaydeder.
+c) Suyun katı ve sıvı hâllerine ait yoğunluk farkının canlılar için önemli olduğunu yorumlar ve değerlendirir.', 'Fen Bilimleri', 26),
+('6. Sınıf', 'Maddenin Ayırt Edici Özellikleri', 'Yoğunluk', 'FB.6.5.6.', 'Yoğunluk ile ilgili bilimsel model oluşturabilme
+a) Yoğunluk ile ilgili model önerir.
+b) Yeni kanıtlarla modeli yeniler.', 'Fen Bilimleri', 27),
+('6. Sınıf', 'Elektriğin İletimi ve Direnç', 'Elektriğin İletimi', 'FB.6.6.1.', 'Maddelerin elektriği iletme durumlarını gösteren deney yapabilme
+a) Maddelerin iletme durumlarını test etmek için elektrik devresi tasarlar.
+b) Deney ile ilgili veri analizi yapar.', 'Fen Bilimleri', 27),
+('6. Sınıf', 'Elektriğin İletimi ve Direnç', 'Elektriksel Direnç ve Bağlı Olduğu Faktörler', 'FB.6.6.2.', 'Elektrik devresindeki ampulün parlaklığının bağlı olduğu değişkenleri belirlemeye yönelik deney yapabilme
+a) Elektrik devresindeki ampulün parlaklığının bağlı olduğu değişkenleri belirleyebilecek bir deney tasarlar.
+b) Deney ile ilgili ölçme ve veri analizi yapar.', 'Fen Bilimleri', 29),
+('6. Sınıf', 'Elektriğin İletimi ve Direnç', 'Elektriksel Direnç ve Bağlı Olduğu Faktörler', 'FB.6.6.3.', 'Ayarlanabilir direncin ampulün parlaklığına etkilerine yönelik bilimsel çıkarım yapabilme
+a) Reosta kullanarak elektriksel dirence ait nitelikleri tanımlar.
+b) Direncin değişkenliğini dikkate alarak veri toplar ve kaydeder.
+c) Ampulün parlaklığı üzerinde elektriksel direncin etkili olduğunu yorumlar ve değerlendirir.', 'Fen Bilimleri', 31),
+('6. Sınıf', 'Sürdürülebilir Yaşam ve Etkileşim', 'Biyoçeşitlilik', 'FB.6.7.1.', 'Biyoçeşitliliğin doğal yaşam için önemini sorgulayabilme
+a) Biyoçeşitliliğin doğal yaşam için önemini tanımlar.
+b) Biyoçeşitliliğin doğal yaşam için önemine ilişkin sorular sorar .
+c) Biyoçeşitliliğin doğal yaşam için önemi konusunda bilgi toplar.
+ç) Biyoçeşitliliğin doğal yaşam için önemi konusunda toplanan bilgilerin doğruluğunu değerlendirir.
+d) Biyoçeşitliliğin doğal yaşam için önemi konusunda toplanan bilgiler üzerinde çıkarım yapar.', 'Fen Bilimleri', 32),
+('6. Sınıf', 'Sürdürülebilir Yaşam ve Etkileşim', 'Biyoçeşitlilik', 'FB.6.7.2.', 'Biyoçeşitliliği tehdit eden faktörleri araştırma verilerine dayalı tahmin edebilme
+a) Biyoçeşitliliği tehdit eden faktörler konusunda ön bilgilere dayalı önerme oluşturur.
+b) Biyoçeşitliliği tehdit eden faktörler konusunda veriye dayalı olan ve dayalı olmayan önermeleri karşılaştırır.
+c) Biyoçeşitliliği tehdit eden faktörler konusunda tahminde bulunur.
+ç) Biyoçeşitliliği tehdit eden faktörler konusunda tahminlerin geçerliğini sorgular.', 'Fen Bilimleri', 33),
+('6. Sınıf', 'Sürdürülebilir Yaşam ve Etkileşim', 'İnsan ve Çevre Etkileşimi', 'FB.6.7.3.', 'Isınma amaçlı yakıt kullanımının insan ve çevre üzerine etkilerini tartışabilme
+a) Isınma amaçlı yakıt kullanımının insan ve çevre üzerine etkisine yönelik mantıksal temellendirme yapar.
+b) Isınma amaçlı yakıt kullanımının insan ve çevre üzerine etkisine yönelik mantıksal çelişkileri tespit eder.
+c) Isınma amaçlı yakıt kullanımının insan ve çevre üzerine etkisi konusunda geçerli fikirleri kabul eder.', 'Fen Bilimleri', 35),
+('6. Sınıf', 'Sürdürülebilir Yaşam ve Etkileşim', 'İnsan ve Çevre Etkileşimi', 'FB.6.7.4.', 'Yakın çevresindeki veya ülkemizdeki bir çevre problemini çözebilme
+a) Yakın çevresindeki veya ülkemizdeki bir çevre sorununu yapılandırır.
+b) Yakın çevresindeki veya ülkemizdeki bir çevre sorununu özetler.
+c) Yakın çevresindeki veya ülkemizdeki bir çevre sorununun çözümüne yönelik veriye dayalı tahmin eder.
+ç) Yakın çevresindeki veya ülkemizdeki bir çevre sorununa yönelik önermeler üzerinden akıl yürütür.
+d) Yakın çevresindeki veya ülkemizdeki bir çevre sorununun çözümüne ilişkin değerlendirme yapar.', 'Fen Bilimleri', 36),
+('7. Sınıf', 'Uzay Çağı', 'Türkiye ve Uzay Araştırmaları', 'FB.7.1.1.', 'Uzay araştırmaları için geliştirilen teknolojileri karşılaştırabilme
+a) Uzay araştırmaları için geliştirilen teknolojilerin özelliklerini belirler.
+b) Uzay araştırmaları için geliştirilen teknolojilerin özelliklerine göre benzerliklerini
+listeler.
+c) Uzay araştırmaları için geliştirilen teknolojilerin özelliklerine göre farklılıklarını listeler.', 'Fen Bilimleri', 1),
+('7. Sınıf', 'Uzay Çağı', 'Türkiye ve Uzay Araştırmaları', 'FB.7.1.2.', 'Uzay gözlem araçları ile ilgili bilimsel model oluşturabilme
+a) Uzay gözlem araçları ile ilgili model önerir.
+b) Uzay gözlem araçları ile ilgili hazırladığı modeli yeni kanıtlara göre yeniler.', 'Fen Bilimleri', 2),
+('7. Sınıf', 'Uzay Çağı', 'Türkiye ve Uzay Araştırmaları', 'FB.7.1.3.', 'Uzay araştırmalarının yol açabileceği problemleri çözebilme
+a) Uzay araştırmalarının yol açabileceği problemleri yapılandırır.
+b) Uzay araştırmalarının yol açabileceği problemleri özetler.
+c) Uzay araştırmalarının yol açabileceği problemlerin çözümüne yönelik veriye dayalı
+tahminde bulunur.
+ç) Uzay araştırmalarının yol açabileceği problemlerin çözümüne yönelik önermeler
+üzerinden akıl yürütür.
+d) Uzay araştırmalarının yol açabileceği problemlerin çözümüne ilişkin değerlendirmede bulunur.', 'Fen Bilimleri', 2),
+('7. Sınıf', 'Uzay Çağı', 'Uzayda Neler Var?', 'FB.7.1.4.', 'Yıldızların yaşamını açıklayarak yapılandırabilme
+a) Yıldızların yaşamını inceleyerek hiyerarşik ilişkileri ortaya koyar.
+b) Yıldızların yaşamı ile ilgili elde ettiği ilişkilere dayalı unsurlardan uyumlu bir bütün
+oluşturur.', 'Fen Bilimleri', 3),
+('7. Sınıf', 'Uzay Çağı', 'Uzayda Neler Var?', 'FB.7.1.5.', 'Yıldız, galaksi ve evren kavramlarını açıklayarak yapılandırabilme
+a) Yıldız, galaksi ve evren kavramlarını inceleyerek hiyerarşik ilişkileri ortaya koyar.
+b) Yıldız, galaksi ve evren kavramları ile ilgili elde ettiği ilişkilere dayalı unsurlardan
+uyumlu bir bütün oluşturur.', 'Fen Bilimleri', 4),
+('7. Sınıf', 'Kuvvet ve Enerjiyi Keşfedelim', 'Kuvvet, İş ve Enerji İlişkisi', 'FB.7.2.1.', 'Fiziksel anlamda yapılan işin bağlı olduğu faktörlere ilişkin bilimsel çıkarım yapabilme
+a) Fiziksel anlamda yapılan işin niteliklerini tanımlar.
+b) Fiziksel anlamda yapılan işin farklı örneklerini gözlemleyerek verileri toplar ve kaydeder.
+c) Fiziksel anlamda yapılan işin kuvvet ve yer değiştirmeye bağlı olduğunu yorumlar
+ve değerlendirir.', 'Fen Bilimleri', 5),
+('7. Sınıf', 'Kuvvet ve Enerjiyi Keşfedelim', 'Kuvvet, İş ve Enerji İlişkisi', 'FB.7.2.2.', 'Enerji çeşitlerinden kinetik ve potansiyel enerjiyi karşılaştırabilme
+a) Kinetik ve potansiyel enerjinin özelliklerini belirler.
+b) Kinetik ve potansiyel enerjinin benzer özelliklerini listeler.
+c) Kinetik ve potansiyel enerjinin farklı özelliklerini listeler.', 'Fen Bilimleri', 6),
+('7. Sınıf', 'Kuvvet ve Enerjiyi Keşfedelim', 'Enerji Dönüşümleri', 'FB.7.2.3.', 'Enerji dönüşümünden hareketle enerjinin korunduğuna yönelik tümevarımsal akıl yürütebilme
+a) Kinetik ve potansiyel enerjinin birbirine dönüşümüne yönelik örüntü bulur.
+b) Enerjinin korunumuna yönelik genelleme yapar.', 'Fen Bilimleri', 8),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Sindirim Sistemi', 'FB.7.3.1.', 'Sindirim sistemini oluşturan yapı ve organların görevlerini model üzerinde bilimsel olarak gözlemleyebilme
+a) Sindirim sistemini oluşturan yapı ve organların niteliklerini tanımlar.
+b) Sindirim sistemini oluşturan yapı ve organları model üzerinde inceleyerek gözlem
+verilerini kaydeder.
+c) Sindirim sistemini oluşturan yapı ve organların görevlerini açıklar.', 'Fen Bilimleri', 10),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Sindirim Sistemi', 'FB.7.3.2.', 'Sindirim sisteminin sağlığı için yapılması gerekenler konusunda bilgi toplayabilme
+a) Sindirim sisteminin sağlığı ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Belirlediği araçları kullanarak sindirim sisteminin sağlığı hakkında bilgiler bulur.
+c) Sindirim sisteminin sağlığı hakkında bulduğu bilgileri doğrular.
+ç) Sindirim sisteminin sağlığı hakkında bulduğu bilgileri kaydeder.', 'Fen Bilimleri', 11),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Dolaşım Sistemi', 'FB.7.3.3.', 'Dolaşım sistemini oluşturan yapı ve organların görevlerini model üzerinde bilimsel olarak gözlemleyebilme
+a) Dolaşım sistemini oluşturan yapı ve organların niteliklerini tanımlar.
+b) Dolaşım sistemini oluşturan yapı ve organları model üzerinde inceleyerek gözlem
+verilerini kaydeder.
+c) Dolaşım sistemini oluşturan yapı ve organların görevlerini açıklar.', 'Fen Bilimleri', 12),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Dolaşım Sistemi', 'FB.7.3.4.', 'Kan bağışının toplumsal dayanışma açısından önemini tartışabilme
+a) Kan bağışının toplumsal dayanışma açısından önemine yönelik mantıksal temellendirme yapar.
+b) Kan bağışının toplumsal dayanışma açısından önemine yönelik mantıksal çelişkileri
+tespit eder.
+c) Kan bağışının toplumsal dayanışma açısından önemi konusunda geçerli fikirler
+oluşturur.', 'Fen Bilimleri', 13),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Dolaşım Sistemi', 'FB.7.3.5.', 'Dolaşım sisteminin sağlığı için yapılması gerekenler konusunda bilgi toplayabilme
+a) Dolaşım sisteminin sağlığı ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Belirlediği aracı kullanarak dolaşım sisteminin sağlığı hakkında bilgiler bulur.
+c) Dolaşım sisteminin sağlığı hakkında bulduğu bilgileri doğrular.
+ç) Dolaşım sisteminin sağlığı hakkında bulduğu bilgileri kaydeder.', 'Fen Bilimleri', 14),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Solunum Sistemi', 'FB.7.3.6.', 'Solunum sistemini oluşturan yapı ve organların görevlerini model üzerinde bilimsel olarak gözlemleyebilme
+a) Solunum sistemini oluşturan yapı ve organların niteliklerini tanımlar.
+b) Solunum sistemini oluşturan yapı ve organları model üzerinde inceleyerek gözlem
+verilerini kaydeder.', 'Fen Bilimleri', 14),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Solunum Sistemi', 'FB.7.3.7.', 'Solunum sisteminin sağlığı için yapılması gerekenler konusunda bilgi toplayabilme
+a) Solunum sisteminin sağlığı ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Belirlediği aracı kullanarak solunum sisteminin sağlığı hakkında bilgiler bulur.
+c) Solunum sisteminin sağlığı hakkında bulduğu bilgileri doğrular.
+ç) Solunum sisteminin sağlığı hakkında bulduğu bilgileri kaydeder.', 'Fen Bilimleri', 16),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Boşaltım Sistemi', 'FB.7.3.8.', 'Boşaltım sistemini oluşturan yapı ve organları model üzerinde bilimsel olarak gözlemleyebilme
+a) Boşaltım sistemini oluşturan yapı ve organların niteliklerini tanımlar.
+b) Boşaltım sistemini oluşturan yapı ve organları model üzerinde inceleyerek gözlem
+verilerini kaydeder.
+c) Boşaltım sistemini oluşturan yapı ve organların özelliklerini açıklar.', 'Fen Bilimleri', 16),
+('7. Sınıf', 'Vücudumuzdaki Sistemler', 'Boşaltım Sistemi', 'FB.7.3.9.', 'Boşaltım sisteminin sağlığı için yapılması gerekenler konusunda bilgi toplayabilme
+a) Boşaltım sisteminin sağlığı ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Belirlediği aracı kullanarak boşaltım sisteminin sağlığı hakkında bilgiler bulur.
+c) Boşaltım sisteminin sağlığı hakkında bulduğu bilgileri doğrular.
+ç) Boşaltım sisteminin sağlığı hakkında ulaştığı bilgileri kaydeder.', 'Fen Bilimleri', 17),
+('7. Sınıf', 'Işığın Kırılması ve Mercekler', 'Işığın Kırılması', 'FB.7.4.1.', 'Ortam değiştiren ışığın izlediği yolu gözlemleyerek kırılma olayına yönelik bilimsel çıkarım yapabilme
+a) Işık ışınlarının kırılmasına yönelik nitelikleri tanımlar.
+b) Farklı yoğunluklara sahip ortamlarda ışığın kırılmasına yönelik verileri toplayarak
+kaydeder.
+c) Az yoğun ortamda ve çok yoğun ortamda ışığın izlediği yolları yorumlar ve değerlendirir.', 'Fen Bilimleri', 18),
+('7. Sınıf', 'Işığın Kırılması ve Mercekler', 'Mercekler', 'FB.7.4.2.', 'Mercek çeşitlerine yönelik bilimsel çıkarım yapabilme
+a) Mercek çeşitlerinin niteliklerini deneyerek tanımlar.
+b) Mercek çeşitlerini kullanarak özelliklerine yönelik veri kaydeder.
+c) Mercekleri ince ve kalın kenarlı mercek olarak yorumlar ve değerlendirir.', 'Fen Bilimleri', 20),
+('7. Sınıf', 'Işığın Kırılması ve Mercekler', 'Mercekler', 'FB.7.4.3.', 'Merceklerin günlük hayatta kullanım alanlarını örneklerle sınıflandırabilme
+a) Merceklerin kullanım alanlarını belirler.
+b) Merceklerin kullanım alanlarını niteliklerine göre ayrıştırır.
+c) Merceklerin kullanım alanlarını gruplandırır.
+ç) Merceklerin kullanım alanlarını niteliklerine göre etiketler.', 'Fen Bilimleri', 21),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Maddenin Tanecikli Yapısı', 'FB.7.5.1.', 'Atomun yapısını ve yapısındaki temel parçacıkları çözümleyebilme
+a) Atomu oluşturan temel parçacıkları belirler.
+b) Atomu oluşturan temel parçacıklar arasındaki ilişkileri belirler.', 'Fen Bilimleri', 22),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Maddenin Tanecikli Yapısı', 'FB.7.5.2.', 'Geçmişten günümüze atom kavramı ile ilgili bilimsel bilgilerin değişebileceğini sorgulayabilme
+a) Geçmişten günümüze atomun sürecini açıklar.
+b) Geçmişten günümüze atom ile ilgili sorular sorar.
+c) Geçmişten günümüze atom ile ilgili bilgi toplar.
+ç) Toplanan bilgilerin doğruluğunu değerlendirir.
+d) Toplanan bilgiler üzerinde çıkarım yapar.', 'Fen Bilimleri', 22),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Maddenin Tanecikli Yapısı', 'FB.7.5.3.', 'Farklı moleküllere ait bilimsel model oluşturabilme
+a) Aynı veya farklı atomların bir araya gelmesiyle ilgili molekül modeli önerir.
+b) Yeni kanıtlarla modeli yeniler.', 'Fen Bilimleri', 23),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Saf Maddeler', 'FB.7.5.4.', 'Saf maddeleri element ve bileşik olarak sınıflandırabilme
+a) Saf maddelerin farklı yapıda olduğunu belirler.
+b) Saf maddeleri niteliklerine göre ayrıştırır.
+c) Saf maddeleri element ve bileşik olarak sınıflar.
+ç) Çevresindeki maddeleri element ve bileşik olarak etiketlendirir.', 'Fen Bilimleri', 23),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Saf Maddeler', 'FB.7.5.5.', 'Periyodik tablodaki ilk 18 elementin isimlerini sembolleriyle yapılandırabilme
+a) Periyodik tablodaki ilk 18 elementin isimlerini ve sembollerini inceleyerek mantıksal ilişkiler ortaya koyar.
+b) Konu ile ilgili ön öğrenmelerine bağlı olarak uyumlu bir bütün oluşturur.', 'Fen Bilimleri', 25),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Saf Maddeler', 'FB.7.5.6.', 'Periyodik tabloda grup ve periyotları karşılaştırabilme
+a) Periyodik tabloda grup ve periyotlara ilişkin özellikleri belirler.
+b) Belirlenen özelliklere ilişkin benzerlikleri listeler.
+c) Belirlenen özelliklere ilişkin farklılıkları listeler.', 'Fen Bilimleri', 26),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Saf Maddeler', 'FB.7.5.7.', 'Bileşiklerin isimlerini formülleriyle yapılandırabilme
+a) Yaygın kullanılan bileşiklerin formüllerini inceleyerek mantıksal ilişkiler ortaya koyar.
+b) Konu ile ilgili ön öğrenmelerine bağlı olarak uyumlu bir bütün oluşturur.', 'Fen Bilimleri', 27),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Karışımlar', 'FB.7.5.8.', 'Karışımları homojen ve heterojen olarak sınıﬂandırabilme
+a) Karışımların görünümlerinin farklı yapıda olduğunu belirler.
+b) Farklı görünümlerdeki karışımları niteliklerine göre ayrıştırır.
+c) Karışımları homojen ve heterojen olarak gruplandırır.
+ç) Çevresindeki maddeleri homojen ve heterojen karışım olarak etiketler.', 'Fen Bilimleri', 28),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Karışımlar', 'FB.7.5.9.', 'Çözünme hızına etki eden faktörler ile ilgili hipotez oluşturabilme
+a) Çözünme hızını etkileyen faktörleri tanımlar.
+b) Çözünme hızı ile onu etkileyen faktörler arasındaki neden sonuç ilişkilerini belirler.
+c) Çözünme hızını etkileyen değişkenleri belirler.
+ç) Temas yüzeyi, karıştırma ve sıcaklık değişkenlerini kontrol eder.
+d) Çözünme hızını etkileyen faktörlere ait önermeler sunar.', 'Fen Bilimleri', 29),
+('7. Sınıf', 'Maddenin Doğasına Yolculuk', 'Karışımların Ayrılması', 'FB.7.5.10.', 'Karışımları ayırmak için deney yapabilme
+a) Farklı karışımları ayırmak için deney tasarlar.
+b) Deney ile ilgili ölçme ve veri analizi yapar.', 'Fen Bilimleri', 30),
+('7. Sınıf', 'Elektriklenme', 'Elektrik Yükleri ve Elektriklenme', 'FB.7.6.1.', 'Elektriklenme ile ilgili bilgi toplayabilme
+a) Elektriklenme ile ilgili bilgiye ulaşmak için kullanacağı araçları belirler.
+b) Belirlediği araçları kullanarak elektriklenme hakkında bilgileri bulur.
+c) Elektriklenme ile ilgili bulduğu bilgileri doğrular.
+ç) Elektriklenme ile ilgili bulduğu bilgileri kaydeder.', 'Fen Bilimleri', 31),
+('7. Sınıf', 'Elektriklenme', 'Elektrik Yükleri ve Elektriklenme', 'FB.7.6.2.', 'Elektriklenme çeşitlerini belirlemeye yönelik deney yapabilme
+a) Elektriklenme çeşitlerini gözlemleyebilecekleri bir deney tasarlar.
+b) Deneyle ilgili ölçme ve veri analizi yapar.', 'Fen Bilimleri', 32),
+('7. Sınıf', 'Elektriklenme', 'Elektrik Yükleri ve Elektriklenme', 'FB.7.6.3.', 'Cisimlerin elektrik yüklerini sınıflandırabilme
+a) Cisimlerin elektrik yüklerinin niteliklerini belirler.
+b) Cisimlerin yük durumlarını ayrıştırır.
+c) Cisimlerin yük durumlarını gruplandırır.
+ç) Cisimlerin yük durumlarını negatif, pozitif ve nötr olarak etiketler.', 'Fen Bilimleri', 33),
+('7. Sınıf', 'Sürdürülebilir Yaşam ve Enerji', 'Besin Zinciri ve Enerji Akışı', 'FB.7.7.1.', 'Besin zincirindeki canlılar arasındaki ilişkileri yapılandırabilme
+a) Besin zincirindeki canlılar arasındaki nedensel ilişkileri ortaya koyar.
+b) Besin zincirini uyumlu bir bütün olarak açıklar.', 'Fen Bilimleri', 34),
+('7. Sınıf', 'Sürdürülebilir Yaşam ve Enerji', 'Sürdürülebilir Yaşam', 'FB.7.7.2.', 'Kaynakların tasarruflu kullanımının önemini sorgulayabilme
+a) Kaynakların tasarruflu kullanımı ile ilgili problemi tanımlar.
+b) Kaynakların tasarruflu kullanımına yönelik çözüm bulmak için model geliştirir.
+c) Kaynakların tasarruflu kullanımına yönelik planladığı araştırmayı gerçekleştirir.
+ç) Kaynakların tasarruflu kullanımına yönelik analiz ettiği verileri yorumlar.
+d) Kaynakların tasarruflu kullanımına yönelik kanıta dayalı çözüm üretir.
+e) Kaynakların tasarruflu kullanımına yönelik bilgileri değerlendirir ve paylaşır.', 'Fen Bilimleri', 35),
+('8. Sınıf', 'Mevsimler ve İklim', 'Mevsimlerin Oluşumu', 'F.8.1.1.1.', 'Mevsimlerin oluşumuna yönelik tahminlerde bulunur.
+a. Dünya''nın dönme ekseni olduğuna değinilir.
+b. Dünya''nın dönme ekseni ile Güneş etrafındaki dolanma düzlemi arasındaki ilişkiye değinilir.
+c. Işığın birim yüzeye düşen enerji miktarının mevsimler üzerindeki etkisine değinilir.', 'Fen Bilimleri', 1),
+('8. Sınıf', 'Mevsimler ve İklim', 'İklim ve Hava Hareketleri', 'F.8.1.2.1.', 'İklim ve hava olayları arasındaki farkı açıklar.', 'Fen Bilimleri', 3),
+('8. Sınıf', 'Mevsimler ve İklim', 'İklim ve Hava Hareketleri', 'F.8.1.2.2.', 'İklim biliminin (klimatoloji) bir bilim dalı olduğunu ve bu alanda çalışan uzmanlara iklim bilimci (klimatolog) adı verildiğini söyler.', 'Fen Bilimleri', 4),
+('8. Sınıf', 'Dna ve Genetik Kod', 'DNA ve Genetik Kod', 'F.8.2.1.1.', 'Nükleotid, gen, DNA ve kromozom kavramlarını açıklayarak bu kavramlar arasında ilişki kurar.
+Bazların isimleri verilirken pürin ve pirimidin ayrımına girilmez.', 'Fen Bilimleri', 4),
+('8. Sınıf', 'Dna ve Genetik Kod', 'DNA ve Genetik Kod', 'F.8.2.1.2.', 'DNA''nın yapısını model üzerinde gösterir.
+a. Hidrojen, glikozit, ester, fosfodiester bağlarına girilmez.
+b. DNA''daki hataların onarılıp onarılmadığı belirtilir.
+c. DNA''daki nükleotid hesaplamaları verilmez.', 'Fen Bilimleri', 5),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Kalıtım', 'F.8.2.1.3.', 'DNA''nın kendini nasıl eşlediğini ifade eder.
+a. Replikasyon ifadesi kullanılmaz.
+b. Eşlenme deneyleri anlatılmaz.
+c. Eşlenme ile ilgili hesaplama sorularına girilmez.', 'Fen Bilimleri', 5),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Kalıtım', 'F.8.2.2.1.', 'Kalıtım ile ilgili kavramları tanımlar.
+a. Gen, fenotip, genotip, saf döl ve melez döl kavramlarına değinilir.
+b. Baskın ve çekinik gen kavramlarına değinilir.', 'Fen Bilimleri', 5),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Kalıtım', 'F.8.2.2.2.', 'Tek karakter çaprazlamaları ile ilgili problemler çözerek sonuçlar hakkında yorum yapar.
+a. Çaprazlamalarda sadece bezelye karakterleri kullanılır.
+b. Diğer canlılarda da karakterlerin aktarımının benzer olduğu vurgulanır.
+c. İnsanda çocuğun cinsiyetinin babadan gelen eşey kromozomu ile belirlendiği vurgulanır.', 'Fen Bilimleri', 6),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Kalıtım', 'F.8.2.2.3.', 'Akraba evliliklerinin genetik sonuçlarını tartışır.', 'Fen Bilimleri', 7),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Mutasyon ve Modifikasyon', 'F.8.2.3.1.', 'Örneklerden yola çıkarak mutasyonu açıklar.', 'Fen Bilimleri', 8),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Adaptasyon (Çevreye Uyum)', 'F.8.2.3.2.', 'Örneklerden yola çıkarak modifikasyonu açıklar.', 'Fen Bilimleri', 8),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Adaptasyon (Çevreye Uyum)', 'F.8.2.3.3.', 'Mutasyonla modifikasyon arasındaki farklar ile ilgili çıkarımda bulunur.', 'Fen Bilimleri', 8),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Adaptasyon (Çevreye Uyum)', 'F.8.2.4.1.', 'Canlıların yaşadıkları çevreye uyumlarını gözlem yaparak açıklar.
+Adaptasyonların kalıtsal olduğu vurgulanır.', 'Fen Bilimleri', 8),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Biyoteknoloji', 'F.8.2.5.1.', 'Genetik mühendisliğini ve biyoteknolojiyi ilişkilendirir.
+Islah, aşılama, gen aktarımı, klonlama, gen tedavisi örnekleri üzerinde durulur.', 'Fen Bilimleri', 9),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Biyoteknoloji', 'F.8.2.5.2.', 'Biyoteknolojik uygulamalar kapsamında oluşturulan ikilemlerle bu uygulamaların insanlık için yararlı ve zararlı yönlerini tartışır.', 'Fen Bilimleri', 9),
+('8. Sınıf', 'Dna ve Genetik Kod', 'Biyoteknoloji', 'F.8.2.5.3.', 'Gelecekteki genetik mühendisliği ve biyoteknoloji uygulamalarının neler olabileceği hakkında tahminde bulunur.', 'Fen Bilimleri', 9),
+('8. Sınıf', 'Basınç', 'Basınç', 'F.8.3.1.1.', 'Katı basıncını etkileyen değişkenleri deneyerek keşfeder.
+Basınç birimi olarak Pascal verilir. Matematiksel bağıntılara girilmez.', 'Fen Bilimleri', 10),
+('8. Sınıf', 'Basınç', 'Basınç', 'F.8.3.1.2.', 'Sıvı basıncını etkileyen değişkenleri tahmin eder ve tahminlerini test eder.
+a. Gazların da sıvılara benzer şekilde basınç uyguladıkları belirtilir. Açık hava basıncı örneklendirilir.
+b. Matematiksel bağıntılara girilmez.
+c. Gaz basıncını etkileyen değişkenlere girilmez.', 'Fen Bilimleri', 11),
+('8. Sınıf', 'Basınç', 'Basınç', 'F.8.3.1.3.', 'Katı, sıvı ve gazların basınç özelliklerinin günlük yaşam ve teknolojideki uygulamalarına örnekler verir.
+a. Sıvı basıncı ile ilgili Pascal prensibinin uygulamalarından örnekler verilir.
+b. Bilimsel bilgi türü olarak ilke ve prensiplere vurgu yapılır.', 'Fen Bilimleri', 12),
+('8. Sınıf', 'Madde ve Endüstri', 'Periyodik Sistem', 'F.8.4.1.1.', 'Periyodik sistemde, grup ve periyotların nasıl oluşturulduğunu açıklar.
+Periyodik sisteme duyulan ihtiyaç ve periyodik sistemin oluşturulma süreci ayrıntıya girilmeden vurgulanır.', 'Fen Bilimleri', 12),
+('8. Sınıf', 'Madde ve Endüstri', 'Periyodik Sistem', 'F.8.4.1.2.', 'Elementleri periyodik tablo üzerinde metal, yarımetal ve ametal olarak sınıflandırır.
+a. Elementlerin özelliklerine girilmez.
+b. Soygazların üzerinde durulur.', 'Fen Bilimleri', 13),
+('8. Sınıf', 'Madde ve Endüstri', 'Fiziksel ve Kimyasal Değişimler', 'F.8.4.2.1.', 'Fiziksel ve kimyasal değişim arasındaki farkları, çeşitli olayları gözlemleyerek açıklar.', 'Fen Bilimleri', 13),
+('8. Sınıf', 'Madde ve Endüstri', 'Kimyasal Tepkimeler', 'F.8.4.3.1.', 'Bileşiklerin kimyasal tepkime sonucunda oluştuğunu bilir.
+Kimyasal tepkime denklemlerine formüller kullanılarak girilmez.', 'Fen Bilimleri', 14),
+('8. Sınıf', 'Madde ve Endüstri', 'Asitler ve Bazlar', 'F.8.4.4.1.', 'Asit ve bazların genel özelliklerini ifade eder.', 'Fen Bilimleri', 15),
+('8. Sınıf', 'Madde ve Endüstri', 'Asitler ve Bazlar', 'F.8.4.4.2.', 'Asit ve bazlara günlük yaşamdan örnekler verir.', 'Fen Bilimleri', 15),
+('8. Sınıf', 'Madde ve Endüstri', 'Asitler ve Bazlar', 'F.8.4.4.3.', 'Günlük hayatta ulaşılabilecek malzemeleri asit-baz ayracı olarak kullanır.', 'Fen Bilimleri', 15),
+('8. Sınıf', 'Madde ve Endüstri', 'Asitler ve Bazlar', 'F.8.4.4.4.', 'Maddelerin asitlik ve bazlık durumlarına ilişkin pH değerlerini kullanarak çıkarımda bulunur.
+Konu ile ilgili deney yolu ile çıkarımlarda bulunmaları sağlanır.', 'Fen Bilimleri', 16),
+('8. Sınıf', 'Madde ve Endüstri', 'Asitler ve Bazlar', 'F.8.4.4.5.', 'Asit ve bazların çeşitli maddeler üzerindeki etkilerini gözlemler.', 'Fen Bilimleri', 16),
+('8. Sınıf', 'Madde ve Endüstri', 'Asitler ve Bazlar', 'F.8.4.4.6.', 'Asit ve bazların temizlik malzemesi olarak kullanılması esnasında oluşabilecek tehlikelerle ilgili gerekli tedbirleri alır.', 'Fen Bilimleri', 16),
+('8. Sınıf', 'Madde ve Endüstri', 'Asitler ve Bazlar', 'F.8.4.4.7.', 'Asit yağmurlarının önlenmesine yönelik çözüm önerileri sunar.
+Asit yağmurlarının oluşum sebepleri ve sonuçlarına değinilir.', 'Fen Bilimleri', 17),
+('8. Sınıf', 'Madde ve Endüstri', 'Maddenin Isı ile Etkileşimi', 'F.8.4.5.1.', 'Isınmanın maddenin cinsine, kütlesine ve/veya sıcaklık değişimine bağlı olduğunu deney yaparak keşfeder.
+a. Q=m.c. Δt bağıntısına girilmez.
+b. Bağımlı, bağımsız ve kontrol edilen değişkenler örneklerle açıklanır.', 'Fen Bilimleri', 17),
+('8. Sınıf', 'Madde ve Endüstri', 'Maddenin Isı ile Etkileşimi', 'F.8.4.5.2.', 'Hâl değiştirmek için gerekli ısının maddenin cinsi ve kütlesiyle ilişkili olduğunu deney yaparak keşfeder.
+a. Saf maddelerin hâl değişimi sırasında sıcaklığının sabit kaldığına değinilir.
+b. Matematiksel hesaplamalara girilmez.', 'Fen Bilimleri', 17),
+('8. Sınıf', 'Madde ve Endüstri', 'Maddenin Isı ile Etkileşimi', 'F.8.4.5.3.', 'Maddelerin hâl değişimi ve ısınma grafiğini çizerek yorumlar.', 'Fen Bilimleri', 18),
+('8. Sınıf', 'Madde ve Endüstri', 'Türkiye''de Kimya Endüstrisi', 'F.8.4.5.4.', 'Günlük yaşamda meydana gelen hâl değişimleri ile ısı alışverişini ilişkilendirir.', 'Fen Bilimleri', 18),
+('8. Sınıf', 'Madde ve Endüstri', 'Türkiye''de Kimya Endüstrisi', 'F.8.4.6.1.', 'Geçmişten günümüze Türkiye''deki kimya endüstrisinin gelişimini araştırır.
+a. Ülkemizdeki kimya endüstrisinin gelişimine katkı sağlayan resmi / özel kurum ve sivil toplum kuruluşlarının yaptığı çalışmalara değinilir.
+b. İthal ve ihraç edilen kimyasal ürünlerden birkaç önemli örnek verilerek Türkiye kimya endüstrisinin işleyişine değinilir.', 'Fen Bilimleri', 18),
+('8. Sınıf', 'Madde ve Endüstri', 'Türkiye''de Kimya Endüstrisi', 'F.8.4.6.2.', 'Kimya endüstrisinde meslek dallarını araştırır ve gelecekteki yeni meslek alanları hakkında öneriler sunar.', 'Fen Bilimleri', 19),
+('8. Sınıf', 'Basit Makineler', 'Basit Makineler', 'F.8.5.1.1.', 'Basit makinelerin sağladığı avantajları örnekler üzerinden açıklar.
+a. Basit makinelerden, sabit makara, hareketli makara, palanga, kaldıraç, eğik düzlem ve çıkrık üzerinde durulur.
+b. Dişli çarklar, vida ve kasnakların da birer basit makine olduğu görsellerle belirtilir, ayrıntıya girilmez.
+c. Basit makinelerde işten kazanç olmadığı vurgulanır.
+ç. Matematiksel bağıntılara girilmez.', 'Fen Bilimleri', 19),
+('8. Sınıf', 'Basit Makineler', 'Basit Makineler', 'F.8.5.1.2.', 'Basit makinelerden yararlanarak günlük yaşamda iş kolaylığı sağlayacak bir düzenek tasarlar.
+Öncelikle tasarımını çizimle ifade etmesi istenir. Şartlar uygunsa üç boyutlu modele dönüştürmesi istenebilir.', 'Fen Bilimleri', 21),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Besin Zinciri ve Enerji Akışı', 'F.8.6.1.1.', 'Besin zincirindeki üretici, tüketici, ayrıştırıcılara örnekler verir.
+a. Parazit besin zincirlerine değinilmez.
+b. Ekoloji piramitlerinde enerji aktarımı, vücut büyüklüğü, birey sayısı ve biyolojik birikim vurgulanır.', 'Fen Bilimleri', 22),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Enerji Dönüşümleri', 'F.8.6.2.1.', 'Bitkilerde besin üretiminde fotosentezin önemini fark eder.
+a. Fotosentezde karbondioksit ve su kullanıldığı, besin ve oksijen üretildiği vurgulanır. Kimyasal denklemine girilmez.
+b. Fotosentezin yapay ışıkta da meydana gelebileceği vurgulanır.
+c. Fotosentez yapan canlıların üretici olduğu ifade edilir.', 'Fen Bilimleri', 22),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Enerji Dönüşümleri', 'F.8.6.2.2.', 'Fotosentez hızını etkileyen faktörler ile ilgili çıkarımlarda bulunur.
+Işık rengi, karbondioksit miktarı, su miktarı, ışık şiddeti ve sıcaklık vurgulanır.', 'Fen Bilimleri', 23),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Enerji Dönüşümleri', 'F.8.6.2.3.', 'Canlılarda solunumun önemini belirtir.
+a. Solunumun kimyasal denklemine girilmez.
+b. Bitkilerin gece ve gündüz solunum yaptığına değinilir.
+c. Oksijenli ve oksijensiz solunum evrelerine girilmeden verilir fakat açığa çıkan enerji miktarları sayısal olarak belirtilmez.
+ç. ATP''nin yapısına girilmeden isminden bahsedilir.', 'Fen Bilimleri', 23),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Madde Döngüleri ve Çevre Sorunları', 'F.8.6.3.1.', 'Madde döngülerini şema üzerinde göstererek açıklar.', 'Fen Bilimleri', 24),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Madde Döngüleri ve Çevre Sorunları', 'F.8.6.3.2.', 'Madde döngülerinin yaşam açısından önemini sorgular.', 'Fen Bilimleri', 25),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Madde Döngüleri ve Çevre Sorunları', 'F.8.6.3.3.', 'Küresel iklim değişikliklerinin nedenlerini ve olası sonuçlarını tartışır.
+a. Sera etkisi açıklanır.
+b. Küresel iklim değişikliği bağlamında çevre sorunlarının Dünya''nın geleceğine ve insan yaşamına nasıl bir etkisi olabileceği sorgulanır.
+c. Çevre sorunlarının dünyanın geleceğine nasıl bir etkisinin olabileceğine yönelik öngörüleri sanatsal yollarla ifade etmeleri istenir.
+ç. Öğrencilerin ekolojik ayak izini hesaplaması (uzantısı edu, org ve mil gibi güvenli sitelerden yararlanılabilinir) sağlanır.
+d. Dünya ülkelerinin küresel iklim değişikliğini önlemek için aldıkları önlemlere (ör. Kyoto Protokolü) değinilir.', 'Fen Bilimleri', 25),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Sürdürülebilir Kalkınma', 'F.8.6.4.1.', 'Kaynakların kullanımında tasarruflu davranmaya özen gösterir.', 'Fen Bilimleri', 26),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Sürdürülebilir Kalkınma', 'F.8.6.4.2.', 'Kaynakların tasarruflu kullanımına yönelik proje tasarlar.', 'Fen Bilimleri', 26),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Sürdürülebilir Kalkınma', 'F.8.6.4.3.', 'Geri dönüşüm için katı atıkların ayrıştırılmasının önemini açıklar.', 'Fen Bilimleri', 27),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Sürdürülebilir Kalkınma', 'F.8.6.4.4.', 'Geri dönüşümün ülke ekonomisine katkısına ilişkin araştırma verilerini kullanarak çözüm önerileri sunar.', 'Fen Bilimleri', 27),
+('8. Sınıf', 'Enerji Dönüşümleri ve Çevre Bilimi', 'Sürdürülebilir Kalkınma', 'F.8.6.4.5.', 'Kaynakların tasarruflu kullanılmaması durumunda gelecekte karşılaşılabilecek problemleri belirterek çözüm önerileri sunar.', 'Fen Bilimleri', 27),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Yükleri ve Elektriklenme', 'F.8.7.1.1.', 'Elektriklenmeyi, bazı doğa olayları ve teknolojideki uygulama örnekleri ile açıklar.', 'Fen Bilimleri', 28),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Yükleri ve Elektriklenme', 'F.8.7.1.2.', 'Elektrik yüklerini sınıflandırarak aynı ve farklı cins elektrik yüklerinin birbirlerine etkisini açıklar.', 'Fen Bilimleri', 28),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Yükleri ve Elektriklenme', 'F.8.7.1.3.', 'Deneyler yaparak elektriklenme çeşitlerini fark eder.', 'Fen Bilimleri', 29),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Yüklü Cisimler', 'F.8.7.2.1.', 'Cisimleri, sahip oldukları elektrik yükleri bakımından sınıflandırır.
+Özellikle nötr cismin, yüksüz cisim anlamına gelmediği; nötr cisimlerde pozitif ve negatif yük miktarlarının eşit olduğu vurgusu yapılır. Elektroskopun yük ölçümünde kullanıldığı belirtilir, çalışma prensibine girilmez.', 'Fen Bilimleri', 29),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Yüklü Cisimler', 'F.8.7.2.2.', 'Topraklamayı açıklar.
+Topraklamanın günlük yaşam ve teknolojideki uygulamaları dikkate alınarak can ve mal güvenliği açısından önemine vurgu yapılır.', 'Fen Bilimleri', 30),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Enerjisinin Dönüşümü', 'F.8.7.3.1.', 'Elektrik enerjisinin ısı, ışık ve hareket enerjisine dönüştüğü uygulamalara örnekler verir.
+a. Güvenlik açısından elektrik sigortasının önemi üzerinde durulur.
+b. Robotların, elektrik enerjisinin, hareket enerjisine dönüşümü temel alınarak geliştirildiği vurgulanır.', 'Fen Bilimleri', 31),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Enerjisinin Dönüşümü', 'F.8.7.3.2.', 'Elektirik enerjisinin ısı, ışık veya hareket enerjisine dönüşümü temel alan bir model tasarlar.
+Öncelikle tasarımlarını çizimle ifade etmeleri istenir. Şartlar uygunsa üç boyutlu modele dönüştürmesi istenebilir.', 'Fen Bilimleri', 32),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Enerjisinin Dönüşümü', 'F.8.7.3.3.', 'Güç santrallerinde elektrik enerjisinin nasıl üretildiğini açıklar.
+Güç santrallerinden hidroelektrik, termik, rüzgâr, jeotermal ve nükleer santrallere değinilir.', 'Fen Bilimleri', 32),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Enerjisinin Dönüşümü', 'F.8.7.3.4.', 'Güç santrallerinin avantaj ve dezavantajları konusunda fikirler üretir.
+Güç santrallerinin yarar-zarar ve riskler yönünden değerlendirilmesine yönelik fikir üretmeleri ve bu fikirlerini savunmaları istenir.', 'Fen Bilimleri', 33),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Enerjisinin Dönüşümü', 'F.8.7.3.5.', 'Elektrik enerjisinin bilinçli ve tasarruflu kullanılmasının aile ve ülke ekonomisi bakımından önemini tartışır.
+a. Enerji verimliliği konusunda ülkemizdeki resmî kurumlar ve sivil toplum kuruluşları tarafından yapılan çalışmalar ve elektrik enerjisi kullanımı bakımından yapılması gerekenler belirtilir.
+b. Kaçak elektrik kullanımının ülke ekonomisine verdiği zarar vurgulanır.', 'Fen Bilimleri', 33),
+('8. Sınıf', 'Elektrik Yükleri ve Elektrik Enerjisi', 'Elektrik Enerjisinin Dönüşümü', 'F.8.7.3.6.', 'Evlerde elektriği tasarruflu kullanmaya özen gösterir.
+Öğrencilerden elektrik faturasını azaltmaya yönelik uzun süreli çalışmalar yapmaları istenir, süreç izlenir.', 'Fen Bilimleri', 33),
+('5. Sınıf', 'Birlikte Yaşamak', 'Gruplar ve Roller', 'SB.5.1.1.', 'Dâhil olduğu gruplar ve bu gruplardaki rolleri arasındaki ilişkileri çözümleyebilme
+a) Dâhil olduğu grupları ve bu gruplardaki rollerini belirler.
+b) Dâhil olduğu gruplar ile bu gruplardaki rolleri arasındaki ilişkileri belirler.', 'Sosyal Bilgiler', 1),
+('5. Sınıf', 'Birlikte Yaşamak', 'Kültürel Özelliklere Saygı ve Birlikte Yaşama Kültürü', 'SB.5.1.2.', 'Kültürel özelliklere saygı duymanın birlikte yaşamaya etkisini yorumlayabilme
+a) Kültürel özelliklere saygı duymanın birlikte yaşamaya etkisini örnekler üzerinden inceler..
+b) Kültürel özelliklere saygı duymanın birlikte yaşamaya etkisini yazılı, görsel veya dijital ürünlere dönüştürür.
+c) Kültürel özelliklere saygı duymanın birlikte yaşamaya etkisini ifade eder.', 'Sosyal Bilgiler', 2),
+('5. Sınıf', 'Birlikte Yaşamak', 'Yardımlaşma ve Dayanışma Faaliyetlerinin Toplumsal Birliğe Etkisi', 'SB.5.1.3.', 'Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetlerine katkı sağlayabilme
+a) Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetlerini
+sorgular.
+b) Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetleri için
+birlikte çalışabileceği grup üyeleriyle iletişim kurar.
+c) Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetleri için
+görev paylaşımında bulunur.
+ç) Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetleri için
+fikir üretir.
+d) Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetlerine
+ilişkin üretilen fikirleri müzakere eder.
+e) Toplumsal birliği sürdürmeye yönelik yardımlaşma ve dayanışma faaliyetlerine
+ilişkin üretilen fikri uygulamak için eyleme geçer.', 'Sosyal Bilgiler', 4),
+('5. Sınıf', 'Evimiz Dünya', 'Yaşadığı İlin Göreceli Konumu', 'SB.5.2.1.', 'Yaşadığı ilin göreceli konum özelliklerini algılayabilme
+a) Yaşadığı ilin göreceli konum özelliklerini belirler.
+b) Yaşadığı ilin göreceli konum özelliklerini görselleştirir.
+c) Yaşadığı ilin göreceli konum özelliklerini özetler.', 'Sosyal Bilgiler', 6),
+('5. Sınıf', 'Evimiz Dünya', 'Yaşadığı İlde Doğal ve Beşerî Çevredeki Değişim', 'SB.5.2.2.', 'Yaşadığı ilde doğal ve beşerî çevredeki değişimi neden ve sonuçlarıyla yorumlayabilme
+a) Yaşadığı ilde doğal ve beşerî çevrenin değişimine neden olan unsurları inceler.
+b) Yaşadığı ilde doğal ve beşerî çevrenin değişiminden etkilenen unsurları inceler.
+c) Yaşadığı ilde doğal ve beşerî çevrede meydana gelen değişimin etkilerini sorgular.
+ç) Yaşadığı ilde doğal ve beşerî çevrede meydana gelen değişimin neden ve sonuçlarını elde ettiği bilgilere dayanarak ifade eder.', 'Sosyal Bilgiler', 8),
+('5. Sınıf', 'Evimiz Dünya', 'Yaşadığı İlde Meydana Gelebilecek Afetlerin Etkileri', 'SB.5.2.3.', 'Yaşadığı ilde meydana gelebilecek afetlerin etkilerini azaltmaya yönelik farkın dalık etkinliği fikrini eyleme dönüştürebilme
+a) Yaşadığı ilde meydana gelebilecek afetlerin etkilerini azaltmaya yönelik farkındalık
+etkinliği planı yapar.
+b) Yaşadığı ilde meydana gelebilecek afetlerin etkilerini azaltmaya yönelik hazırladığı
+farkındalık etkinliği planını uygular.
+c) Yaşadığı ilde meydana gelebilecek afetlerin etkilerini azaltmaya yönelik hazırladığı
+farkındalık etkinliği planını değerlendirir.', 'Sosyal Bilgiler', 10),
+('5. Sınıf', 'Evimiz Dünya', 'Ülkemize Komşu Devletler', 'SB.5.2.4.', 'Ülkemize kara sınırı olan komşu devletler hakkında bilgi toplayabilme
+a) Ülkemize kara sınırı olan komşu devletlerle ilgili bilgilere ulaşmak amacıyla kullanacağı kaynakları belirler.
+b) Ülkemize kara sınırı olan komşu devletlerle ilgili bilgileri belirlediği kaynaklardan
+bulur.
+c) Ülkemize kara sınırı olan komşu devletlerle ilgili belirlediği kaynaklardan edindiği bilgileri doğrular.
+ç) Ülkemize kara sınırı olan komşu devletlerle ilgili belirlediği kaynaklardan edindiği
+bilgileri kaydeder.', 'Sosyal Bilgiler', 12),
+('5. Sınıf', 'Ortak Mirasımız', 'Ortak Miras Ögeleri', 'SB.5.3.1.', 'Yaşadığı ildeki ortak miras ögelerine ilişkin oluşturduğu ürünü paylaşabilme
+a) Yaşadığı ildeki somut ve somut olmayan kültürel miras ögelerinden hareketle ortak
+mirasın önemi hakkında çıkarım yapar.
+b) Yapılan çıkarımlardan hareketle ortak mirasın önemini açıklayan bir ürün oluşturur.
+c) Ortak mirasın önemi hakkında çıkarımlarına dayalı olarak oluşturduğu ürünü paylaşır.', 'Sosyal Bilgiler', 14),
+('5. Sınıf', 'Ortak Mirasımız', 'Anadolu''nun İlk Yerleşim Yerlerinde Sosyal Hayat', 'SB.5.3.2.', 'Anadolu''da ilk yerleşimleri kuran toplumların sosyal hayatlarına yönelik bakış açısı geliştirebilme
+a) Anadolu''da ilk yerleşimleri kuran toplumların sosyal hayatlarını kaynaklardan
+edindiği bilgiler doğrultusunda yorumlar.
+b) Anadolu''da ilk yerleşimleri kuran toplumların sosyal hayatlarına ilişkin tarihsel
+bağlam oluşturur.
+c) Anadolu''da ilk yerleşimleri kuran toplumların sosyal hayatlarına ilişkin bakış açı
+sını kaynaklar doğrultusunda yapılandırır.', 'Sosyal Bilgiler', 16),
+('5. Sınıf', 'Ortak Mirasımız', 'Mezopotamya ve Anadolu Medeniyetlerinin Ortak Mirasa Katkıları', 'SB.5.3.3.', 'Mezopotamya ve Anadolu medeniyetlerinin ortak mirasa katkılarını karşılaştırabilme
+a) Mezopotamya ve Anadolu medeniyetlerinin ortak mirasa katkılarını belirler.
+b) Mezopotamya ve Anadolu medeniyetlerinin ortak mirasa katkılarının benzerliklerini listeler.
+c) Mezopotamya ve Anadolu medeniyetlerinin ortak mirasa katkılarının farklılıklarını listeler.', 'Sosyal Bilgiler', 18),
+('5. Sınıf', 'Yaşayan Demokrasimiz', 'Demokrasi ve Cumhuriyet Kavramının Temel Nitelikleri', 'SB.5.4.1.', 'Demokrasi ve cumhuriyet kavramları arasındaki ilişkiyi çözümleyebilme
+a) Demokrasi ve cumhuriyet kavramlarının niteliklerini belirler.
+b) Demokrasi ve cumhuriyet kavramları arasındaki ilişkiyi belirler.', 'Sosyal Bilgiler', 20),
+('5. Sınıf', 'Yaşayan Demokrasimiz', 'Etkin Vatandaşın Özellikleri ve Önemi', 'SB.5.4.2.', 'Toplum düzenine etkisi bakımından etkin vatandaş olmanın önemine yönelik çıkarımda bulunabilme
+a) Etkin vatandaş olmanın önemine ilişkin varsayımda bulunur.
+b) Etkin vatandaşın sahip olması gereken özellikleri listeler.
+c) Etkin olan ve olmayan vatandaş özelliklerini karşılaştırır.
+ç) Etkin vatandaş davranışlarının toplum düzenine etkisine yönelik tahminlerde bulunur.
+d) Etkin vatandaş olmanın önemini toplum düzeni açısından değerlendirir.', 'Sosyal Bilgiler', 21),
+('5. Sınıf', 'Yaşayan Demokrasimiz', 'Temel Haklar, Sorumluluklar ve Önemi', 'SB.5.4.3.', 'Temel insan hak ve sorumluluklarının önemini sorgulayabilme
+a) Temel insan hak ve sorumluluklarının önemine yönelik merak ettiği konuları tanımlar.
+b) Toplumsal hayatta insan hak ve sorumluluklarının önemine yönelik sorular sorar.
+c) Temel insan hak ve sorumluluklarının önemine ilişkin bilgi toplar.
+ç) Temel insan hak ve sorumluluklarının önemine ilişkin topladığı bilgilerin doğruluğunu değerlendirir.
+d) Temel insan hak ve sorumluluklarının önemine ilişkin topladığı bilgiler doğrultusunda çıkarımlar yapar.', 'Sosyal Bilgiler', 24),
+('5. Sınıf', 'Yaşayan Demokrasimiz', 'İhtiyaç Durumunda veya Sorunların Çözümünde Başvurulabilecek Kurumlar', 'SB.5.4.4.', 'Bir ihtiyaç hâlinde veya sorun karşısında başvuru yapılabilecek kurumlar hakkında bilgi toplayabilme
+a) Bir ihtiyaç hâlinde veya sorun karşısında başvuru yapılabilecek kurumlar hakkında
+bilgi toplayabileceği kaynakları belirler.
+b) Belirlediği kaynaklardan ihtiyaç hâlinde veya sorun karşısında başvuru yapılabilecek kurumlar hakkındaki bilgileri bulur.
+c) Belirlediği kaynaklardan ihtiyaç hâlinde veya sorun karşısında başvuru yapılabilecek kurumlar hakkında ulaştığı bilgileri doğrular.
+ç) Belirlediği kaynaklardan ihtiyaç hâlinde veya sorun karşısında başvuru yapılabilecek kurumlar hakkında ulaştığı bilgileri kaydeder.', 'Sosyal Bilgiler', 26),
+('5. Sınıf', 'Hayatımızdaki Ekonomi', 'Kaynakların Verimli Kullanımı', 'SB.5.5.1.', 'Kaynakları verimli kullanmanın doğa ve insanlar üzerindeki etkisini yorumlayabilme
+a) Kaynakları verimli kullanmanın doğa ve insanlar üzerindeki etkisini farklı kaynaklar üzerinden inceler.
+b) Kaynakları verimli kullanmanın doğa ve insanlar üzerindeki etkilerine ilişkin bilgileri bağlamdan kopmadan dönüştürür.
+c) Kaynakları verimli kullanmanın doğa ve insanlar üzerindeki etkisini nesnel, doğru ve anlamı değiştirmeyecek şekilde yeniden ifade eder.', 'Sosyal Bilgiler', 28),
+('5. Sınıf', 'Hayatımızdaki Ekonomi', 'Bütçe Oluşturma', 'SB.5.5.2.', 'İhtiyaç ve isteklerini karşılamak için gerekli bütçe kaynaklarını yönetebilme
+a) İhtiyaç ve isteklerini karşılamaya yönelik bütçe için gerekli olan kaynakları belirler.
+b) İhtiyaç ve isteklerini karşılamaya yönelik bütçe için gerekli olan kaynakları temin etme ve etkin kullanmaya ilişkin bir taslak oluşturur.', 'Sosyal Bilgiler', 30),
+('5. Sınıf', 'Hayatımızdaki Ekonomi', 'Yaşadığım İldeki Ekonomik Faaliyetler', 'SB.5.5.3.', 'Yaşadığı ildeki ekonomik faaliyetleri özetleyebilme
+a) Yaşadığı ildeki ekonomik faaliyetleri çözümler.
+b) Yaşadığı ildeki ekonomik faaliyetleri alanlarına göre sınıﬂandırır.
+c) Yaşadığı ildeki ekonomik faaliyetleri yorumlar.', 'Sosyal Bilgiler', 32),
+('5. Sınıf', 'Teknoloji ve Sosyal Bilimler', 'Teknolojik Gelişmelerin Toplum Hayatına Etkileri', 'SB.5.6.1.', 'Teknolojik gelişmelerin toplum hayatına etkilerini tartışabilme
+a) Teknolojik gelişmelerin toplum hayatına etkileri hakkında mantıksal temellendirmeler yapar.
+b) Teknolojik gelişmelerin toplum hayatına etkileri üzerindeki tartışmalarda tutarsızlıkları tespit eder.
+c) Teknolojik gelişmelerin toplum hayatına etkilerine yönelik görüşleri çürütür veya kabul eder.', 'Sosyal Bilgiler', 35),
+('5. Sınıf', 'Teknoloji ve Sosyal Bilimler', 'Teknolojik Ürünlerin Bilinçli Kullanımı', 'SB.5.6.2.', 'Teknolojik ürünlerin bilinçli kullanımının önemine ilişkin oluşturduğu ürünü paylaşabilme
+a) Teknolojik ürünlerin bilinçli kullanımının önemine ilişkin kanıtlara dayalı çıkarımda bulunur.
+b) Teknolojik ürünlerin bilinçli kullanımının önemine ilişkin kendi çıkarımlarına dayalı ürün oluşturur.
+c) Teknolojik ürünlerin bilinçli kullanımının önemine ilişkin oluşturulan ürünleri paylaşır.', 'Sosyal Bilgiler', 36),
+('6. Sınıf', 'Birlikte Yaşamak', 'Zaman İçinde Değişen Gruplar ve Roller', 'SB.6.1.1.', 'Dâhil olduğu grupların ve bu gruplardaki rollerinin zaman içerisinde değişebile ceğine ilişkin çıkarım yapabilme
+a) Dâhil olduğu gruplar ve bu gruplardaki rollerinin zaman içerisinde değişebileceği
+ne ilişkin varsayımda bulunur.
+b) Farklı grupları ve bu gruplardaki rolleri listeler.
+c) Farklı grupları ve bu gruplardaki rolleri karşılaştırır.
+ç) Gelecekte dâhil olabileceği gruplar ve roller ile ilgili önermede bulunur.
+d) Dâhil olduğu grupların ve bu gruplardaki rollerinin zaman içinde değişebileceğini
+değerlendirir.', 'Sosyal Bilgiler', 1),
+('6. Sınıf', 'Birlikte Yaşamak', 'Kültürel Bağlarımızın ve Millî Değerlerimizin Toplumsal Birlikteliğe Etkisi', 'SB.6.1.2.', 'Kültürel bağlarımızın ve millî değerlerimizin toplumsal birliğe etkisini yorumlayabilme
+a) Kültürel bağlarımızın ve millî değerlerimizin toplumsal birliğe etkisini inceler.
+b) Kültürel bağlarımızın ve millî değerlerimizin toplumsal birliğe etkisine ilişkin edindiği
+bilgileri bağlamdan kopmadan dönüştürür.
+c) Kültürel bağlarımızın ve millî değerlerimizin toplumsal birliğe etkisini nesnel, doğru
+ve anlamı değiştirmeyecek şekilde yeniden ifade eder.', 'Sosyal Bilgiler', 3),
+('6. Sınıf', 'Birlikte Yaşamak', 'Toplumsal Sorunlar ve Çözümler Önerileri', 'SB.6.1.3.', 'Toplumsal hayatta karşılaşılan sorunlara yönelik çözüm önerilerini müzakere edebilme
+a) Toplumsal hayatta karşılaşılan sorunları fark eder.
+b) Toplumsal hayatta karşılaşılan sorunların nedenlerine yönelik farklı bakış açılarını
+karşılaştırır.
+c) Toplumsal hayatta karşılaşılan sorunlara yönelik çözüm önerileri geliştirir.
+ç) Toplumsal hayatta karşılaşılan sorunlara yönelik çözüm önerilerini farklı görüş ve
+düşünceleri dikkate alarak düzenler.
+d) Toplumsal hayatta karşılaşılan sorunlara yönelik çözüm önerilerini savunur.', 'Sosyal Bilgiler', 4),
+('6. Sınıf', 'Evimiz Dünya', 'Ülkemizin, Kıtaların ve Okyanusların Konum Özellikleri', 'SB.6.2.1.', 'Ülkemizin, kıtaların ve okyanusların konum özelliklerini algılayabilme
+a) Ülkemizin, kıtaların ve okyanusların göreceli konum özellikleri ile ülkemizin mutlak
+konum özelliklerini belirler.
+b) Ülkemizin, kıtaların ve okyanusların göreceli konum özellikleri ile ülkemizin mutlak
+konum özelliklerini görselleştirir.
+c) Ülkemizin, kıtaların ve okyanusların göreceli konum özellikleri ile ülkemizin mutlak
+konum özelliklerini özetler.', 'Sosyal Bilgiler', 6),
+('6. Sınıf', 'Evimiz Dünya', 'Doğal ve Beşerî Çevre Özellikleri Arasındaki İlişki', 'SB.6.2.2.', 'Ülkemizin doğal ve beşerî çevre özellikleri arasındaki ilişkiyi çözümleyebilme
+a) Ülkemizdeki doğal ve beşerî çevre özelliklerini belirler.
+b) Ülkemizdeki doğal ve beşerî çevre özellikleri arasındaki ilişkiyi belirler.', 'Sosyal Bilgiler', 8),
+('6. Sınıf', 'Evimiz Dünya', 'Ülkemizin Türk Dünyasıyla Kültürel İş birlikleri', 'SB.6.2.3.', 'Ülkemizin Türk dünyasıyla kültürel iş birliklerini yorumlayabilme
+a) Ülkemizin Türk dünyası ile kültürel iş birliklerini inceler.
+b) Ülkemizin Türk dünyası ile kültürel iş birliklerini bağlamdan kopmadan dönüştürür.
+c) Ülkemizin Türk dünyasıyla kültürel iş birliklerini nesnel, doğru ve anlamı değiştir
+meyecek şekilde yeniden ifade eder.', 'Sosyal Bilgiler', 11),
+('6. Sınıf', 'Ortak Mirasımız', 'Türkistan''da Kurulan İlk Türk Devletlerinin Medeniyetimize Katkıları', 'SB.6.3.1.', 'Türkistan''da kurulan ilk Türk devletlerinin medeniyetimize katkılarını sorgulayabilme
+a) Türkistan''da kurulan ilk Türk devletlerinin medeniyetimize katkıları hakkında merak ettiği konuyu tanımlar.
+b) Türkistan''da kurulan ilk Türk devletlerinin medeniyetimize katkıları hakkında verilen kaynaklara dayanarak sorular sorar.
+c) Türkistan''da kurulan ilk Türk devletlerinin medeniyetimize katkıları hakkında veri
+len kaynaklardan bilgi toplar.
+ç) Türkistan''da kurulan ilk Türk devletlerinin medeniyetimize katkıları hakkında topladığı bilgilerin doğruluğunu değerlendirir.
+d) Türkistan''da kurulan ilk Türk devletlerinin medeniyetimize katkıları hakkında toplanan bilgiler üzerinden çıkarım yapar.', 'Sosyal Bilgiler', 12),
+('6. Sınıf', 'Ortak Mirasımız', 'VII-XIII. Yüzyıllar Arasında İslam Medeniyetinin İnsanlığın Ortak Mirasına Katkıları', 'SB.6.3.2.', 'VII-XIII. yüzyıllar arasında İslam medeniyetinin eğitim, bilim, hukuk, kültür, sa nat ve mimari alanlarında insanlığın ortak mirasına katkılarına dair akıl yürütebilme
+a) İslam medeniyetinin insanlığın ortak mirasına katkılarını belirler.
+b) İslam medeniyetinin insanlığın ortak mirasına yaptığı katkıları eğitim, bilim, hukuk, kültür, sanat ve mimari alanları ile ilişkilendirir.
+c) İslam medeniyetinin eğitim, bilim, hukuk, kültür, sanat ve mimari alanlarında insanlığın ortak mirasına yaptığı katkılar hakkında çıkarım yapar.', 'Sosyal Bilgiler', 14),
+('6. Sınıf', 'Ortak Mirasımız', 'İslamiyet''in Kabulüyle Türklerin Sosyal ve Kültürel Hayatlarında Meydana Gelen Değişimler', 'SB.6.3.3.', 'İslamiyet''in kabulüyle Türklerin sosyal ve kültürel hayatlarında meydana gelen değişime tarihsel bağlam oluşturabilmee
+a) İslamiyet''in kabulüyle Türklerin sosyal ve kültürel hayatlarında meydana gelen değişimi kaynaklara dayanarak analiz eder.
+b) İslamiyet''in kabulüyle Türklerin sosyal ve kültürel hayatlarında meydana gelen değişime ilişkin dönemin koşullarını fark eder.
+c) İslamiyet''in kabulüyle Türklerin sosyal ve kültürel hayatlarında meydana gelen değişimin sonuçlarını günümüz koşullarıyla karşılaştırır.
+ç) İslamiyet''in kabulüyle Türklerin sosyal ve kültürel hayatlarında meydana gelen değişimin sonuçlarını dönemin koşulları içinde açıklar.', 'Sosyal Bilgiler', 16),
+('6. Sınıf', 'Ortak Mirasımız', 'XI- XIII. Yüzyıllar Arasında Meydana Gelen Askerî Mücadelelerin Anadolu''nun Türkleşmesi ve İslamlaşmasına Katkıları', 'SB.6.3.4.', 'XI-XIII. yüzyıllar arasında meydana gelen siyasi faaliyetler ve askerî mücadele lerin Anadolu''nun Türkleşmesi ve İslamlaşmasına etkisini özetleyebilme
+a) XI-XIII. yüzyıllar arasında Anadolu''nun Türkleşmesi ve İslamlaşmasına etkide bulu nan siyasi faaliyetler ve askerî mücadeleleri çözümler.
+b) XI-XIII. yüzyıllar arasında Anadolu''nun Türkleşmesi ve İslamlaşmasına etkide bulu nan siyasi faaliyetler ve askerî mücadeleleri sınıflandırır.
+c) XI-XIII. yüzyıllar arasında meydana gelen siyasi faaliyetler ve askerî mücadelelerin
+Anadolu''nun Türkleşmesi ve İslamlaşmasına etkisini yorumlar.', 'Sosyal Bilgiler', 18),
+('6. Sınıf', 'Yaşayan Demokrasimiz', 'Yönetimin Karar Alma Sürecini Etkileyen Unsurlar', 'SB.6.4.1.', 'Yönetimin karar alma sürecini etkileyen unsurları çözümleyebilme
+a) Yönetimin karar alma sürecini etkileyen unsurları belirler.
+b) Yönetimin karar alma sürecini etkileyen unsurlar arasındaki ilişkiyi belirler.', 'Sosyal Bilgiler', 20),
+('6. Sınıf', 'Yaşayan Demokrasimiz', 'Temel Hak ve Sorumlulukların Toplumsal Düzenin Sürdürülmesindeki Önemi', 'SB.6.4.2.', 'Toplumsal düzenin sürdürülmesinde temel hak ve sorumlulukların önemini yorumlayabilme
+a) Toplumsal düzenin sürdürülmesinde temel hak ve sorumlulukların önemini inceler.
+b) Toplumsal düzenin sürdürülmesinde temel hak ve sorumlulukların önemini bağ
+lamdan kopmadan dönüştürür.
+c) Toplumsal düzenin sürdürülmesinde temel hak ve sorumlulukların önemini nesnel,
+doğru ve anlamı değiştirmeyecek şekilde yeniden ifade eder.', 'Sosyal Bilgiler', 20),
+('6. Sınıf', 'Yaşayan Demokrasimiz', 'Dijitalleşme ve Teknolojik Gelişmelerin Vatandaşlık Hak ve Sorumluluklarına Etkileri', 'SB.6.4.3.', 'Vatandaşlık haklarının kullanımında dijitalleşme ve teknolojik gelişmelerin etkilerini sorgulayabilme
+a) Vatandaşlık haklarının kullanımında dijitalleşme ve teknolojik gelişmelerin etkilerini tanımlar.
+b) Vatandaşlık haklarının kullanımında dijitalleşme ve teknolojik gelişmelerin etkileri
+hakkında sorular sorar (5N1K).
+c) Vatandaşlık haklarının kullanımında dijitalleşme ve teknolojik gelişmelerin etkileri
+hakkında bilgi toplar.
+ç) Vatandaşlık haklarının kullanımında dijitalleşme ve teknolojik gelişmelerin etkileri
+hakkında topladığı bilgileri güncellik ve bilimsellik açısından değerlendirir.
+d) Vatandaşlık haklarının kullanımında dijitalleşme ve teknolojik gelişmelerin etkileri
+hakkında doğruluğunu değerlendirdiği bilgilerden hareketle çıkarımlar yapar.', 'Sosyal Bilgiler', 24),
+('6. Sınıf', 'Hayatımızdaki Ekonomi', 'Ülkemizin Kaynakları ve Ekonomik Faaliyetler', 'SB.6.5.1.', 'Ülkemizin kaynakları ile ekonomik faaliyetler arasındaki ilişkiyi çözümleyebilme
+a) Ülkemizin kaynakları ve ekonomik faaliyetlerin özelliklerini belirler.
+b) Ülkemizin kaynakları ve ekonomik faaliyetler arasındaki ilişkileri belirler.', 'Sosyal Bilgiler', 26),
+('6. Sınıf', 'Hayatımızdaki Ekonomi', 'Ekonomik Faaliyetler ve Meslekler', 'SB.6.5.2.', 'Ekonomik faaliyetler ve meslekler arasındaki ilişki hakkında kanıta dayalı öngörüde bulunabilme
+a) Gözlem ve deneyimlerinden yola çıkarak ekonomik faaliyetler ve meslekleri ilişkilendirir.
+b) Ekonomik faaliyetlerdeki değişime bağlı olarak gelecekte ortaya çıkabilecek meslekler hakkında çıkarımda bulunur.', 'Sosyal Bilgiler', 30),
+('6. Sınıf', 'Hayatımızdaki Ekonomi', 'Tasarlanan Bir Ürünün Yatırım ve Pazarlama Süreci', 'SB.6.5.3.', 'Tasarladığı bir ürün için yatırım ve pazarlama proje önerisi hazırlayabilme
+a) Tasarladığı bir ürün için yatırım ve pazarlama projelerini sorgular.
+b) Tasarladığı ürünün yatırım ve pazarlama alanlarına ilişkin gözlemlerine dayalı tah minlerde bulunur.
+c) Olası riskleri değerlendirerek tasarladığı ürünün yatırım ve pazarlama alanlarının be lirlenmesine gerekçe sunarak karar verir.
+ç) Tasarladığı ürünün yatırım ve pazarlama aşaması için gerekli kaynakları yönetir.
+d) Tasarladığı ürün için yatırım ve pazarlama proje öneri raporu oluşturur.', 'Sosyal Bilgiler', 32),
+('6. Sınıf', 'Teknoloji ve Sosyal Bilimler', 'Ulaşım ve İletişim Teknolojilerinin Kültürel Etkileşimdeki Rolü', 'SB.6.6.1.', 'Ulaşım ve iletişim teknolojilerindeki gelişmelerin kültürel etkileşimdeki rolünü yapılandırabilme
+a) Ulaşım ve iletişim teknolojilerindeki gelişmelerin kültürel etkileşimdeki rolüne
+yönelik nedensel ilişkileri ortaya koyar.
+b) Ulaşım ve iletişim teknolojilerindeki gelişmelerin kültürel etkileşimdeki rolüne ilişkin anlamlı bir bütün ortaya koyar.', 'Sosyal Bilgiler', 34),
+('6. Sınıf', 'Teknoloji ve Sosyal Bilimler', 'Telif ve Patent Süreci', 'SB.6.6.2.', 'Bir ürün veya fikrin patent ve telif haklarıyla ilgili bilgi toplayabilme
+a) Bir ürün veya fikrin patent ve telif haklarıyla ilgili bilgi toplayacağı kaynakları belirler.
+b) Bir ürün veya fikrin patent ve telif haklarıyla ilgili bilgileri belirlediği kaynaklardan
+toplar.
+c) Bir ürün veya fikrin patent ve telif haklarıyla ilgili topladığı bilgileri doğrular.
+ç) Bir ürün veya fikrin patent ve telif haklarıyla ilgili doğruladığı bilgileri kaydeder', 'Sosyal Bilgiler', 36),
+('7. Sınıf', 'Birlikte Yaşamak', 'Gruplarda ve Sosyal Hayatta İletişimin Önemi', 'SB.7.1.1.', 'Dâhil olduğu gruplarda ve sosyal hayatta etkili iletişimin önemini sorgulayabilme
+a) Dâhil olduğu gruplarda ve sosyal hayatta etkili iletişimin önemi ile ilgili merak ettiği
+konuları tanımlar.
+b) Dâhil olduğu gruplarda ve sosyal hayatta etkili iletişimin önemi ile ilgili sorular sorar.
+c) Dâhil olduğu gruplarda ve sosyal hayatta etkili iletişimin önemi ile ilgili bilgi toplar.
+ç) Dâhil olduğu gruplarda ve sosyal hayatta etkili iletişimin önemi ile ilgili topladığı bil
+gilerin doğruluğunu değerlendirir.
+d) Yapmış olduğu değerlendirmelerden hareketle olumlu iletişimin önemine yönelik
+çıkarım yapar.', 'Sosyal Bilgiler', 1),
+('7. Sınıf', 'Birlikte Yaşamak', 'Özel Gereksinimli Bireyler İçin Fırsat Eşitliği', 'SB.7.1.2.', 'Özel gereksinimli bireyler için fırsat eşitliğini sürdürmeye yönelik fikir üretebilme
+a) Özel gereksinimli bireyler için fırsat eşitliğini sürdürmenin önemini fark eder.
+b) Özel gereksinimli bireyler için fırsat eşitliğini sürdürmeye yönelik benzer girişimleri inceler.
+c) Özel gereksinimli bireyler için fırsat eşitliğini sürdürmeye yönelik yeni fikirler üretir.', 'Sosyal Bilgiler', 3),
+('7. Sınıf', 'Birlikte Yaşamak', 'Millî Meseleler Karşısında Türk Toplumunun Tutum ve Davranışları', 'SB.7.1.3.', 'Türk toplumunun millî meseleler karşısında gösterdiği tutum ve davranışlara ilişkin çıkarım yapabilme
+a) Türk toplumunun millî meseleler karşısında gösterdiği tutum ve davranışlara ilişkin varsayımlarda bulunur.
+b) Türk toplumunun millî meseleler karşısında gösterdiği tutum ve davranışlara ilişkin örnekleri listeler.
+c) Türk toplumunun millî meseleler karşısında gösterdiği tutum ve davranışları karşılaştırır.
+ç) Türk toplumunun oluşabilecek farklı millî meseleler karşısında gösterebileceği tutum ve davranışlara ilişkin önermelerde bulunur.
+d) Türk toplumunun millî meseleler karşısında gösterdiği tutum ve davranışları toplumsal birlikteliğe etkisi açısından değerlendirir.', 'Sosyal Bilgiler', 5),
+('7. Sınıf', 'Evimiz Dünya', 'Küreselleşmenin İnsan ve Toplum Hayatına Etkisi', 'SB.7.2.1.', 'Küreselleşmenin insan ve toplum hayatında meydana getirdiği değişimi yorumlayabilme
+a) Küreselleşmenin insan ve toplum hayatında meydana getirdiği değişimi inceler.
+b) Küreselleşmenin insan ve toplum hayatında meydana getirdiği değişimi bağlamdan kopmadan dönüştürür.
+c) Küreselleşmenin insan ve toplum hayatında meydana getirdiği değişimi nesnel,
+doğru ve anlamı değiştirmeyecek şekilde yeniden ifade eder.', 'Sosyal Bilgiler', 6),
+('7. Sınıf', 'Evimiz Dünya', 'Bölgesel ve Küresel Sorunların Çözümünde Ülkemizin Rolü', 'SB.7.2.2.', 'Bölgesel ve küresel sorunların çözümünde ülkemizin rolünü özetleyebilme
+a) Bölgesel ve küresel sorunların çözümünde ülkemizin rolüne ilişkin çözümleme yapar.
+b) Bölgesel ve küresel sorunların çözümünde ülkemizin rolüne ilişkin sınıflandırma yapar.
+c) Bölgesel ve küresel sorunların çözümünde ülkemizin rolünü yorumlar.', 'Sosyal Bilgiler', 8),
+('7. Sınıf', 'Ortak Mirasımız', 'Osmanlı Devleti''nin Cihan Devleti Hâline Gelmesini Sağlayan Politikalar', 'SB.7.3.1.', 'Osmanlı Devleti''nin cihan devleti hâline gelmesini sağlayan politikaları sorgulayabilme
+a) Osmanlı Devleti''nin cihan devleti hâline gelmesini sağlayan politikalar hakkında
+merak ettiği konuyu tanımlar.
+b) Osmanlı Devleti''nin cihan devleti hâline gelmesini sağlayan politikalar hakkında ve
+rilen kaynaklara dayanarak sorular sorar.
+c) Osmanlı Devleti''nin cihan devleti hâline gelmesini sağlayan politikalar hakkında
+verilen kaynaklardan bilgi toplar.
+ç) Osmanlı Devleti''nin cihan devleti hâline gelmesini sağlayan politikalar hakkında
+topladığı bilgilerin doğruluğunu değerlendirir.
+d) Edindiği bilgilerden hareketle Osmanlı Devleti''nin cihan devleti hâline gelmesini
+sağlayan politikalar hakkında çıkarım yapar.', 'Sosyal Bilgiler', 10),
+('7. Sınıf', 'Ortak Mirasımız', 'Osmanlı Devleti''nin Uygulamaya Koyduğu Yenilikler', 'SB.7.3.2.', 'Değişen dünya dengeleri karşısında Osmanlı Devleti''nin uyguladığı yenilikleri neden ve sonuçlarıyla yorumlayabilme
+a) Değişen dünya dengeleri karşısında Osmanlı Devleti''nin uyguladığı yeniliklerin nedenlerini inceler.
+b) Değişen dünya dengeleri karşısında Osmanlı Devleti''nin uyguladığı yeniliklerin etkilediği unsurları inceler.
+c) Değişen dünya dengeleri karşısında Osmanlı Devleti''nin uyguladığı yeniliklerin etkilerini sorgular.
+ç) Değişen dünya dengeleri karşısında Osmanlı Devleti''nin uyguladığı yeniliklerin neden ve sonuçlarını elde ettiği bilgilere dayanarak ifade eder.', 'Sosyal Bilgiler', 13),
+('7. Sınıf', 'Ortak Mirasımız', 'Osmanlı Kültür ve Medeniyeti', 'SB.7.3.3.', 'Osmanlı kültür ve medeniyet unsurlarına ilişkin oluşturduğu ürünü paylaşabilme
+a) Osmanlı kültür ve medeniyet unsurlarının temel özelliklerine ilişkin kanıtlara dayanarak çıkarım yapar.
+b) Osmanlı kültür ve medeniyet unsurlarının temel özelliklerine ilişkin kanıtlardaki bilgilerden hareketle görüşünü yansıtan ürün oluşturur.
+c) Osmanlı kültür ve medeniyet unsurlarının özelliklerine ilişkin görüşlerine dayalı olarak oluşturduğu ürünü paylaşır.', 'Sosyal Bilgiler', 16),
+('7. Sınıf', 'Yaşayan Demokrasimiz', 'Türkiye Cumhuriyeti''nin Nitelikleri', 'SB.7.4.1.', 'Türkiye Cumhuriyeti''nin temel niteliklerini özetleyebilme
+a) Türkiye Cumhuriyeti''nin temel niteliklerini çözümler.
+b) Türkiye Cumhuriyeti''nin temel niteliklerini sınıflandırır.
+c) Türkiye Cumhuriyeti''nin temel niteliklerini yorumlar.', 'Sosyal Bilgiler', 18),
+('7. Sınıf', 'Yaşayan Demokrasimiz', 'Türkiye Cumhuriyeti''nin Yönetim Yapısı', 'SB.7.4.2.', 'Türkiye Cumhuriyeti Devleti''nin yönetim yapısını çözümleyebilme
+a) Türkiye Cumhuriyeti Devleti''nin yönetim yapısını belirler.
+b) Türkiye Cumhuriyeti Devleti''nin yönetim yapısını oluşturan unsurlar arası ilişkileri belirler.', 'Sosyal Bilgiler', 20),
+('7. Sınıf', 'Yaşayan Demokrasimiz', 'Ülkemizde Demokrasinin Gelişimi', 'SB.7.4.3.', 'Ülkemizdeki demokrasinin gelişimini, demokrasinin temel ilkeleri açısından yorumlayabilme
+a) Demokrasinin temel nitelikleri ile ülkemizin demokrasi tarihi arasındaki ilişkiyi gör
+sel/işitsel/dijital tarihî kaynaklardan inceler.
+b) Demokrasinin temel nitelikleri ile ülkemizin demokrasi tarihi arasındaki ilişkiyi nes
+nel, doğru anlamı değiştirmeyecek bir şekilde yeniden ifade eder.', 'Sosyal Bilgiler', 22),
+('7. Sınıf', 'Yaşayan Demokrasimiz', 'Demokrasinin Uygulanma Sürecinde Karşılaşılan Sorunlar', 'SB.7.4.4.', 'Demokrasinin uygulama sürecinde karşılaşılan sorunları özetleyebilme
+a) Demokrasinin uygulama sürecinde karşılaşılabilecek sorunları çözümler.
+b) Demokrasinin uygulama sürecinde karşılaşılabilecek sorunları sınıflandırır.
+c) Demokrasinin uygulama sürecinde karşılaşılabilecek sorunları yorumlar.', 'Sosyal Bilgiler', 24),
+('7. Sınıf', 'Hayatımızdaki Ekonomi', 'Millî Kalkınma Hamleleri', 'SB.7.5.1.', 'Millî kalkınma hamlelerini neden ve sonuçlarıyla yorumlayabilme
+a) Millî kalkınma hamlelerine neden olan unsurları inceler.
+b) Millî kalkınma hamlelerinin etkilediği unsurları inceler.
+c) Millî kalkınma hamlelerinin etkilerinin niteliğini sorgular.
+ç) Millî kalkınma hamlelerinin neden ve sonuçlarını bağlamından kopmadan yeniden ifade eder.', 'Sosyal Bilgiler', 26),
+('7. Sınıf', 'Hayatımızdaki Ekonomi', 'Ekonomik Gelişmişlik ile Üretim, Dağıtım ve Tüketim Arasındaki Döngü', 'SB.7.5.2.', 'Ekonomik gelişmişlik ile üretim, dağıtım ve tüketim döngüsü arasındaki ilişkiyi çözümleyebilme
+a) Ekonomik gelişmişlik unsurları ile üretim, dağıtım ve tüketim döngüsünü belirler.
+b) Ekonomik gelişmişlik unsurları ile üretim dağıtım ve tüketim arasındaki ilişkiyi belirler.', 'Sosyal Bilgiler', 28),
+('7. Sınıf', 'TEKNOLOJİ ve SOSYAL BİLİMLER', 'Bilimsel ve Teknolojik Gelişmelerin Gelecekteki Hayata Etkisi', 'SB.7.6.1.', 'Bilimsel ve teknolojik gelişmelerin gelecekteki toplum hayatına etkilerine ilişkin öngörüde bulunabilme
+a) Bilimsel ve teknolojik gelişmelerin günümüzdeki toplumsal hayata etkilerine ilişkin kanıt, gözlem ve deneyimleri ilişkilendirir.
+b) Bilimsel ve teknolojik gelişmelerin toplumsal hayata etkilerine ilişkin kanıt, gözlem ve deneyimleri ilişkilendirerek geleceğe yönelik çıkarımda bulunur.', 'Sosyal Bilgiler', 30),
+('7. Sınıf', 'Teknoloji ve Sosyal Bilimler', 'Sosyal Bilimlerin Çalışma Alanları', 'SB.7.6.2.', 'Örnek metinler üzerinden sosyal bilimlerin çalışma alanlarına dair genelleme yapabilme
+a) Örnek metinler üzerinden sosyal bilimlerin çalışma alanlarına dair bilgi toplar.
+b) Örnek metinler üzerinden sosyal bilimlerin çalışma alanlarının ortak özelliklerini belirler.
+c) Örnek metinler üzerinden sosyal bilimlerin çalışma alanlarının farklılıklarını belirler.
+ç) Örnek metinler doğrultusunda sosyal bilimlerin çalışma alanlarına dair örüntüler üzerinden önermelerde bulunur.', 'Sosyal Bilgiler', 32),
+('7. Sınıf', 'Teknoloji ve Sosyal Bilimler', 'Toplumsal Hayatta Karşılaşılabilecek Problemlere Çözüm Üretme', 'SB.7.6.3.', 'Toplumsal hayatta karşılaşabileceği bir probleme yönelik bilimsel sorgulama yapabilme
+a) Toplumsal hayatta karşılaşabileceği bir problemi tanımlar.
+b) Toplumsal hayatta karşılaşabileceği bir problemin çözümüne dair kullanabileceği bir model geliştirir.
+c) Toplumsal hayatta karşılaşabileceği bir problemin çözümüne yönelik araştırmayı planlar ve gerçekleştirir.
+ç) Toplumsal hayatta karşılaşabileceği bir problemin çözümüne yönelik verileri analiz eder ve yorumlar.
+d) Toplumsal hayatta karşılaşabileceği bir problemin çözümüne dair kanıta dayalı açıklama yapar ve probleme çözüm üretir.
+e) Toplumsal hayatta karşılaşabileceği bir problemin çözümüne dair bilgiyi değerlendirir ve paylaşır.', 'Sosyal Bilgiler', 34),
+('8. Sınıf', 'Bir Kahraman Doğuyor', 'Bir Kahraman Doğuyor', 'İTA.8.1.1.', 'Avrupa''daki gelişmelerin yansımaları bağlamında Osmanlı Devleti''nin yirminci yüzyılın başlarındaki siyasi ve sosyal durumunu kavrar.
+a) Fransız İhtilali ile ortaya çıkan siyasi düşüncelere, Avrupa devletlerinin sömürgecilik faaliyetlerine,
+Tanzimat ve Meşrutiyet dönemlerinin Osmanlı siyasi ve sosyal yapısına etkisine kısaca değinilir.
+b) Osmanlı Devleti ile Avrupa devletlerinin yirminci yüzyılın başlarındaki durumu harita üzerinde gösterilir.
+c) Osmanlı Devleti''nin son döneminde siyasi ve sosyal hayatı etkileyen başlıca fikir akımlarına (Osmanlıcılık, İslamcılık, Türkçülük, Batıcılık) kısaca değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 1),
+('8. Sınıf', 'Bir Kahraman Doğuyor', 'Bir Kahraman Doğuyor', 'İTA.8.1.2.', 'Mustafa Kemal''in çocukluk ve öğrenim hayatından hareketle onun kişilik özelliklerinin oluşumu hakkında çıkarımlarda bulunur.
+Mustafa Kemal''in kişilik gelişimi ve yetişmesinde rol oynayan şahsiyetlere değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 2),
+('8. Sınıf', 'Bir Kahraman Doğuyor', 'Bir Kahraman Doğuyor', 'İTA.8.1.3.', 'Gençlik döneminde Mustafa Kemal''in fikir hayatını etkileyen önemli kişileri ve olayları kavrar.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 3),
+('8. Sınıf', 'Bir Kahraman Doğuyor', 'Bir Kahraman Doğuyor', 'İTA.8.1.4.', 'Mustafa Kemal''in askerlik hayatı ile ilgili olayları ve olguları onun kişilik özellikleri ile ilişkilendirir.
+a) Mustafa Kemal''in Birinci Dünya Savaşı öncesinde yaptığı görev ve hizmetler üzerinde durulur.
+b) 31 Mart Olayı, Trablusgarp Savaşı, Balkan Savaşları''na kısaca değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 4),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.1.', 'Birinci Dünya Savaşı''nın sebeplerini ve savaşın başlamasına yol açan gelişmeleri kavrar.
+Savaş öncesinde ülkeler arasındaki bloklaşmalara değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 5),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.2.', 'Birinci Dünya Savaşı''nda Osmanlı Devleti''nin durumu hakkında çıkarımlarda bulunur.
+a) Birinci Dünya Savaşı''nda Osmanlı Devleti''nin savaştığı cepheler taarruz ve savunma özellikleri belirtilerek (Kafkas, Kanal, Çanakkale, Hicaz-Yemen, Irak ve Suriye) harita üzerinde gösterilir.
+b) Çanakkale Cephesi''ndeki deniz ve kara zaferleri ile Irak Cephesi''ndeki Kut''ül-Amâre Zaferi''ne ve Kafkas Cephesi''ndeki Sarıkamış Harekâtı''na değinilir.
+c) Mustafa Kemal Paşa ve diğer önemli şahsiyetlerin cephelerdeki görev ve başarıları çeşitli alıntılar üzerinden ele alınır.
+ç) 1915 Olayları ve Tehcir Kanunu''na değinilir.
+d) Birinci Dünya Savaşı''nın sonuçları ele alınır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 6),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.3.', 'Mondros Ateşkes Antlaşması''nın imzalanması ve uygulanması karşısında Osmanlı yönetiminin, Mustafa Kemal''in ve halkın tutumunu analiz eder.
+Mustafa Kemal''in ve halkın tepkisi millî birlik ve beraberlik ile vatanseverlik açısından ele alınır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 7),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.4.', 'Kuvâ-yı Millîye''nin oluşum sürecini ve sonrasında meydana gelen gelişmeleri kavrar.
+Millî cemiyetler ve millî varlığa düşman cemiyetlerin başlıca özelliklerine değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 8),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.5.', 'Millî Mücadele''nin hazırlık döneminde Mustafa Kemal''in yaptığı çalışmaları analiz eder.
+a) Mustafa Kemal''in Samsun''a çıkışı, Havza Genelgesi, Amasya Genelgesi, Erzurum Kongresi, Sivas Kongresi ve Amasya Görüşmeleri ele alınır.
+b) Millî Mücadele''nin hazırlık aşamasında karşılaşılan sorunlara Mustafa Kemal''in bulduğu çözüm yollarına değinilir.
+c) Millî Mücadele Dönemi''nde basının rolüne kısaca değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 9),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.6.', 'Misakımilli''nin kabulünü ve Büyük Millet Meclisinin açılışını vatanın bütünlüğü esası ile “ulusal egemenlik” ve “tam bağımsızlık” ilkeleri ile ilişkilendirir.
+Birinci Büyük Millet Meclisinin nasıl teşekkül ettiğine kısaca değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 11),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.7.', 'Büyük Millet Meclisine karşı ayaklanmalar ile ayaklanmaların bastırılması için alınan tedbirleri analiz eder.
+Hıyanet-i Vataniye Kanunu''nun çıkarılma gerekçelerine ve kanunun uygulanma sürecine değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 12),
+('8. Sınıf', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'Millî Uyanış: Bağımsızlık Yolunda Atılan Adımlar', 'İTA.8.2.8.', 'Mustafa Kemal''in ve Türk milletinin Sevr Antlaşması''na karşı tepkilerini değerlendirir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 13),
+('8. Sınıf', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'İTA.8.3.1.', 'Millî Mücadele Dönemi''nde Doğu Cephesi ve Güney Cephesi''nde meydana gelen gelişmeleri kavrar.
+a) Doğu Cephesi''nde kazanılan başarılar ve bunların siyasi önemi açıklanır.
+b) Güney Cephesi''nde vatanseverlik duygularıyla hareket eden Türk milletinin örgütlenmesi vurgulanarak millî ve yerel kahramanlara değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 14),
+('8. Sınıf', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'İTA.8.3.2.', 'Millî Mücadele Dönemi''nde Batı Cephesi''nde meydana gelen gelişmeleri kavrar.
+a) Kuvâ-yı Millîye birliklerinin faaliyetleri ve düzenli ordunun kurulma süreci ele alınır.
+b) I. İnönü ve II. İnönü Muharebeleri ile Kütahya-Eskişehir Muharebeleri ele alınır.
+c) Teşkilat-ı Esasiye Kanunu''nun kabul edilmesi, Londra Konferansı, Afganistan ile Dostluk Antlaşması, İstiklal Marşı''nın kabul edilmesi ve Moskova Antlaşması''na değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 15),
+('8. Sınıf', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'İTA.8.3.3.', 'Millî Mücadele''nin zor bir döneminde Maarif Kongresi yapan Atatürk''ün, millî ve çağdaş eğitime verdiği önemi kavrar.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 17),
+('8. Sınıf', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'İTA.8.3.4.', 'Türk milletinin millî birlik, beraberlik ve dayanışmasının bir örneği olarak Tekalif-i Millîye Emirleri doğrultusunda yapılan uygulamaları analiz eder.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 17),
+('8. Sınıf', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'İTA.8.3.5.', 'Sakarya Meydan Savaşı''nın kazanılmasında ve Büyük Taarruz''un başarılı olmasında Mustafa Kemal''in rolüne ilişkin çıkarımlarda bulunur.
+Kars Antlaşması, Ankara Antlaşması ve Mudanya Ateşkes Antlaşması üzerinde durulur.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 18),
+('8. Sınıf', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'İTA.8.3.6.', 'Lozan Antlaşması''nın sağladığı kazanımları analiz eder.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 19),
+('8. Sınıf', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'Millî Bir Destan: Ya İstiklal Ya Ölüm!', 'İTA.8.3.7.', 'Millî Mücadele Dönemi''nin siyasi, sosyal ve kültürel olaylarının sanat ve edebiyat ürünlerine yansımalarına kanıtlar gösterir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 20),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.1.', 'Çağdaşlaşan Türkiye''nin temeli olan Atatürk ilkelerini açıklar.
+Cumhuriyetçilik, Milliyetçilik, Halkçılık, Devletçilik, Laiklik ve İnkılapçılık ilkeleri kavramsal düzeyde ele alınır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 21),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.2.', 'Siyasi alanda meydana gelen gelişmeleri kavrar.
+iTA.8.4.3. Hukuk alanında meydana gelen gelişmelerin toplumsal hayata yansımalarını kavrar.
+a) Saltanatın kaldırılması, Ankara''nın başkent oluşu, Cumhuriyet''in ilan edilmesi, Halifeliğin kaldırılması, Şeriye ve Evkâf Vekâleti''nin kaldırılması ile Erkân-ı Harbiye Vekâleti''nin kaldırılmasının neden ve sonuçları ele alınır.
+b) 1924 Anayasası''nın kabulüne değinilir.
+
+
+a) Hukuki düzenlemelerin gerekçeleri kısaca açıklanır.
+b) Türk Medeni Kanunu''nun aile yapısında ve kadının toplumsal statüsünde meydana getirdiği değişim vurgulanır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 22),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.4.', 'Eğitim ve kültür alanında yapılan inkılapları ve gelişmeleri kavrar.
+"a) Tevhid-i Tedrisat Kanunu, Harf İnkılabı, Millet Mektepleri, Türk Tarih Kurumu ve Türk Dil Kurumu ele alınır.
+b) 1933 Üniversite Reformu''ndan hareketle Atatürk''ün bilimsel gelişme ve kalkınmaya verdiği önem vurgulanır.
+c) Atatürk''ün güzel sanatlara ve spora verdiği önem örneklerle açıklanır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 23),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.5.', 'Toplumsal alanda yapılan inkılapları ve meydana gelen gelişmeleri kavrar.
+a) Şapka ve kıyafetler konusunda yapılan düzenlemeler, tekke, zaviye ve türbelerin kapatılması, takvim, saat ve ölçülerde değişim ile Soyadı Kanunu ele alınır.
+b) Türk kadınına eğitim alanı ile sosyal, kültürel ve siyasi alanlarda sağlanan haklar ele alınır ve bu haklar diğer ülkelerde kadınlara verilen haklar ile karşılaştırılır."', 'T.C. İnkılap Tarihi ve Atatürkçülük', 23),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.6.', 'Ekonomi alanında meydana gelen gelişmeleri kavrar.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 24),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.7.', 'Atatürk Dönemi''nde sağlık alanında yapılan çalışmaları devletin temel görevleri ile ilişkilendirir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 24),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.8.', 'Cumhuriyet''in sağladığı kazanımları ve Atatürk''ün Türk milleti için gösterdiği hedeﬂeri analiz eder.
+a) Büyük Nutuk ve Onuncu Yıl Nutku ele alınır.
+b) Atatürk''ün Gençliğe Hitabesi''nden hareketle Cumhuriyet''in korunmasında ve sürekliliğinin
+sağlanmasında gençliğe verilen görev ve sorumluluklar vurgulanır.
+c) Atatürk''ün kişilik özelliklerinden; çok yönlülüğü, akılcılığı, bilimselliği ve çağdaşlığı vurgulanır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 25),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.3.', 'Hukuk alanında meydana gelen gelişmelerin toplumsal hayata yansımalarını kavrar.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 26),
+('8. Sınıf', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'Atatürkçülük ve Çağdaşlaşan Türkiye', 'İTA.8.4.9.', 'Atatürk ilke ve inkılaplarını oluşturan temel esasları kavrar.
+Atatürk ilkeleri; millî tarih bilinci, bağımsızlık ve özgürlük, egemenliğin millete ait olması, millî kültürün geliştirilmesi, Türk milletini çağdaş uygarlık düzeyinin üzerine çıkarma ideali, millî birlik ve beraberlik ile ülke bütünlüğü bağlamında açıklanır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 26),
+('8. Sınıf', 'Demokratikleşme Çabaları', 'Demokratikleşme Çabaları', 'İTA.8.5.1.', 'Atatürk Dönemi''ndeki demokratikleşme yolunda atılan adımları açıklar.
+a) Cumhuriyet Halk Fırkası, Terakkiperver Cumhuriyet Fırkası ve Serbest Cumhuriyet Fırkası ele alınır.
+b) Demokratikleşme çabalarına ilişkin olarak Büyük Nutuk''ta yer alan kısımlardan kanıtlar gösterilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 27),
+('8. Sınıf', 'Demokratikleşme Çabaları', 'Demokratikleşme Çabaları', 'İTA.8.5.2.', 'Mustafa Kemal''e suikast girişimini analiz eder.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 28),
+('8. Sınıf', 'Demokratikleşme Çabaları', 'Demokratikleşme Çabaları', 'İTA.8.5.3.', 'Cumhuriyetin ilk yıllarında Türkiye Cumhuriyetine yönelik tehditleri analiz eder.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 29),
+('8. Sınıf', 'Atatürk Dönemi Türk Dış Politikası', 'Atatürk Dönemi Türk Dış Politikası', 'İTA.8.6.1.', 'Atatürk Dönemi Türk dış politikasının temel ilkelerini ve amaçlarını açıklar.
+Tam bağımsızlık, gerçekçilik, akılcılık, mütekabiliyet, barış, millî menfaatleri esas alma, Türk ve dünya kamuoyunu dikkate alma ilkeleri, Atatürk dönemi Türk dış politikası çerçevesinde işlenerek Atatürk''ün ileri görüşlülüğü vurgulanır.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 30),
+('8. Sınıf', 'Atatürk Dönemi Türk Dış Politikası', 'Atatürk Dönemi Türk Dış Politikası', 'İTA.8.6.2.', 'Atatürk Dönemi Türk dış politikasında yaşanan gelişmeleri analiz eder.
+"a) Lozan Barış Antlaşması, Atatürk dönemi Türk dış politikasının temel ilkeleri ile ilişkilendirilir.
+b) Yabancı okullar, Dış Borçlar Sorunu, Musul Sorunu, Nüfus Mübadelesi ve Montrö Boğazlar
+Sözleşmesi Atatürk dönemi Türk dış politikası açısından ele alınır.
+c) Milletler Cemiyeti''ne girişte izlenen politika vurgulanır.
+d) Balkan Antantı ve Sadabat Paktı ele alınır."', 'T.C. İnkılap Tarihi ve Atatürkçülük', 31),
+('8. Sınıf', 'Atatürk Dönemi Türk Dış Politikası', 'Atatürk Dönemi Türk Dış Politikası', 'İTA.8.6.3.', 'Atatürk''ün Hatay''ı ülkemize katmak konusunda yaptıklarına ve bu uğurda gösterdiği özveriye kanıtlar gösterir.
+Atatürk Dönemi Türk dış politikasının temel ilkeleri ile Hatay''ın anavatana katılması ilişkilendirilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 32),
+('8. Sınıf', 'Atatürk''ün Ölümü ve Sonrası', 'Atatürk''ün Ölümü ve Sonrası', 'İTA.8.7.1.', 'Atatürk''ün ölümüne ilişkin yansıma ve değerlendirmelerden hareketle onun fikir ve eserlerinin evrensel değerine ilişkin çıkarımlarda bulunur.
+a) Atatürk''ün ölümüne ilişkin yerli ve yabancı basında çıkan haber ve yorumlara değinilir.
+b) İsmet İnönü''nün cumhurbaşkanı seçilmesine değinilir', 'T.C. İnkılap Tarihi ve Atatürkçülük', 33),
+('8. Sınıf', 'Atatürk''ün Ölümü ve Sonrası', 'Atatürk''ün Ölümü ve Sonrası', 'İTA.8.7.2.', 'Atatürk''ün Türk Milleti''ne bıraktığı eserlerinden örnekler verir.
+Atatürk''ün “En büyük eserim Türkiye Cumhuriyeti''dir.” sözüne ve yazılı eserlerine değinilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 34),
+('8. Sınıf', 'Atatürk''ün Ölümü ve Sonrası', 'Atatürk''ün Ölümü ve Sonrası', 'İTA.8.7.3.', 'Atatürk''ün İkinci Dünya Savaşı öncesi tespitleri ve girişimleri Türkiye''nin savaşta izlediği denge siyaseti ile ilişkilendirilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 35),
+('8. Sınıf', 'Atatürk''ün Ölümü ve Sonrası', 'Atatürk''ün Ölümü ve Sonrası', 'İTA.8.7.4.', 'İkinci Dünya Savaşı''ndaki gelişmelerin ve bu savaşın sonuçlarının Türkiye''ye etkilerini analiz eder.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 35),
+('8. Sınıf', 'Atatürk''ün Ölümü ve Sonrası', 'Atatürk''ün Ölümü ve Sonrası', 'İTA.8.7.5.', 'Türkiye''de çok partili siyasi hayata geçişi hızlandıran gelişmeleri, demokrasinin gerekleri açısından analiz eder.
+Konu işlenişi, 1946 yılında gerçekleştirilen ilk çok partili genel seçime değinilerek bitirilir.', 'T.C. İnkılap Tarihi ve Atatürkçülük', 36),
+('5. Sınıf', 'Oyun Dünyası', 'Konuşma', 'T.K.5.1.', 'Konuşma sürecini yönetebilme
+a) Konuşma türü (sözlü üretim veya sözlü etkileşim), amacı, süresi, ilgi ve ihtiyaçlarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda konuşurken kullanacağı yöntemi ve/veya tekniği seçer.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Yazma', 'T.Y.5.1.', 'Yazma sürecini yönetebilme
+a) Yazma şekli (yazılı üretim ve yazılı etkileşim), amacı, bağlamı ve olanakları doğrultusunda yazma içeriğini, hedef kitlesini, yazma ortamını ve araçlarını belirler.
+b) Yazılı etkileşiminde yazışmayı başlatma, sürdürme, sonlandırmayla ilgili selam, hitap vb. kalıp ifadeleri kullanır.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.2.', 'Akıcı okuyabilme', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Yazma', 'T.Y.5.2.', 'Yazmada strateji, yöntem ve tekniklerine yönelik seçimlerini yönetebilme
+a) Yazma şekli (yazılı üretim ve yazılı etkileşim), amacı, bağlamı ve olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda yazarken kullanacağı strateji ve/veya yöntemi/tekniği seçer.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Dinleme/İzleme', 'T.D.5.3.', 'Dinleyeceğinin/izleyeceğinin içeriğine yönelik tahminde bulunabilme
+a) Dinleyeceğinin/izleyeceğinin başlık, görsel ve/veya belirli bir bölümünden hareketle içerikle ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) İçerik veya sonraki bölümlerle ilgili mantıklı tahminde bulunur.
+c) Tahminine yönelik gerekçelendirme yapar.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.3.', 'Okumada strateji, yöntem ve teknik seçimlerini yönetebilme
+a) Amacı, ilgi ve ihtiyaçları, materyalin özellikleri, faaliyetin süresi ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda okurken kullanacağı strateji ve/veya yöntemi/tekniği seçer.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Yazma', 'T.Y.5.3.', 'Yazısında içerik ve yapıya yönelik seçimlerini yönetebilme
+a) Yazma amacına uygun paragraf türü ve/veya metin yapısını belirler.
+b) Seçtiği paragraf türünü ve/veya metin yapısını yazısında uygun biçimde kullanır.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Dinleme/İzleme', 'T.D.5.4.', 'Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme
+a) Dinlediğinin/izlediğinin bağlamından söz varlığı unsurlarının anlamıyla ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Söz varlığı unsurlarının anlamına ilişkin mantıklı tahminde bulunur.
+c) Tahminin doğruluğunu kaynaklardan (sözlük, başvuru kitapları, genel ağ vb.), ebeveyn veya öğretmenden yardım alarak kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.4.', 'Okuyacağı metnin içeriğine yönelik tahminde bulunabilme
+a) Okuyacağı metnin başlık, görsel ve/veya belirli bir bölümünden hareketle içerikle ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Metnin içeriği veya sonraki bölümleriyle ilgili mantıklı tahminde bulunur.
+c) Tahminine yönelik gerekçelendirme yapar.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Dinleme/İzleme', 'T.D.5.5.', 'Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme
+a) Dinlediği/izlediği ve varsa ona eşlik eden görsellerden hareketle bağlama dair ipuçlarını bulur.
+b) Dinlediğinde/izlediğinde doğrudan verilen bilgileri (tanımı verilen kavram, düşünce, yönerge, iletilmek istenen mesaj, açıkça ifade edilen ana fikir vb.) belirler.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.5.', 'Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme
+a) Metnin bağlamından söz varlığı unsurlarının anlamıyla ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Söz varlığı unsurlarının anlamına ilişkin mantıklı tahminde bulunur.
+c) Tahminin doğruluğunu kaynaklardan (sözlük, başvuru kitapları, genel ağ vb.), ebeveyn veya öğretmenden yardım alarak kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.6.', 'Metnin yüzey anlamını belirleyebilme
+a) Metin ve varsa ona eşlik eden görsellerden hareketle bağlama dair ipuçlarını bulur.
+b) Metinde doğrudan verilen bilgileri (tanımı verilen kavram, düşünce, yönerge, iletilmek istenen mesaj, açıkça ifade edilen ana fikir vb.) belirler.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Yazma', 'T.Y.5.6.', 'Yazılı üretim ve yazılı etkileşiminde tahminlerinden yararlanabilme
+a) Karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Özellikler arasındaki benzerlikleri tespit ederek yazısında kullanır.
+c) Özellikler arasındaki farklılıkları tespit ederek yazısında kullanır.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.7.', 'Görselle iletilen anlamı belirleyebilme
+a) Görseldeki unsurlardan hareketle anlama ilişkin ipuçlarını bulur.
+b) Ön bilgileri ve ipuçlarından hareketle açık ve/veya örtük olarak iletilen mesajı belirler.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Konuşma', 'T.K.5.7.', 'Hazırlıksız konuşma yapabilme
+a) Çıkış noktasından ve ön bilgilerinden hareketle kısa süreli zihinsel planlama yapar.
+b) Doğaçlama yoluyla bağlama uygun ve doğal bir biçimde konuşur.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Konuşma', 'T.K.5.8.', 'Konuşmasında sesini uygun şekilde kullanabilme', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Dinleme/İzleme', 'T.D.5.13.', 'Dinlediğinin/izlediğinin anahtar kelimelerini belirlemeye yönelik çözümleme
+a) Dinlediğinin/izlediğinin içeriğini yansıtan anahtar kelimeleri belirler.
+b) Anahtar kelimelerin dinlediğiyle/izlediğiyle ilişkisini ortaya koyar.
+yapabilme', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Yazma', 'T.Y.5.13.', 'Yazısını zenginleştirecek biçimde söz varlığını kullanabilme
+a) Kullanacağı söz varlığı unsurlarını belirler.
+b) Söz varlığı unsurlarını bağlama uygun şekilde yazısında kullanır.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.15.', 'Metnin anahtar kelimelerini belirlemeye yönelik çözümleme yapabilme
+a) Metnin içeriğini yansıtan anahtar kelimeleri belirler.
+b) Anahtar kelimelerin metinle ilişkisini ortaya koyar.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Yazma', 'T.Y.5.16.', 'Yazım ve noktalama işaretleriyle ilgili kuralları uygulayabilme', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Dinleme/İzleme', 'T.D.5.17.', 'Dinlediğinden/izlediğinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme
+a) Dinlediğinin/izlediğinin temayla ilgili söz varlığı unsurlarını belirler.
+b) Söz varlığı unsurlarının anlam ilişkilerini inceler.
+çözümleme yapabilme', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Konuşma', 'T.K.5.17.', 'Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme
+a) Kullanacağı söz varlığı unsurlarını belirler.
+b) Söz varlığı unsurlarına bağlama uygun şekilde konuşmasında yer verir.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Okuma', 'T.O.5.20.', 'Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme
+a) Metnin temayla ilgili söz varlığı unsurlarını belirler.
+b) Söz varlığı unsurlarının anlam ilişkilerini inceler.', 'Türkçe', 1),
+('5. Sınıf', 'Oyun Dünyası', 'Konuşma', 'T.K.5.20.', 'Konuşmasında beden dilini kullanabilme
+a) Dinleyicilerle/izleyicilerle göz teması kurar.
+b) Baş, el, kol, bacak ve bedenin genel duruşunu içeriğe uygun kullanır.
+c) İçeriğe uygun olarak yaygın yüz ifadelerini (şaşırma, kızgınlık, mutluluk vb.) kullanır.', 'Türkçe', 1),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Dinleme/İzleme', 'T.D.5.1.', 'Dinlemede/izlemede materyal seçimini yönetebilme
+a) Dinleme/izleme şekli (etkileşimli veya etkileşimsiz), amacı, ilgi ve ihtiyaçları, faaliyetin süresi ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda metin ve diğer yardımcı materyalleri (ses ve/veya video kayıtları, film, belgesel, dijital içerikler, etkileşimli sunumlar vb.) seçer.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Okuma', 'T.O.5.1.', 'Okumada materyal seçimini yönetebilme
+a) Amacı, ilgi ve ihtiyaçları, materyalin özellikleri, faaliyetin süresi ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda metin ve diğer yardımcı materyalleri (sözlük, genel ağ, çalışma kâğıdı, grafik organize edici vb.) seçer.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Dinleme/İzleme', 'T.D.5.2.', 'Dinlemede/izlemede strateji, yöntem ve teknik seçimlerini yönetebilme
+a) Dinleme/izleme şekli (etkileşimli veya etkileşimsiz), amacı, ilgi ve ihtiyaçları; materyalin özellikleri ve faaliyetin süresini analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda dinlerken/izlerken kullanacağı strateji ve/veya yöntemi/tekniği seçer.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Konuşma', 'T.K.5.2.', 'Konuşmada yöntem ve teknik seçimlerini yönetebilme
+a) Konuşma türü (sözlü üretim veya sözlü etkileşim), amacı, süresi, ilgi ve ihtiyaçlarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda konuşurken kullanacağı yöntemi ve/veya tekniği seçer.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Konuşma', 'T.K.5.3.', 'Konuşmasında amaç ve içeriğe yönelik seçimlerini yönetebilme
+a) Konuşma amacını, konusunu, türünü ve anlatım biçimini belirler.
+b) Amaç, konu, tür ve anlatım biçimi tercihleri doğrultusunda konuşmasını sürdürür.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Konuşma', 'T.K.5.9.', 'Konuşmasında tahminlerinden yararlanabilme
+a) Konuşmasında ele alacağı olay, bilgi ya da durumu ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmelerden hareketle olay, bilgi ya da duruma yönelik mantıklı tahminde bulunur.
+c) Konuşmasında tahminlerine yer verir.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Dinleme/İzleme', 'T.D.5.11.', 'Öyküleyici metinde hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme
+a) Şahıs ve/veya varlık kadrosunu, mekânı, zamanı ve olay örgüsünü belirler.
+b) Hikâye unsurları arasındaki ilişkiyi belirler.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Dinleme/İzleme', 'T.D.5.14.', 'Dinlediğinin/izlediğinin bölümlerini belirlemeye yönelik çözümleme yapabilme
+a) Metnin türüne uygun olarak giriş, gelişme, sonuç veya serim, düğüm, çözüm bölümlerini belirler.
+b) Metnin bölümlerinin birbirleriyle bağlantısını belirler.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Yazma', 'T.Y.5.15.', 'Uygun bağlantı ifadelerini kullanabilme', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Okuma', 'T.O.5.17.', 'Şiirin biçim özelliklerini belirlemeye yönelik çözümleme yapabilme
+a) Okuduğu şiirin biçim özelliklerini belirler.
+b) Şiirin biçim özelliklerinin birbirleriyle ve şiirsel söyleyişle ilişkisini ortaya koyar.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Yazma', 'T.Y.5.17.', 'Yazma sürecini değerlendirebilme
+a) Yazma sürecindeki güçlü ve gelişmeye açık yönlerini belirler.
+b) Gelişmeye açık yönlerini destekleyecek tedbirler alıp, güçlü yönlerini sonraki yazma çalışmalarına aktararak yazar kimliğinin gelişimine yön verir.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Okuma', 'T.O.5.19.', 'Metindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme
+a) Okuduğundaki söz sanatlarını belirler.
+b) Söz sanatlarının metnin anlatımıyla ilişkisini ortaya koyar.', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Konuşma', 'T.K.5.19.', 'Uygun bağlantı ifadelerini kullanabilme', 'Türkçe', 6),
+('5. Sınıf', 'Atatürk''ü Tanımak', 'Okuma', 'T.O.5.22.', 'Okuma sürecini değerlendirebilme
+a) Okuma sürecindeki güçlü ve gelişmeye açık yönlerini belirler.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp, güçlü yönlerini sonraki çalışmalara aktararak okur kimliğinin gelişimine yön verir.', 'Türkçe', 6),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Konuşma', 'T.K.5.4.', 'İletişimi sürdürmek amacıyla soru sorabilme
+a) Bağlamdaki olay, bilgi, durumu belirler.
+b) Bağlamı ve karşısındakini dikkate alarak soru sorar.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Yazma', 'T.Y.5.4.', 'Yazısında çoklu ortam ögeleriyle içerik oluşturabilme
+a) Yazısında kullanacağı çoklu ortam ögelerini (fotoğraf, resim, tablo, grafik, harita, ses, müzik, video vb.) belirler.
+b) Ögelerin işlevlerini (eş anlam oluşturma, destekleme, tek başına anlam verme) belirler.
+c) Çoklu ortam ögelerini içerikle ilişkilendirerek yazısında kullanır.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Yazma', 'T.Y.5.5.', 'Yaratıcı yazı yazabilme
+a) Alışılmışın dışında konu, varlık vb. unsurları belirler.
+b) Kurguladığı unsurları birbirleriyle ilişilendirir.
+c) Bunları gözlem, deneyim, hayal gücüyle vb. zenginleştirerek özgün bir metin oluşturur.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Dinleme/İzleme', 'T.D.5.6.', 'Basit çıkarımlar yoluyla dinlediğinin/izlediğinin derin anlamını belirleyebilme
+a) Dinlediğinin/izlediğinin sınırlı bir bölümünden bağlama dair ipuçlarını bulur.
+b) Ön bilgileri ve ipuçlarından hareketle anlamı belirler.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Konuşma', 'T.K.5.6.', 'Yaratıcı konuşma yapabilme
+a) Alışılmışın dışında konu, varlık vb. unsurları belirler.
+b) Kurguladığı unsurları birbirleriyle ilişilendirir.
+c) Bunları gözlem, deneyim, hayal gücüyle vb. zenginleştirerek özgün bir anlatım oluşturur.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Yazma', 'T.Y.5.8.', 'Yazısında sınıflandırma yapabilme
+a) Yorumlayacağı olay, bilgi, durum vb.ni inceler.
+b) Olay, bilgi, durum vb.ni bağlamdan kopmadan, farklı bakış açısıyla, genişleterek veya daraltarak
+dönüştürür.
+c) Olay, bilgi, durum vb.ni belirlenen bakış açısıyla kendine özgü biçimde yazısında yeniden ifade eder.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Okuma', 'T.O.5.11.', 'Metindeki unsurları sınıflandırabilme
+a) Sınıflandırma ölçütüne karar verir.
+b) Metni ölçüte göre inceler.
+c) Metindeki unsurları ölçüte göre gruplandırır.
+ç) Oluşturulan grupları adlandırır.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Okuma', 'T.O.5.13.', 'Öyküleyici metinde hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme
+a) Şahıs ve/veya varlık kadrosunu, mekânı, zamanı ve olay örgüsünü belirler.
+b) Hikâye unsurları arasındaki ilişkiyi belirler.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Okuma', 'T.O.5.16.', 'Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme
+a) Metnin türüne uygun olarak giriş, gelişme, sonuç veya serim, düğüm, çözüm bölümlerini belirler.
+b) Metnin bölümlerinin birbirleriyle bağlantısını belirler.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Konuşma', 'T.K.5.16.', 'Düşünceyi geliştirme yollarını kullanarak konuşmasını yapılandırabilme
+a) Kullanacağı düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarını konuşma içeriğiyle uyumlu şekilde kullanır.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Dinleme/İzleme', 'T.D.5.18.', 'Çoklu ortam ögelerine yönelik çözümleme yapabilme
+a) Çoklu ortam ögelerini belirler.
+b) Ögeler arasındaki anlam ilişkilerini (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) belirler.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Okuma', 'T.O.5.18.', 'Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme
+a) Yazarın başvurduğu düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarının içerikle ilişkisini ortaya koyar.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Dinleme/İzleme', 'T.D.5.20.', 'Dinleme/izleme sürecini değerlendirebilme
+a) Dinleme/izleme sürecindeki güçlü ve gelişmeye açık yönlerini belirler.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp, güçlü yönlerini sonraki çalışmalara aktararak dinleyici/izleyici kimliğinin gelişimine yön verir.', 'Türkçe', 13),
+('5. Sınıf', 'Duygularımı Tanıyorum', 'Konuşma', 'T.K.5.21.', 'Konuşma sürecini değerlendirebilme
+a) Konuşma sürecindeki güçlü ve gelişmeye açık yönlerini belirler.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp, güçlü yönlerini sonraki çalışmalara aktararak konuşan kimliğinin gelişimine yön verir.', 'Türkçe', 13),
+('5. Sınıf', 'Geleneklerimiz', 'Konuşma', 'T.K.5.5.', 'Konuşmasında çoklu ortam ögeleriyle içerik oluşturabilme
+a) Konuşmasında kullanacağı çoklu ortam ögelerini (fotoğraf, resim, tablo, grafik, harita, ses, müzik, video vb.) belirler.
+b) Ögelerin işlevlerini (eş anlam oluşturma, destekleme, tek başına anlam verme) belirler.
+c) Çoklu ortam ögelerini içerikle ilişkilendirerek konuşmasında kullanır.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Dinleme/İzleme', 'T.D.5.7.', 'Üst düzey çıkarımlar yoluyla dinlediğinin/izlediğinin derin anlamını belirleyebilme
+a) Dinlediğinin/izlediğinin bütününden bağlama dair ipuçlarını bulur.
+b) Ön bilgileri ve ipuçlarından hareketle anlamı belirler.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Yazma', 'T.Y.5.7.', 'Yazısında karşılaştırma yapabilme
+a) Karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Özellikler arasındaki benzerlikleri tespit ederek yazısında kullanır.
+c) Özellikler arasındaki farklılıkları tespit ederek yazısında kullanır.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Okuma', 'T.O.5.8.', 'Basit çıkarımlar yoluyla metnin derin anlamını belirleyebilme
+a) Metnin sınırlı bir bölümünden ve varsa görselden yararlanarak bağlama dair ipuçlarını bulur.
+b) Ön bilgileri ve ipuçlarından hareketle anlamı belirler.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Dinleme/İzleme', 'T.D.5.9.', 'Dinlediğindeki/izlediğindeki unsurları sınıflandırabilme
+a) Sınıflandırma ölçütüne karar verir.
+b) Dinlediğini/izlediğini ölçüte göre inceler.
+c) Dinlediğindeki/izlediğindeki unsurları ölçüte göre gruplandırır.
+ç) Oluşturulan grupları adlandırır.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Okuma', 'T.O.5.9.', 'Üst düzey çıkarımlar yoluyla metnin derin anlamını belirleyebilme
+a) Metnin bütününden ve varsa görselden yararlanarak bağlama dair ipuçlarını bulur.
+b) Ön bilgileri ve ipuçlarından hareketle anlamı belirler.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Dinleme/İzleme', 'T.D.5.10.', 'Dinlediğini/izlediğini yorumlayabilme
+a) Dinlediğindeki/izlediğindeki olay, bilgi, durum vb.ni inceler.
+b) Dinlediğindeki/izlediğindeki olay, bilgi, durum vb.ni kaynağın, dinleyicinin/izleyicinin veya bunların dışında bir başkasının bakış açısını dikkate alıp genişleterek veya daraltarak dönüştürür.
+c) Dinlediğindeki/izlediğindeki olay, bilgi, durumu vb.ni seçilen bakış açısıyla kendine özgü bir biçimde yeniden ifade eder.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Okuma', 'T.O.5.10.', 'Okuduklarını karşılaştırabilme
+a) Karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Belirlediği özelliklerdeki benzerlikleri listeler.
+c) Belirlediği özelliklerdeki farklılıkları listeler.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Yazma', 'T.Y.5.10.', 'Yazılı olarak özetleyebilme
+a) Olay, bilgi, durum vb.ni çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Önemli bilgileri kronolojik akışa ve/veya düşünce akışına uygun olarak kendi cümleleriyle ifade eder.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Konuşma', 'T.K.5.11.', 'Konuşmasında sınıflandırma yapabilme
+a) Yorumlayacağı olay, bilgi, durum vb.ni inceler.
+b) Olay, bilgi, durum vb.ni bağlamdan kopmadan, farklı bakış açısıyla, genişleterek veya daraltarak dönüştürür.
+c) Olay, bilgi, durum vb.ni belirlenen bakış açısıyla kendine özgü biçimde konuşmasında yeniden ifade eder.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Konuşma', 'T.K.5.12.', 'Yorumunu sözlü olarak ifade edebilme
+a) Olay, bilgi, durum vb.ni çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Önemli bilgileri kronolojik akışa ve/veya düşünce akışına uygun olarak kendi cümleleriyle ifade eder.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Yazma', 'T.Y.5.12.', 'Düşünceyi geliştirme yollarını kullanarak metni yapılandırabilme
+a) Kullanacağı düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarını yazısının içeriğiyle uyumlu şekilde kullanır.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Dinleme/İzleme', 'T.D.5.15.', 'Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme
+a) Dinlediğinde/izlediğinde başvurulan düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarının içerikle ilişkisini ortaya koyar.', 'Türkçe', 19),
+('5. Sınıf', 'Geleneklerimiz', 'Okuma', 'T.O.5.21.', 'Okuduğunu özetleyebilme
+a) Metinde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Metindeki önemli bilgileri kronolojik akışa ve/veya düşünce akışına uygun olarak kendi cümleleriyle ifade eder.', 'Türkçe', 19),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.5.8.', 'Dinlediklerini/izlediklerini karşılaştırabilme
+a) Karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Belirlediği özelliklerdeki benzerlikleri listeler.
+c) Belirlediği özelliklerdeki farklılıkları listeler.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Yazma', 'T.Y.5.9.', 'Yorumunu yazılı olarak ifade edebilme
+a) Yorumlayacağı olay, bilgi, durum vb.ni inceler.
+b) Olay, bilgi, durum vb.ni bağlamdan kopmadan, farklı bakış açısıyla, genişleterek veya daraltarak dönüştürür.
+c) Olay, bilgi, durum vb.ni belirlenen bakış açısıyla kendine özgü biçimde yazısında yeniden ifade eder.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.5.10.', 'Konuşmasında karşılaştırma yapabilme
+a) Karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Özellikler arasındaki benzerlikleri tespit ederek konuşmasında kullanır.
+c) Özellikler arasındaki farklılıkları tespit ederek konuşmasında kullanır.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.5.12.', 'Metni yorumlayabilme
+a) Metindeki olay, bilgi, durum vb.ni inceler.
+b) Metindeki olay, bilgi, durum vb.ni yazarın, okurun veya bunların dışında bir başkasının bakış açısını dikkate alıp genişleterek veya daraltarak dönüştürür.
+c) Metindeki olay, bilgi, durum vb.ni seçilen bakış açısıyla kendine özgü bir biçimde yeniden ifade eder.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.5.13.', 'Sözlü olarak özetleyebilme
+a) Değerlendirme ölçütüne karar verir.
+b) Olay, bilgi, durum vb.ni ölçüte göre inceler.
+c) İnceleme sonuçlarını belirlediği ölçütle karşılaştırır.
+ç) Karşılaştırma sonucunda ulaştığı yargıya konuşmasında yer verir.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Yazma', 'T.Y.5.14.', 'Yazısında açık ve örtük ifadeleri kullanabilme
+a) Kullanacağı örtük ileti unsurlarını (söz sanatları, mecaz, deyim, atasözü ve diğer söz varlığı unsurları) belirler.
+b) Yazısında açık ve örtük iletilere bağlama uygun şekilde yer verir.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.5.16.', 'Dinlediğindeki/izlediğindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme
+a) Dinlediğindeki/izlediğindeki söz sanatlarını belirler.
+b) Söz sanatlarının metnin anlatımıyla ilişkisini ortaya koyar.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.5.18.', 'Konuşmasında açık ve örtük ifadeleri kullanabilme
+a) Kullanacağı örtük ileti unsurlarını (söz sanatları, mecaz, deyim, atasözü ve diğer söz varlığı unsurları) belirler.
+b) Konuşmasında açık ve örtük iletilere bağlama uygun şekilde yer verir.', 'Türkçe', 25),
+('5. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.5.19.', 'Dinlediğini/izlediğini özetleyebilme
+a) Dinlediğinde/izlediğinde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Dinlediğindeki/izlediğindeki önemli bilgileri kronolojik akışa ve/veya düşünce akışına uygun olarak kendi cümleleriyle ifade eder.', 'Türkçe', 25),
+('5. Sınıf', 'Sağlıklı Yaşıyorum', 'Yazma', 'T.Y.5.11.', 'Yazılı üretiminde ve yazılı etkileşiminde tartışabilme
+a) Düşüncelerini savunurken önermelerine yönelik mantıklı temellendirme yapar.
+b) Varsa içerikteki tutarsız, geçersiz görüş ve bilgiyi tespit eder.
+c) Doğru görüş ve bilgiyi kabul eder; tutarsız, geçersiz görüş ve bilgiyi çürütür.', 'Türkçe', 31),
+('5. Sınıf', 'Sağlıklı Yaşıyorum', 'Dinleme/İzleme', 'T.D.5.12.', 'Bilgilendirici metinde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme
+a) Metin yapısından hareketle önemli bilgileri belirler.
+b) Bilgiler arasındaki ilişkiyi ortaya koyar.', 'Türkçe', 31),
+('5. Sınıf', 'Sağlıklı Yaşıyorum', 'Okuma', 'T.O.5.14.', 'Bilgilendirici metinde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme
+a) Metin yapısından hareketle önemli bilgileri belirler.
+b) Bilgiler arasındaki ilişkiyi ortaya koyar.', 'Türkçe', 31),
+('5. Sınıf', 'Sağlıklı Yaşıyorum', 'Konuşma', 'T.K.5.14.', 'Sözlü olarak tartışabilme
+a) Eleştireceği olay, bilgi, problem, durum vb.ni sorgular.
+b) Sorgulanan olay, bilgi, problem, durum vb.ne ilişkin akıl yürüterek olumlu ve/veya olumsuz yargıya ulaşır.
+c) Ulaştığı yargıya konuşmasında yer verir.', 'Türkçe', 31),
+('5. Sınıf', 'Sağlıklı Yaşıyorum', 'Konuşma', 'T.K.5.15.', 'Hazırlıklı konuşmasını yapılandırabilme
+a) Konuşma sürecini planlar.
+b) Plana uygun hazırlık yapar.
+c) Konuşma içeriğine yönelik metin veya taslak hazırlar.
+ç) Dinleyici/izleyici kitlesinden gelebilecek sorulara yönelik tahminde bulunur.
+d) Konuşmasını yapar.', 'Türkçe', 31),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Dinleme/İzleme', 'T.D.6.1.', 'Dinlemede/izlemede materyal seçimini yönetebilme
+a) Dinleme/izleme şekli (etkileşimli veya etkileşimsiz), amacı, ilgi ve ihtiyaçları, bilgiye erişim olanakları; etkinliğin süresi doğrultusunda dinleme/izleme materyalini ve diğer kaynakları (sözlük, genel ağ, çalışma kâğıdı, grafik organize edici vb.) seçer.
+b) Seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler yapar.
+c) Etkileşimli dinleme/izleme sırasında karşısındakiyle ilişkiyi sürdürür.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.1.', 'Okumada materyal seçimini yönetebilme
+a) Amacı, ilgi ve ihtiyaçları, materyalin özellikleri, süre ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda metin ve diğer yardımcı materyalleri (sözlük, ek kaynak vb.) seçer.
+c) Seçimleri üzerinde zamana bağlı değişime/üst bilişsel izlemeye dayalı düzenlemeler yapar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Konuşma', 'T.K.6.1.', 'Konuşma sürecini yönetebilme
+a) Konuşmayı başlatma, sürdürme, sonlandırmayla ilgili selam, hitap ve sonlandırma ifadelerini kullanır.
+b) Uygun zamanda söz alır/verir.
+c) Olay, konu, durum, problem vb. ile ilgili anlaşılmayan noktaları açıklığa kavuşturmak için herhangi bir yönlendirmenin etkisinde kalmadan soru sorar.
+ç) Kendisine yöneltilen soruları cevaplar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Yazma', 'T.Y.6.1.', 'Yazma sürecini yönetebilme
+a) Amaç, bağlam ve olanaklarını analiz ederek yazma konusunu, hedef kitlesini, dijital de dâhil yazma aracı ve ortamını belirler.
+b) Yazılı etkileşiminde yazışmayı başlatma, sürdürme ve sonlandırmayla ilgili uygun selam ve hitap ifadelerini kullanır.
+c) Yazılı üretim ve yazılı etkileşiminde içerik ve süreçle ilgili gerekli seçim ve düzenlemeleri yapar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Dinleme/İzleme', 'T.D.6.2.', 'Dinlemede/izlemede strateji ve yöntem seçimlerini yönetebilme
+a) Dinleme/izleme şekli (etkileşimli veya etkileşimsiz), amacı, ilgi ve ihtiyaçları; materyalin özellikleri ve etkinliğin süresi doğrultusunda kullanacağı strateji ve yöntemleri seçer.
+b) Seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler yapar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.2.', 'Sesli ve sessiz okurken akıcı okuma unsurlarını yönetebilme
+a) Faaliyetin amacını, ilgi ve ihtiyaçlarını, materyalin özelliklerini, süre ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Metnin tür özellikleri ve içeriğinden hareketle okuma hızı, duraklama, vurgu, tonlama ve telaffuzu, anlamı yansıtacak biçimde düzenleyerek metni sesli okur.
+c) Metnin tür özellikleri ve içeriğinden hareketle okuma hızı ve duraklamaları, anlamı yansıtacak biçimde düzenleyerek metni sessiz okur.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Konuşma', 'T.K.6.2.', 'Konuşma yöntem ve tekniklerine yönelik seçimlerini yönetebilme
+a) Konuşma şekli (sözlü üretim veya sözlü etkileşim), amacı, süresi, ilgi ve ihtiyaçları doğrultusunda kullanacağı yöntem ve teknikleri seçer.
+b) Seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler yapar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Yazma', 'T.Y.6.2.', 'Yazma strateji, yöntem ve tekniklerine yönelik seçimlerini yönetebilme
+a) Yazma şekli (etkileşimli veya etkileşimsiz), amacı, bağlamı ve olanakları doğrultusunda kullanacağı stratejileri seçer.
+b) Yazma şekli (etkileşimli veya etkileşimsiz), amacı, bağlamı ve olanakları doğrultusunda kullanacağı yöntem ve teknikleri seçer.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.3.', 'Okumada strateji ve yöntem seçimlerini yönetebilme
+a) Faaliyetin amacını, ilgi ve ihtiyaçlarını, materyalin özelliklerini, süre ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda okurken kullanacağı strateji ve yöntemleri seçer ve seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler yapar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Konuşma', 'T.K.6.3.', 'Konuşmasında amaç ve içeriğe yönelik seçimlerini yönetebilme
+a) Konuşma amacını belirler.
+b) Konuşma konusunu belirler.
+c) Konuşma türünü belirler.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Yazma', 'T.Y.6.3.', 'Yazısında içerik ve yapıya yönelik seçimlerini yönetebilme
+a) Yazma amacına uygun paragraf türünü seçer.
+b) Yazma amacına uygun metin yapısını seçer.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Dinleme/İzleme', 'T.D.6.4.', 'Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme
+a) Dinlediğinin/izlediğinin bağlamından söz varlığı unsurlarının anlamıyla ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Söz varlığı unsurlarının anlamına ilişkin mantıklı tahminde bulunur.
+c) Tahminin doğruluğunu kaynaklardan (sözlük, başvuru kitapları vb.), ebeveyn veya öğretmenden yardım alarak kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.4.', 'Okuyacağı metnin içeriğine yönelik tahminde bulunabilme
+a) Okuyacağı metnin başlık, görsel ve/veya belirli bir bölümünden hareketle içerikle ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Metnin içeriği veya sonraki bölümleriyle ilgili mantıklı tahminde bulunur.
+c) Tahmininin doğruluğunu kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Dinleme/İzleme', 'T.D.6.5.', 'Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme
+a) Dinlediği/izlediği ve varsa ona eşlik eden görsellerden hareketle bağlama/konuya dair ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Dinlediğinde/izlediğinde doğrudan verilen bilgileri (tanımı verilen kavram, düşünce, yönerge, iletilmek istenen mesaj, açıkça ifade edilen ana fikir vb.) belirler.
+c) Uygun durumlarda, iletilen mesajın gerektirdiği tepkiyi verir.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.5.', 'Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme
+a) Metnin bağlamından söz varlığı unsurlarının anlamıyla ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Söz varlığı unsurlarının anlamına ilişkin mantıklı tahminde bulunur.
+c) Tahminin doğruluğunu kaynaklardan (sözlük, başvuru kitapları), ebeveyn veya öğretmenden yardım alarak kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.6.', 'Metnin yüzey anlamını belirleyebilme
+a) Metin ve varsa ona eşlik eden görsellerden hareketle bağlama/konuya dair ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Metinde doğrudan verilen bilgileri (tanımı verilen kavram, düşünce, yönerge, iletilmek istenen mesaj, açıkça ifade edilen ana fikir vb.) belirler.
+c) Gerektiğinde iletilen mesajın gerektirdiği tepkiyi verir.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Konuşma', 'T.K.6.9.', 'Konuşmasında sesini uygun şekilde kullanabilme
+a) Nefesini doğru ayarlar.
+b) Kelimeleri doğru telaffuz eder.
+c) Sesin şiddetini ayarlar.
+ç) Doğru vurgu ve tonlamayla konuşur.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Dinleme/İzleme', 'T.D.6.15.', 'Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme
+a) Metnin içeriğini yansıtan anahtar kelimeleri belirler.
+b) Anahtar kelimelerin dinlediğiyle/izlediğiyle ilişkisini ortaya koyar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.16.', 'Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme
+a) Metnin içeriğini yansıtan anahtar kelimeleri belirler.
+b) Anahtar kelimelerin metinle ilişkisini ortaya koyar.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Yazma', 'T.Y.6.18.', 'Yazısını zenginleştirecek biçimde söz varlığını kullanabilme
+a) Kullanacağı söz varlığı unsurlarını aralarındaki anlam ilişkilerini dikkate alarak belirler.
+b) Aynı anlamı farklı söz varlığı unsurlarıyla (eş ve yakın anlamlı kelime, zıt anlamlı ve eş sesli kelime, çağrıştırdığı kelime; atasözü, deyim, kalıp söz, terim, ikileme, pekiştirme) ifade eder.
+c) Söz varlığı unsurlarını bağlama uygun kullanır.
+ç) Gerektiğinde yazısında söz varlığı unsurlarının görsel karşılığını kullanır.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Dinleme/İzleme', 'T.D.6.19.', 'Dinlediğinden/izlediğinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme
+a) Dinlediğinin/izlediğinin anahtar söz varlığı unsurlarını belirler.
+b) Belirlenen söz varlığı unsurlarının anlam ilişkilerini inceler.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.21.', 'Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme
+a) Metnin anahtar söz varlığı unsurlarını belirler.
+b) Belirlenen söz varlığı unsurlarının anlam ilişkilerini inceler.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Yazma', 'T.Y.6.21.', 'Yazım kuralları ve noktalama işaretlerini uygulayabilme
+a) Yazım kurallarını uygular.
+b) Noktalama işaretlerini uygun biçimde kullanır.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Konuşma', 'T.K.6.22.', 'Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme
+a) Kullanacağı söz varlığı unsurlarını aralarındaki anlam ilişkilerini dikkate alarak belirler.
+b) Aynı anlamı farklı söz varlığı unsurlarıyla (eş ve yakın anlamlı kelime, zıt anlamlı ve eş sesli kelime, çağrıştırdığı kelime; atasözü, deyim, kalıp söz, terim, ikileme, pekiştirme) ifade eder.
+c) Söz varlığı unsurlarını bağlama uygun kullanır.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Yazma', 'T.Y.6.22.', 'Yazma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Yazma sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp güçlü yönlerini sonraki çalışmalara aktararak yazar kimliğinin gelişimine yön verir.
+c) Yazılarından oluşan ürün ve seçki dosyası (sözlük, günlük, anı, gezi, şiir, alıntılar seçkisi, atasözü ve deyim vb.) oluşturur.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Dinleme/İzleme', 'T.D.6.25.', 'Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Dinleme/izleme sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp güçlü yönlerini sonraki çalışmalara aktararak dinleyici/izleyici kimliğinin gelişimine yön verir.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Konuşma', 'T.K.6.26.', 'Konuşma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Konuşma sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp güçlü yönlerini sonraki çalışmalara aktararak konuşan kimliğinin gelişimine yön verir.
+c) Konuşmalarından oluşan ürün ve seçki dosyası (ses kaydı, konuşma metni, sunum videosu, çoklu medya ögeleri vb.) oluşturur.', 'Türkçe', 1),
+('6. Sınıf', 'Dilimizin Zenginliği', 'Okuma', 'T.O.6.27.', 'Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Okuma sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp güçlü yönlerini sonraki çalışmalara aktararak okur kimliğinin gelişimine yön verir.', 'Türkçe', 1),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Dinleme/İzleme', 'T.D.6.3.', 'Dinleyeceğinin/izleyeceğinin içeriğine yönelik tahminde bulunabilme
+a) Dinleyeceğinin/izleyeceğinin başlık, görsel ve/veya belirli bir bölümünden hareketle içerikle ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) İçerik veya sonraki bölümlerle ilgili mantıklı tahminde bulunur.
+c) Tahmininin doğruluğunu kontrol edip yargıya ulaşır.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Konuşma', 'T.K.6.4.', 'Konuşmasında ön bilgilerinden yararlanabilme
+a) Konuyla ilgili ön bilgilerini (gözlem, anı, deneyim, güncel olay, haber vb.) belirler.
+b) Ön bilgilerini konuşma içeriğiyle ilişkilendirir.
+c) Belirlediği ön bilgileri konuşmasına aktarır.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Yazma', 'T.Y.6.4.', 'Yazılı üretim ve yazılı etkileşiminde ön bilgilerinden yararlanabilme
+a) Konuyla ilgili ön bilgilerini (gözlem, anı, deneyim, güncel olay, haber vb.) belirler.
+b) Ön bilgilerini yazma konusuyla ilişkilendirir.
+c) Belirlediği ön bilgileri yazısına aktarır.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Konuşma', 'T.K.6.5.', 'Konuşmasında uygun tepki verebilme
+a) İletinin hedef kitlesi, içerik ve yapısını (konusunu, ana fikrini, amacını, yapı ve dil özelliklerini vb.) çözümler.
+b) Çözümlediği verileri kullanarak vereceği dönütü (nasıl cevap verileceği, hangi bilgi ve gerekçelerin kullanılacağı vb.) belirler.
+c) Yorum ve değerlendirmelerini yansıtan tepki verir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Yazma', 'T.Y.6.5.', 'Yazılı etkileşiminde uygun tepki verebilme
+a) İletinin hedef kitlesi, içerik ve yapısını (konusunu, ana fikrini, amacını, yapı ve dil özelliklerini vb.) çözümler.
+b) Çözümlediği verileri kullanarak vereceği dönütü (nasıl cevap verileceği, hangi bilgi ve gerekçeler kullanılacağı vb.) belirler.
+c) Kişisel yorum ve değerlendirmelerini yansıtan tepki verir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Dinleme/İzleme', 'T.D.6.6.', 'Görselle iletilen anlamı belirleyebilme
+a) Görseldeki unsurlardan hareketle anlama ilişkin ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Görselde doğrudan ve/veya örtük olarak iletilen mesajı belirler.
+c) Gerektiğinde görselle iletilen mesaja uygun tepkiyi verir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Dinleme/İzleme', 'T.D.6.7.', 'Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme
+a) Dinlediğinin/izlediğinin sınırlı bir bölümünden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Konuşma', 'T.K.6.7.', 'Yaratıcı konuşma yapabilme
+a) Konuşmasında tema, karakter ve olay örgülerini farklı açılardan ele alır.
+b) Deneyim ve gözlemlerini hayal gücüyle birleştirerek konuşmasını zenginleştirir.
+c) Farklı anlatı yapılarını kullanır.
+ç) Özgün çözüm, karakter ve diyaloglar üretir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Dinleme/İzleme', 'T.D.6.8.', 'Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme
+a) Dinlediğinin/izlediğinin bütününden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Okuma', 'T.O.6.8.', 'Metnin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme
+a) Metnin sınırlı bir bölümünden ve görselden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Konuşma', 'T.K.6.8.', 'Hazırlıksız konuşma yapabilme
+a) Hazırlıksız konuşma öncesinde çıkış noktası ve ön yaşantılarından hareketle kısa süreli zihinsel planlama yapar.
+b) Doğaçlama yoluyla bağlama uygun konuşma yapar.
+c) Konuşmasını konu odağı çerçevesinde sonlandırır.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Dinleme/İzleme', 'T.D.6.9.', 'Dinlediğini/izlediğini kendi içinde karşılaştırabilme
+a) İçeriğin farklı bölümlerindeki karşılaştırılabilir unsurlara (duygu, düşünce, görüş, kahraman, dil kullanımı vb.) ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Okuma', 'T.O.6.9.', 'Metnin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme
+a) Metnin bütününden ve görsellerden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Okuma', 'T.O.6.10.', 'Metin içi karşılaştırma yapabilme
+a) Metnin farklı bölümlerindeki karşılaştırılabilir unsurlara (duygu, düşünce, görüş, kahraman, dil kullanımı vb.) ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Dinleme/İzleme', 'T.D.6.11.', 'Dinlediğindeki/izlediğindeki unsurları sınıflandırabilme
+a) Sınıflandırma ölçütlerini belirler.
+b) Dinlediğindeki/izlediğindeki unsurları belirlediği ölçütlere göre ayrıştırır.
+c) Ayrıştırılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini ölçütlerden hareketle adlandırır/etiketler.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Okuma', 'T.O.6.11.', 'Metinler arası karşılaştırma yapabilme
+a) Metinlerdeki karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Yazma', 'T.Y.6.11.', 'Yorumunu yazılı olarak ifade edebilme
+a) Yorumlayacağı olay, konu, durum vb.ni inceler.
+b) Yorumlayacağı olay, konu, durum vb.ni bağlamdan kopmadan kendi öznel-nesnel bakış açısı, hedef kitlenin bakış açısı veya ikisi dışında belirli bir bakış açısına göre genişleterek veya daraltarak dönüştürür.
+c) Yorumlayacağı olay, konu, durum vb.ni belirlediği bakış açısına göre yazısında yeniden ifade eder.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Okuma', 'T.O.6.12.', 'Metindeki unsurları sınıflandırabilme
+a) Sınıflandırma ölçütlerini belirler.
+b) Metindeki unsurları belirlediği ölçütlere göre ayrıştırır.
+c) Ayrıştırılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini ölçütlerden hareketle adlandırır/etiketler.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Konuşma', 'T.K.6.12.', 'Konuşmasında karşılaştırma yapabilme
+a) Karşılaştıracağı unsurların (nesne, kişi, olay, bilgi vb.) özelliklerini belirler.
+b) Belirlenen özelliklere göre benzerlikleri listeler.
+c) Belirlenen özelliklere göre farklılıkları listeler.
+ç) Benzerlik ve farklılıklardan hareketle ulaştığı yargıyı konuşmasında kullanır.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Konuşma', 'T.K.6.15.', 'Sözlü olarak özetleyebilme
+a) Metinde/söylemde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Önemli bilgileri kronolojik akışa/düşünce akışına uygun olarak sıralar.
+ç) Sıraladıklarını kendi cümleleriyle konuşmasında kullanır.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Okuma', 'T.O.6.23.', 'Okuduğunu özetleyebilme
+a) Metinde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Metindeki önemli bilgileri kronolojik akışa/düşünce akışına uygun olarak kendi cümleleriyle ifade eder.', 'Türkçe', 6),
+('6. Sınıf', 'Bağımsızlık Yolu', 'Konuşma', 'T.K.6.25.', 'Konuşmasında beden dilini ve mekânı etkili kullanabilme
+a) Konuşma yapacağı mekânın özelliklerini göz önünde bulundurur.
+b) Dinleyicilerle/izleyicilerle göz teması kurar.
+c) Baş, el, kol ve bacaklarının duruşunu söyleme göre konumlandırır.
+ç) Söylem içeriğine uygun olarak yaygın yüz ifadelerini (şaşırma, kızgınlık, mutluluk vb.) kullanır.', 'Türkçe', 6),
+('6. Sınıf', 'Farklı Dünyalar', 'Konuşma', 'T.K.6.6.', 'Konuşmasında çoklu ortam ögeleriyle içerik oluşturabilme
+a) Amacına uygun olarak kullanacağı çoklu ortam ögelerini (fotoğraf, resim, tablo, grafik, harita, sanal gezi uygulamaları, ses kaydı, müzik, video, dijital pano, çevrim içi toplantı araçları vb.) belirler.
+b) Belirlediği çoklu ortam ögelerinin işlevlerine (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) karar verir.
+c) Belirlediği çoklu ortam ögelerini, birbirleriyle etkileşimlerini dikkate alarak konuşma içeriğinde kullanır.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Okuma', 'T.O.6.7.', 'Görselle iletilen anlamı belirleyebilme
+a) Görseldeki unsurlardan hareketle anlama ilişkin ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Görselde doğrudan ve/veya örtük olarak iletilen mesajı belirler.
+c) Gerektiğinde, görselle iletilen mesaja uygun tepkiyi verir.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Yazma', 'T.Y.6.7.', 'Yaratıcı yazı yazabilme
+a) Yazısında tema, karakter ve olay örgülerini farklı açılardan ele alır.
+b) Deneyim ve gözlemlerini hayal gücüyle birleştirerek yazısını zenginleştirir.
+c) Farklı metin yapılarını kullanır.
+ç) Özgün çözüm, karakter ve diyaloglar üretir.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Yazma', 'T.Y.6.9.', 'Yazısında karşılaştırma yapabilme
+a) Karşılaştıracağı unsurların (nesne, kişi, olay, bilgi vb.) özelliklerini belirler.
+b) Belirlenen özelliklere göre benzerlikleri listeler.
+c) Belirlenen özelliklere göre farklılıkları listeler.
+ç) Benzerlik ve farklılıklardan hareketle ulaştığı yargıyı yazısında kullanır.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Dinleme/İzleme', 'T.D.6.10.', 'Dinledikleri/izledikleri arasında karşılaştırma yapabilme
+a) Dinlediklerindeki/izlediklerindeki karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Yazma', 'T.Y.6.10.', 'Yazısında sınıflandırma yapabilme
+a) Sınıflandırma yapacağı unsur ve ölçütleri belirler.
+b) Unsurları, belirlediği ölçütlere göre ayırır.
+c) Ayrılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini (gerekli durumlarda grafik, tablo, görsel vb. ile destekleyerek) yazısında kullanır.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Konuşma', 'T.K.6.13.', 'Konuşmasında sınıflandırma yapabilme
+a) Sınıflandırma yapacağı unsurları ve ölçütleri belirler.
+b) Unsurları, belirlediği ölçütlere göre ayırır.
+c) Ayrılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini (gerekli durumlarda grafik, tablo, görsel vb. ile destekleyerek) konuşmasında kullanır.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Konuşma', 'T.K.6.14.', 'Yorumunu sözlü olarak ifade edebilme
+a) Yorumlayacağı olay, konu, durum vb.ni inceler.
+b) Yorum yapacağı olay, konu, durum vb.ni bağlamdan kopmadan kendi öznel-nesnel bakış açısı, hedef kitlenin bakış açısı veya ikisi dışında belirli bir bakış açısına göre genişleterek veya daraltarak dönüştürür.
+c) Yorumlayacağı olay, konu, durum vb.ni belirlediği bakış açısına göre konuşmasında yeniden ifade eder.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Dinleme/İzleme', 'T.D.6.17.', 'Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme
+a) Dinlediğinde/izlediğinde başvurulan düşünceyi geliştirme yollarını belirler.
+b) Belirlediği düşünceyi geliştirme yollarının birbirleriyle ve dinledikleriyle/izledikleriyle ilişkisini ortaya koyar.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Okuma', 'T.O.6.17.', 'Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme
+a) Metnin türüne uygun olarak giriş, gelişme, sonuç veya serim, düğüm, çözüm bölümlerini belirler.
+b) Metnin bölümlerinin birbirleriyle bağlantısını belirler.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Konuşma', 'T.K.6.17.', 'Sözlü olarak tartışmaya katılabilme
+a) Tartışmalarda önermelerine yönelik mantıklı temellendirme yapar.
+b) Karşısındakinin konuşmasını inceleyerek varsa tutarsız ve geçersiz görüş ve bilgiyi tespit eder.
+c) Doğru görüş ve bilgiyi kabul eder veya tutarsız ve geçersiz görüş ve bilgiyi çürütür.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Yazma', 'T.Y.6.17.', 'Yazısında düşünceyi geliştirme yollarını kullanabilme
+a) Kullanacağı düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarını birbirleriyle ve metinle uyumlu şekilde kullanır.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Okuma', 'T.O.6.18.', 'Şiirin biçim özelliklerini belirlemeye yönelik çözümleme yapabilme
+a) Okuduğu şiirin biçim özelliklerini belirler.
+b) Şiirin biçim özelliklerinin birbirleriyle ve metinle ilişkisini ortaya koyar.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Okuma', 'T.O.6.19.', 'Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme
+a) Yazarın başvurduğu düşünceyi geliştirme yollarını belirler.
+b) Belirlediği düşünceyi geliştirme yollarının birbirleriyle ve metinle ilişkisini ortaya koyar.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Dinleme/İzleme', 'T.D.6.20.', 'Çoklu ortam ögelerine yönelik çözümleme yapabilme
+a) Çoklu ortam ögelerinin işlevlerini (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) belirler.
+b) Ögeler arasındaki bağlantıları belirler.', 'Türkçe', 13),
+('6. Sınıf', 'Farklı Dünyalar', 'Dinleme/İzleme', 'T.D.6.21.', 'Dinlediğini/izlediğini özetleyebilme
+a) Dinlediğinde/izlediğinde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Dinlediğindeki/izlediğindeki önemli bilgileri kronolojik akışa/düşünce akışına uygun olarak kendi cümleleriyle ifade eder.', 'Türkçe', 13),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Yazma', 'T.Y.6.6.', 'Yazısında çoklu ortam ögeleriyle içerik oluşturabilme
+a) Amacına uygun olarak kullanacağı çoklu ortam ögelerini (fotoğraf, resim, tablo, grafik, harita, ses kaydı, müzik, video vb.) belirler.
+b) Belirlediği çoklu ortam ögelerinin işlevlerine (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) karar verir.
+c) Belirlediği çoklu ortam ögelerini, birbirleriyle etkileşimlerini dikkate alarak yazısında kullanır.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.6.12.', 'Dinlediğini/izlediğini yorumlayabilme
+a) Dinlediğindeki/izlediğindeki olay, konu, durum vb.ni inceler.
+b) Dinlediğindeki/izlediğindeki olay, konu, durum vb.ni yazarın, dinleyicinin/izleyicinin veya bunların dışında bir başkasının bakış açısını dikkate alıp genişleterek veya daraltarak dönüştürür.
+c) Dinlediğindeki/izlediğindeki olay, konu, durumu vb.ni seçilen bakış açısıyla kendine özgü bir biçimde yeniden ifade eder.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Yazma', 'T.Y.6.12.', 'Yazılı olarak özetleyebilme
+a) Metinde/söylemde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Önemli bilgileri kronolojik akışa/düşünce akışına uygun olarak sıralar.
+ç) Sıraladıklarını kendi cümleleriyle yazıya aktarır.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.6.13.', 'Metni yorumlayabilme
+a) Metindeki olay, konu, durum vb.ni inceler.
+b) Metindeki olay, konu, durum vb.ni yazarın, okurun veya bunların dışında bir başkasının bakış açısını dikkate alıp genişleterek veya daraltarak dönüştürür.
+c) Metindeki olay, konu, durum vb.ni seçilen bakış açısıyla kendine özgü bir biçimde yeniden ifade eder.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.6.14.', 'Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme
+a) Metin yapısından hareketle önemli bilgileri belirler.
+b) Belirlenen bilgilerin birbirleriyle ilişkisini ortaya koyar.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.6.15.', 'Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme
+a) Metin yapısından hareketle önemli bilgileri belirler.
+b) Belirlenen bilgilerin birbiriyle ilişkisini ortaya koyar.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.6.20.', 'Hazırlıklı konuşmasını yapılandırabilme
+a) Konuşma sürecini planlar.
+b) Plana uygun hazırlıklar yapar.
+c) Konuşma içeriğine yönelik metin veya taslak hazırlar.
+ç) Dinleyici/izleyici kitlesinden gelebilecek sorulara yönelik tahminde bulunur.
+d) Konuşmasına yönelik değerlendirme kriteri belirler.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.6.21.', 'Konuşmasında düşünceyi geliştirme yollarını kullanabilme
+a) Kullanacağı düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarını birbirleriyle ve söylemle uyumlu şekilde kullanır.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.6.22.', 'Çoklu ortam ögelerine yönelik çözümleme yapabilme
+a) Çoklu ortam ögelerinin işlevlerini (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) belirler.
+b) Ögeler arasındaki bağlantıları belirler.', 'Türkçe', 19),
+('6. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.6.24.', 'Uygun geçiş ve bağlantı ifadelerini kullanabilme
+Konuşmasında bağdaşıklık ögelerini işlevlerine uygun kullanır.', 'Türkçe', 19),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Yazma', 'T.Y.6.8.', 'Yazılı üretim ve yazılı etkileşiminde tahminlerinden yararlanabilme
+a) Mevcut olay, konu, durum vb. ile gözlem ve ön bilgilerini ilişkilendirir.
+b) Mevcut olay, konu, durum vb.ne ilişkin tahminde bulunur.
+c) Yazısında mevcut olay, konu, durum vb.ne ilişkin yargıda bulunur.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Konuşma', 'T.K.6.10.', 'Sözlü sunum yapabilme
+a) Plan yapar.
+b) Plana uygun hazırlıklarını yapar.
+c) Prova yapar.
+ç) Hedef kitleye uygun; ses, beden dili ve görsellerle desteklenen bir sunum yapar.
+d) Dinleyicilerin/izleyicilerin sorularını cevaplar.
+e) Sunumunu amaç, içerik ve dil-anlatım açısından değerlendirir.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Konuşma', 'T.K.6.11.', 'Konuşmasında tahminlerinden yararlanabilme
+a) Mevcut olay, konu, durum vb. ile gözlem ve ön bilgilerini ilişkilendirir.
+b) Mevcut olay, konu, durum vb.ne ilişkin tahminde bulunur.
+c) Mevcut olay, konu, durum vb.ne ilişkin yargıda bulunur.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Dinleme/İzleme', 'T.D.6.13.', 'Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme
+a) Şahıs/varlık kadrosunu, mekânı, zamanı ve olay örgüsünü belirler.
+b) Hikâye unsurlarının birbirleriyle bağlantısını belirler.
+c) Hikâye unsurları arasındaki etkileşimleri (zamanın kahramanla, mekânın olayla vb.) belirler.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Okuma', 'T.O.6.14.', 'Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme
+a) Şahıs/varlık kadrosunu, mekânı, zamanı ve olay örgüsünü belirler.
+b) Hikâye unsurlarının birbirleriyle bağlantısını belirler.
+c) Hikâye unsurları arasındaki etkileşimleri (zamanın kahramanla, mekânın olayla vb.) belirler.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Yazma', 'T.Y.6.14.', 'Yazılı üretiminde ve yazılı etkileşiminde tartışabilme
+a) Yazısında yer verdiği önermelerine yönelik mantıklı temellendirme yapar.
+b) Karşısındakinin yazısını inceleyerek varsa tutarsız ve geçersiz görüş ve bilgiyi tespit eder.
+c) Doğru görüş ve bilgiyi kabul eder veya tutarsız ve geçersiz görüş ve bilgiyi çürütür.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Dinleme/İzleme', 'T.D.6.16.', 'Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme
+a) Metnin türüne uygun olarak giriş, gelişme, sonuç veya serim, düğüm, çözüm bölümlerini belirler.
+b) Metnin bölümlerinin birbirleriyle bağlantısını belirler.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Dinleme/İzleme', 'T.D.6.18.', 'Dinlediğindeki/izlediğindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme
+a) Dinlediğindeki/izlediğindeki söz sanatlarını belirler.
+b) Dinlediğinin/izlediğinin anlatımıyla söz sanatlarının ilişkisini ortaya koyar.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Yazma', 'T.Y.6.19.', 'Yazısında açık ve örtük ifade etmeye yönelik yapıları kullanabilme
+a) İletileri açık ve anlaşılır şekilde ifade eder.
+b) Örtük iletilerini destekleyecek unsurları (söz sanatları, mecaz, deyim, atasözü ve diğer söz varlığı unsurları) kullanır.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Okuma', 'T.O.6.20.', 'Metindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme
+a) Okuduklarındaki söz sanatlarını belirler.
+b) Söz sanatlarının metnin anlatımıyla ilişkisini ortaya koyar.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Yazma', 'T.Y.6.20.', 'Uygun geçiş ve bağlantı ifadelerini kullanabilme
+Yazısında bağdaşıklık ögelerini işlevlerine uygun kullanır.', 'Türkçe', 25),
+('6. Sınıf', 'Bilim ve Teknoloji', 'Konuşma', 'T.K.6.23.', 'Konuşmasında açık ve örtük ifadeleri kullanabilme
+a) İletileri açık ve anlaşılır şekilde ifade eder.
+b) Örtük iletilerini destekleyecek unsurları (söz sanatları, mecaz, deyim, atasözü ve diğer söz varlığı unsurları) kullanır.', 'Türkçe', 25),
+('6. Sınıf', 'Lider Ruhlar', 'Yazma', 'T.Y.6.13.', 'Değerlendirmesini yazılı olarak ifade edebilme
+a) Mevcut olay, konu, durum vb.ne ilişkin bir norm belirler.
+b) Belirlediği norma göre olay, konu, durum vb.ni inceler.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucunda ulaştığı yargıyı yazısında kullanır.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Yazma', 'T.Y.6.15.', 'Eleştirisini yazılı olarak ifade edebilme
+a) Eleştireceği olay, konu, problem, durum vb.ni sorgular.
+b) Sorgulanan olay, konu, problem, durum vb.ne ilişkin akıl yürüterek olumlu/olumsuz yargıya ulaşır.
+c) Akıl yürütme ile ulaştığı yargıyı yazısına yansıtır.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Konuşma', 'T.K.6.16.', 'Değerlendirmesini sözlü olarak ifade edebilme
+a) Mevcut olay, konu, durum vb.ne ilişkin bir norm belirler.
+b) Belirlediği norma göre olay, konu, durum vb.ni inceler.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucunda ulaştığı yargıyı konuşmasında kullanır.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Yazma', 'T.Y.6.16.', 'Problem çözümüne yönelik yazabilme
+a) Problemi tanımlar.
+b) Problemi özetler.
+c) Gözlem, mevcut bilgi, veri ve ön bilgiye dayalı alternatif çözümler üretir.
+ç) Alternatif çözümler arasından en uygun olanı akıl yürüterek belirler.
+d) Çözümü ve çözüm sonrası değerlendirmelerini yazılı olarak ifade eder.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Konuşma', 'T.K.6.18.', 'Eleştirisini sözlü olarak ifade edebilme
+a) Eleştireceği olay, konu, problem, durum vb.ni sorgular.
+b) Sorgulanan olay, konu, problem, durum vb.ne ilişkin akıl yürüterek olumlu/olumsuz yargıya ulaşır.
+c) Akıl yürütme ile ulaştığı yargıyı konuşmasına yansıtır.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Konuşma', 'T.K.6.19.', 'Problem çözümüne yönelik konuşma yapabilme
+a) Problemi tanımlar.
+b) Problemi özetler.
+c) Gözlem, mevcut bilgi, veri ve ön bilgiye dayalı alternatif çözümler üretir.
+ç) Alternatif çözümler arasından en uygun olanı akıl yürüterek belirler.
+d) Çözümü ve çözüm sonrası değerlendirmelerini sözlü olarak ifade eder.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Dinleme/İzleme', 'T.D.6.22.', 'Dinlediğini/izlediğini değerlendirebilme
+a) Dinlediği/izlediği ile ilgili bir norm belirler.
+b) Dinlediğinde/izlediğinde belirlediği norma ilişkin inceleme yapar.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucundan hareketle bir yargıya ulaşır.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Dinleme/İzleme', 'T.D.6.23.', 'Dinlediğini/izlediğini eleştirebilme
+a) Medya içeriğiyle ilgili bir norm belirler.
+b) Belirlediği norma göre medya içeriğinde inceleme yapar.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucundan hareketle bir yargıya ulaşır.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Dinleme/İzleme', 'T.D.6.24.', 'Dinlediğindeki/izlediğindeki probleme çözüm üretebilme
+a) Dinlediğinde/izlediğinde yer alan olay ya da durumu problem biçiminde tanımlar.
+b) Olay ya da durumun problemli yönünü özetler.
+c) Ön bilgilerini kullanarak problemin olası çözümlerine yönelik alternatif tahminler oluşturur.
+ç) Alternatif çözümler arasından akıl yürüterek en uygun çözümü belirler.
+d) Ürettiği çözüme ilişkin yansıtma ve değerlendirme yapar.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Okuma', 'T.O.6.24.', 'Okuduğunu değerlendirebilme
+a) Metnin içeriğiyle ilgili bir norm belirler.
+b) Okuduklarında belirlediği norma ilişkin inceleme yapar.
+c) İnceleme sonuçlarını belirdiği normla karşılaştırır.
+ç) Karşılaştırma sonucundan hareketle bir yargıya ulaşır.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Okuma', 'T.O.6.25.', 'Metni eleştirebilme
+a) Okuduğunu belirlenen bir özellik açısından sorgular.
+b) Sorgulanan özellikle ilgili akıl yürüterek olumlu/olumsuz yargıya ulaşır.
+c) Olumsuz yargıya yönelik gerekçeli alternatif üretir.', 'Türkçe', 30),
+('6. Sınıf', 'Lider Ruhlar', 'Okuma', 'T.O.6.26.', 'Metindeki probleme çözüm üretebilme
+a) Metinde yer alan olay ya da durumu problem biçiminde tanımlar.
+b) Olay ya da durumun problemli yönünü özetler.
+c) Ön bilgilerini kullanarak problemin olası çözümlerine yönelik alternatif tahminler oluşturur.
+ç) Alternatif çözümler arasından akıl yürüterek en uygun çözümü belirler.
+d) Ürettiği çözüme ilişkin yansıtma ve değerlendirme yapar.', 'Türkçe', 30),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Dinleme/İzleme', 'T.D.7.1.', 'Dinlemede/izlemede materyal seçimini yönetebilme
+a) Dinleme/izleme şekli (etkileşimli veya etkileşimsiz), amacı, ilgi
+ve ihtiyaçları, bilgiye erişim olanakları; etkinliğin süresi doğrultusunda
+dinleme/izleme materyalini ve diğer kaynakları (sözlük, genel ağ, çalışma kâğıdı, grafik organize edici vb.) seçer.
+b) Seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler yapar.
+c) Etkileşimli dinleme/izleme sırasında karşısındakiyle ilişkiyi sürdürür.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Okuma', 'T.O.7.1.', 'Okumada materyal seçimini yönetebilme
+a) Amacı, ilgi ve ihtiyaçları, materyalin özellikleri, süre ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda metin ve diğer yardımcı materyalleri
+(sözlük, ek kaynak vb.) seçer.
+c) Seçimleri üzerinde zamana bağlı değişime/üst bilişsel izlemeye dayalı
+düzenlemeler yapar.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Konuşma', 'T.K.7.1.', 'Konuşma sürecini yönetebilme
+a) Konuşmayı başlatma, sürdürme, sonlandırmayla ilgili selam, hitap ve sonlandırma ifadelerini kullanır.
+b) Uygun zamanda söz alır/verir.
+c) Olay, konu, durum, problem vb. ile ilgili anlaşılmayan noktaları açıklığa
+kavuşturmak için herhangi bir yönlendirmenin etkisinde kalmadan soru sorar.
+ç) Kendisine yöneltilen soruları cevaplar.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Yazma', 'T.Y.7.1.', 'Yazma sürecini yönetebilme
+a) Amaç, bağlam ve olanaklarını analiz ederek yazma konusunu, hedef kitlesini, dijital de dâhil yazma aracı ve ortamını belirler.
+b) Yazılı etkileşiminde yazışmayı başlatma, sürdürme ve sonlandırmayla ilgili uygun selam ve hitap ifadelerini kullanır.
+c) Yazılı üretim ve yazılı etkileşiminde içerik ve süreçle ilgili gerekli seçim ve düzenlemeleri yapar.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Dinleme/İzleme', 'T.D.7.2.', 'Dinlemede/izlemede strateji ve yöntem seçimlerini yönetebilme
+a) Dinleme/izleme şekli (etkileşimli veya etkileşimsiz), amacı, ilgi ve
+ihtiyaçları; materyalin özellikleri ve etkinliğin süresi doğrultusunda kullanacağı strateji ve yöntemleri seçer.
+b) Seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler
+yapar.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Okuma', 'T.O.7.2.', 'Okumada strateji ve yöntem seçimlerini yönetebilme
+a) Faaliyetin amacını, ilgi ve ihtiyaçlarını, materyalin özelliklerini, süre ve bilgiye erişim olanaklarını analiz ederek görüş oluşturur.
+b) Analiz sonuçları doğrultusunda okurken kullanacağı strateji ve yöntemleri seçer ve seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler yapar.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Konuşma', 'T.K.7.2.', 'Konuşma yöntem ve tekniklerine yönelik seçimlerini yönetebilme
+a) Konuşma şekli (sözlü üretim veya sözlü etkileşim), amacı, süresi, ilgi ve
+ihtiyaçları doğrultusunda kullanacağı yöntem ve teknikleri seçer.
+b) Seçimleri üzerinde zamana veya üst bilişsel izlemeye bağlı düzenlemeler
+yapar.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Yazma', 'T.Y.7.2.', 'Yazma strateji, yöntem ve tekniklerine yönelik seçimlerini yönetebilme
+a) Yazma şekli (etkileşimli veya etkileşimsiz), amacı, bağlamı ve olanakları doğrultusunda kullanacağı stratejileri seçer.
+b) Yazma şekli (etkileşimli veya etkileşimsiz), amacı, bağlamı ve olanakları doğrultusunda kullanacağı yöntem ve teknikleri seçer.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Okuma', 'T.O.7.3.', 'Okuyacağı metnin içeriğine yönelik tahminde bulunabilme
+a) Okuyacağı metnin başlık, görsel ve/veya belirli bir bölümünden hareketle içerikle ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Metnin içeriği veya sonraki bölümleriyle ilgili mantıklı tahminde bulunur.
+c) Tahmininin doğruluğunu kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Konuşma', 'T.K.7.3.', 'Konuşmasında amaç ve içeriğe yönelik seçimlerini yönetebilme
+a) Konuşma amacını belirler.
+b) Konuşma konusunu belirler.
+c) Konuşma türünü belirler.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Yazma', 'T.Y.7.3.', 'Yazısında içerik ve yapıya yönelik seçimlerini yönetebilme
+a) Yazma amacına uygun paragraf türünü seçer.
+b) Yazma amacına uygun metin yapısını seçer.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Dinleme/İzleme', 'T.D.7.4.', 'Dinlediğinde/izlediğinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme
+a) Dinlediğinin/izlediğinin bağlamından söz varlığı unsurlarının anlamıyla
+ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Söz varlığı unsurlarının anlamına ilişkin mantıklı tahminde bulunur.
+c) Tahminin doğruluğunu kaynaklardan (sözlük, başvuru kitapları vb.),
+ebeveyn veya öğretmenden yardım alarak kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Okuma', 'T.O.7.4.', 'Metinde geçen anlamını bilmediği söz varlığı unsurlarının anlamını tahmin edebilme
+a) Metnin bağlamından söz varlığı unsurlarının anlamıyla ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) Söz varlığı unsurlarının anlamına ilişkin mantıklı tahminde bulunur.
+c) Tahminin doğruluğunu kaynaklardan (sözlük, başvuru kitapları), ebeveyn veya öğretmenden yardım alarak kontrol edip yargıya ulaşır.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Konuşma', 'T.K.7.4.', 'Konuşmasında ön bilgilerinden yararlanabilme
+a) Konuyla ilgili ön bilgilerini (gözlem, anı, deneyim, güncel olay, haber vb.) belirler.
+b) Ön bilgilerini konuşma içeriğiyle ilişkilendirir.
+c) Belirlediği ön bilgileri konuşmasına aktarır.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Dinleme/İzleme', 'T.D.7.5.', 'Dinlediğinin/izlediğinin yüzey anlamını belirleyebilme
+a) Dinlediği/izlediği ve varsa ona eşlik eden görsellerden hareketle bağlama/konuya dair ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Dinlediğinde/izlediğinde doğrudan verilen bilgileri (tanımı verilen
+kavram, düşünce, yönerge, iletilmek istenen mesaj, açıkça ifade edilen
+ana fikir vb.) belirler.
+c) Uygun durumlarda, iletilen mesajın gerektirdiği tepkiyi verir.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Okuma', 'T.O.7.5.', 'Metnin yüzey anlamını belirleyebilme
+a) Metin ve varsa ona eşlik eden görsellerden hareketle bağlama/konuya dair ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Metinde doğrudan verilen bilgileri (tanımı verilen kavram, düşünce, yönerge, iletilmek istenen mesaj, açıkça ifade edilen ana fikir vb.) belirler.
+c) Gerektiğinde iletilen mesajın gerektirdiği tepkiyi verir.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Dinleme/İzleme', 'T.D.7.16.', 'Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme
+a) Metnin türüne uygun olarak giriş, gelişme, sonuç veya serim, düğüm, çözüm bölümlerini belirler.
+b) Metnin bölümlerinin birbirleriyle bağlantısını belirler.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Yazma', 'T.Y.7.18.', 'Yazısını zenginleştirecek biçimde söz varlığını kullanabilme
+a) Kullanacağı söz varlığı unsurlarını aralarındaki anlam ilişkilerini dikkate alarak belirler.
+b) Aynı anlamı farklı söz varlığı unsurlarıyla (eş ve yakın anlamlı kelime, zıt anlamlı ve eş sesli kelime, çağrıştırdığı kelime; atasözü, deyim, kalıp söz, terim, ikileme, pekiştirme) ifade eder.
+c) Söz varlığı unsurlarını bağlama uygun kullanır.
+ç) Gerektiğinde yazısında söz varlığı unsurlarının görsel karşılığını kullanır.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Okuma', 'T.O.7.21.', 'Metinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme a) Metnin anahtar söz varlığı unsurlarını belirler.
+b) Belirlenen söz varlığı unsurlarının anlam ilişkilerini inceler.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Yazma', 'T.Y.7.21.', 'Yazım kuralları ve noktalama işaretlerini uygulayabilme
+a) Yazım kurallarını uygular.
+b) Noktalama işaretlerini uygun biçimde kullanır.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Yazma', 'T.Y.7.22.', 'Yazma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Yazma sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp güçlü yönlerini sonraki çalışmalara aktararak yazar kimliğinin gelişimine yön verir.
+c) Yazılarından oluşan ürün ve seçki dosyası (sözlük, günlük, anı, gezi, şiir, alıntılar seçkisi, atasözü ve deyim vb.) oluşturur.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Konuşma', 'T.K.7.26.', 'Konuşma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Konuşma sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek
+kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler
+alıp güçlü yönlerini sonraki çalışmalara aktararak konuşan kimliğinin gelişimine yön verir.
+c) Konuşmalarından oluşan ürün ve seçki dosyası (ses kaydı, konuşma
+metni, sunum videosu, çoklu medya ögeleri vb.) oluşturur.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Dinleme/İzleme', 'T.D.7.27.', 'Dinleme/izleme sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Dinleme/izleme sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp güçlü yönlerini sonraki çalışmalara aktararak dinleyici/izleyici kimliğinin gelişimine yön verir.', 'Türkçe', 1),
+('7. Sınıf', 'Hayat Boyu Gelişim', 'Okuma', 'T.O.7.28.', 'Okuma sürecine yönelik öz yansıtma yapabilme/kendini uyarlayabilme
+a) Okuma sürecindeki güçlü ve gelişmeye açık yönlerini gerekçelendirerek kendisini değerlendirir.
+b) Deneyimlediği süreçteki gelişmeye açık yönlerini destekleyecek tedbirler alıp güçlü yönlerini sonraki çalışmalara aktararak okur kimliğinin gelişimine yön verir.', 'Türkçe', 1),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Dinleme/İzleme', 'T.D.7.3.', 'Dinleyeceğinin/izleyeceğinin içeriğine yönelik tahminde bulunabilme
+a) Dinleyeceğinin/izleyeceğinin başlık, görsel ve/veya belirli bir bölümünden hareketle içerikle ilgili ipuçlarını belirleyip ön bilgileriyle ilişkilendirir.
+b) İçerik veya sonraki bölümlerle ilgili mantıklı tahminde bulunur.
+c) Tahmininin doğruluğunu kontrol edip yargıya ulaşır.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Yazma', 'T.Y.7.4.', 'Yazılı üretim ve yazılı etkileşiminde ön bilgilerinden yararlanabilme
+a) Konuyla ilgili ön bilgilerini (gözlem, anı, deneyim, güncel olay, haber vb.) belirler.
+b) Ön bilgilerini yazma konusuyla ilişkilendirir.
+c) Belirlediği ön bilgileri yazısına aktarır.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Konuşma', 'T.K.7.5.', 'Konuşmasında uygun tepki verebilme
+a) İletinin hedef kitlesi, içerik ve yapısını (konusunu, ana fikrini, amacını, yapı ve dil özelliklerini vb.) çözümler.
+b) Çözümlediği verileri kullanarak vereceği dönütü (nasıl cevap verileceği, hangi bilgi ve gerekçelerin kullanılacağı vb.) belirler.
+c) Yorum ve değerlendirmelerini yansıtan tepki verir.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Yazma', 'T.Y.7.5.', 'Yazılı etkileşiminde uygun tepki verebilme
+a) İletinin hedef kitlesi, içerik ve yapısını (konusunu, ana fikrini, amacını, yapı ve dil özelliklerini vb.) çözümler.
+b) Çözümlediği verileri kullanarak vereceği dönütü (nasıl cevap verileceği, hangi bilgi ve gerekçeler kullanılacağı vb.) belirler.
+c) Kişisel yorum ve değerlendirmelerini yansıtan tepki verir.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Okuma', 'T.O.7.6.', 'Görselle iletilen anlamı belirleyebilme
+a) Görseldeki unsurlardan hareketle anlama ilişkin ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Görselde doğrudan ve/veya örtük olarak iletilen mesajı belirler.
+c) Gerektiğinde, görselle iletilen mesaja uygun tepkiyi verir.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Okuma', 'T.O.7.7.', 'Metnin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme
+a) Metnin sınırlı bir bölümünden ve görselden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Konuşma', 'T.K.7.7.', 'Yaratıcı konuşma yapabilme
+a) Konuşmasında tema, karakter ve olay örgülerini farklı açılardan ele alır.
+b) Deneyim ve gözlemlerini hayal gücüyle birleştirerek konuşmasını zenginleştirir.
+c) Farklı anlatı yapılarını kullanır.
+ç) Özgün çözüm, karakter ve diyaloglar üretir.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Okuma', 'T.O.7.8.', 'Metnin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme
+a) Metnin bütününden ve görsellerden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Konuşma', 'T.K.7.8.', 'Hazırlıksız konuşma yapabilme
+a) Hazırlıksız konuşma öncesinde çıkış noktası ve ön yaşantılarından
+hareketle kısa süreli zihinsel planlama yapar.
+b) Doğaçlama yoluyla bağlama uygun konuşma yapar.
+c) Konuşmasını konu odağı çerçevesinde sonlandırır.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Konuşma', 'T.K.7.9.', 'Konuşmasında sesini uygun şekilde kullanabilme
+a) Nefesini doğru ayarlar.
+b) Kelimeleri doğru telaffuz eder.
+c) Sesin şiddetini ayarlar.
+ç) Doğru vurgu ve tonlamayla konuşur.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Yazma', 'T.Y.7.10.', 'Yazısında sınıflandırma yapabilme
+a) Sınıflandırma yapacağı unsur ve ölçütleri belirler.
+b) Unsurları, belirlediği ölçütlere göre ayırır.
+c) Ayrılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini (gerekli durumlarda grafik, tablo, görsel vb. ile destekleyerek) yazısında kullanır.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Konuşma', 'T.K.7.13.', 'Konuşmasında sınıflandırma yapabilme
+a) Sınıflandırma yapacağı unsurları ve ölçütleri belirler.
+b) Unsurları, belirlediği ölçütlere göre ayırır.
+c) Ayrılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini (gerekli durumlarda grafik, tablo, görsel vb. ile destekleyerek) konuşmasında kullanır.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Dinleme/İzleme', 'T.D.7.14.', 'Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme
+a) Metin yapısından hareketle önemli bilgileri belirler.
+b) Belirlenen bilgilerin birbirleriyle ilişkisini ortaya koyar.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Okuma', 'T.O.7.14.', 'Bilgilendirici metinlerde metin yapılarından hareketle önemli bilgileri belirlemeye yönelik çözümleme yapabilme
+a) Metin yapısından hareketle önemli bilgileri belirler.
+b) Belirlenen bilgilerin birbiriyle ilişkisini ortaya koyar.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Okuma', 'T.O.7.15.', 'Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme
+a) Metnin içeriğini yansıtan anahtar kelimeleri belirler.
+b) Anahtar kelimelerin metinle ilişkisini ortaya koyar.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Dinleme/İzleme', 'T.D.7.17.', 'Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme
+a) Dinlediğinde/izlediğinde başvurulan düşünceyi geliştirme yollarını belirler.
+b) Belirlediği düşünceyi geliştirme yollarının birbirleriyle ve dinledikleriyle/izledikleriyle ilişkisini ortaya koyar.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Dinleme/İzleme', 'T.D.7.18.', 'Dinlediğindeki/izlediğindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme
+a) Dinlediğindeki/izlediğindeki söz sanatlarını belirler.
+b) Dinlediğinin/izlediğinin anlatımıyla söz sanatlarının ilişkisini ortaya koyar.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Dinleme/İzleme', 'T.D.7.20.', 'Dinlediğinden/izlediğinden hareketle söz varlığını geliştirmeye yönelik çözümleme yapabilme
+a) Dinlediğinin/izlediğinin anahtar söz varlığı unsurlarını belirler.
+b) Belirlenen söz varlığı unsurlarının anlam ilişkilerini inceler.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Okuma', 'T.O.7.20.', 'Metinde kullanılan ikna etme tekniklerini belirlemeye yönelik çözümleme yapabilme
+a) Yazarın başvurduğu ikna etme tekniklerini belirler.
+b) Belirlediği ikna etme tekniklerinin birbirleriyle ve metinle ilişkisini ortaya koyar.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Konuşma', 'T.K.7.22.', 'Konuşmasını zenginleştirecek biçimde söz varlığını kullanabilme
+a) Kullanacağı söz varlığı unsurlarını aralarındaki anlam ilişkilerini dikkate alarak belirler.
+b) Aynı anlamı farklı söz varlığı unsurlarıyla (eş ve yakın anlamlı kelime, zıt anlamlı ve eş sesli kelime, çağrıştırdığı kelime; atasözü, deyim, kalıp söz, terim, ikileme, pekiştirme) ifade eder.
+c) Söz varlığı unsurlarını bağlama uygun kullanır.', 'Türkçe', 6),
+('7. Sınıf', 'Bir Hilal Uğruna', 'Dinleme/İzleme', 'T.D.7.24.', 'Medya içeriğini değerlendirebilme
+a) Medya içeriğiyle ilgili bir norm belirler.
+b) Belirlediği norma göre medya içeriğinde inceleme yapar.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucundan hareketle bir yargıya ulaşır.', 'Türkçe', 6),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.7.7.', 'Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik basit çıkarımlar yapabilme
+a) Dinlediğinin/izlediğinin sınırlı bir bölümünden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.7.8.', 'Dinlediğinin/izlediğinin derin anlamını belirlemeye yönelik üst düzey çıkarımlar yapabilme
+a) Dinlediğinin/izlediğinin bütününden kanıt toplayıp ön bilgileriyle ilişkilendirir.
+b) İlişkilendirmeden hareketle çıkarım yapar.
+c) Bir yargıya vararak gerektiğinde tepki verir.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Yazma', 'T.Y.7.9.', 'Yazısında karşılaştırma yapabilme
+a) Karşılaştıracağı unsurların (nesne, kişi, olay, bilgi vb.) özelliklerini belirler.
+b) Belirlenen özelliklere göre benzerlikleri listeler.
+c) Belirlenen özelliklere göre farklılıkları listeler.
+ç) Benzerlik ve farklılıklardan hareketle ulaştığı yargıyı yazısında kullanır.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.7.15.', 'Sözlü olarak özetleyebilme
+a) Metinde/söylemde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Önemli bilgileri kronolojik akışa/düşünce akışına uygun olarak sıralar.
+ç) Sıraladıklarını kendi cümleleriyle konuşmasında kullanır.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.7.16.', 'Metnin bölümlerini belirlemeye yönelik çözümleme yapabilme
+a) Metnin türüne uygun olarak giriş, gelişme, sonuç veya serim, düğüm, çözüm bölümlerini belirler.
+b) Metnin bölümlerinin birbirleriyle bağlantısını belirler.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.7.17.', 'Şiirin biçim özelliklerini belirlemeye yönelik çözümleme yapabilme
+a) Okuduğu şiirin biçim özelliklerini belirler.
+b) Şiirin biçim özelliklerinin birbirleriyle ve metinle ilişkisini ortaya koyar.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.7.17.', 'Sözlü olarak tartışmaya katılabilme
+a) Tartışmalarda önermelerine yönelik mantıklı temellendirme yapar.
+b) Karşısındakinin konuşmasını inceleyerek varsa tutarsız ve geçersiz görüş ve bilgiyi tespit eder.
+c) Doğru görüş ve bilgiyi kabul eder veya tutarsız ve geçersiz görüş ve bilgiyi çürütür.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Yazma', 'T.Y.7.17.', 'Yazısında düşünceyi geliştirme yollarını kullanabilme
+a) Kullanacağı düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarını birbirleriyle ve metinle uyumlu şekilde kullanır.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.7.18.', 'Bilgilendirici metinde düşünceyi geliştirme yollarını belirlemeye yönelik çözümleme yapabilme
+a) Yazarın başvurduğu düşünceyi geliştirme yollarını belirler.
+b) Belirlediği düşünceyi geliştirme yollarının birbirleriyle ve metinle ilişkisini ortaya koyar.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.7.19.', 'Dinlediğinde/izlediğinde kullanılan ikna etme tekniklerini belirlemeye yönelik çözümleme yapabilme
+a) Dinlediğinde/izlediğinde başvurulan ikna etme tekniklerini belirler.
+b) Belirlediği ikna etme tekniklerinin birbirleriyle ve metinle ilişkisini ortaya koyar.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.7.19.', 'Metindeki söz sanatlarını belirlemeye yönelik çözümleme yapabilme
+a) Okuduklarındaki söz sanatlarını belirler.
+b) Söz sanatlarının metnin anlatımıyla ilişkisini ortaya koyar.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.7.21.', 'Konuşmasında düşünceyi geliştirme yollarını kullanabilme
+a) Kullanacağı düşünceyi geliştirme yollarını belirler.
+b) Düşünceyi geliştirme yollarını birbirleriyle ve söylemle uyumlu şekilde kullanır.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.7.23.', 'Dinlediğini/izlediğini değerlendirebilme
+a) Dinlediği/izlediği ile ilgili bir norm belirler.
+b) Dinlediğinde/izlediğinde belirlediği norma ilişkin inceleme yapar.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucundan hareketle bir yargıya ulaşır.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Okuma', 'T.O.7.23.', 'Okuduğunu özetleyebilme
+a) Metinde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Metindeki önemli bilgileri kronolojik akışa/düşünce akışına uygun
+olarak kendi cümleleriyle ifade eder.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Dinleme/İzleme', 'T.D.7.25.', 'Dinlediğini/izlediğini eleştirebilme
+a) Dinlediğini/izlediğini belirlenen bir özellik açısından sorgular.
+b) Sorgulanan özellikle ilgili akıl yürüterek olumlu/olumsuz yargıya ulaşır.
+c) Olumsuz yargıya yönelik gerekçeli alternatif üretir.', 'Türkçe', 13),
+('7. Sınıf', 'İletişim ve Sosyal İlişkiler', 'Konuşma', 'T.K.7.25.', 'Konuşmasında beden dilini ve mekânı etkili kullanabilme
+a) Konuşma yapacağı mekânın özelliklerini göz önünde bulundurur.
+b) Dinleyicilerle/izleyicilerle göz teması kurar.
+c) Baş, el, kol ve bacaklarının duruşunu söyleme göre konumlandırır.
+ç) Söylem içeriğine uygun olarak yaygın yüz ifadelerini (şaşırma, kızgınlık,
+mutluluk vb.) kullanır.', 'Türkçe', 13),
+('7. Sınıf', 'Türk Sanatı', 'Dinleme/İzleme', 'T.D.7.6.', 'Görselle iletilen anlamı belirleyebilme
+a) Görseldeki unsurlardan hareketle anlama ilişkin ipuçlarını bulup ön bilgileriyle bağlantı kurar.
+b) Görselde doğrudan ve/veya örtük olarak iletilen mesajı belirler.
+c) Gerektiğinde görselle iletilen mesaja uygun tepkiyi verir.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Yazma', 'T.Y.7.6.', 'Yazısında çoklu ortam ögeleriyle içerik oluşturabilme
+a) Amacına uygun olarak kullanacağı çoklu ortam ögelerini (fotoğraf, resim, tablo, grafik, harita, ses kaydı, müzik, video vb.) belirler.
+b) Belirlediği çoklu ortam ögelerinin işlevlerine (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) karar verir.
+c) Belirlediği çoklu ortam ögelerini, birbirleriyle etkileşimlerini dikkate alarak yazısında kullanır.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Yazma', 'T.Y.7.7.', 'Yaratıcı yazı yazabilme
+a) Yazısında tema, karakter ve olay örgülerini farklı açılardan ele alır.
+b) Deneyim ve gözlemlerini hayal gücüyle birleştirerek yazısını zenginleştirir.
+c) Farklı metin yapılarını kullanır.
+ç) Özgün çözüm, karakter ve diyaloglar üretir.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Yazma', 'T.Y.7.8.', 'Yazılı üretim ve yazılı etkileşiminde tahminlerinden yararlanabilme
+a) Mevcut olay, konu, durum vb. ile gözlem ve ön bilgilerini ilişkilendirir.
+b) Mevcut olay, konu, durum vb.ne ilişkin tahminde bulunur.
+c) Yazısında mevcut olay, konu, durum vb.ne ilişkin yargıda bulunur.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Okuma', 'T.O.7.9.', 'Metin içi karşılaştırma yapabilme
+a) Metnin farklı bölümlerindeki karşılaştırılabilir unsurlara (duygu, düşünce, görüş, kahraman, dil kullanımı vb.) ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Okuma', 'T.O.7.10.', 'Metinler arası karşılaştırma yapabilme
+a) Metinlerdeki karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Dinleme/İzleme', 'T.D.7.11.', 'Dinlediğindeki/izlediğindeki unsurları sınıflandırabilme
+a) Sınıflandırma ölçütlerini belirler.
+b) Dinlediğindeki/izlediğindeki unsurları belirlediği ölçütlere göre ayrıştırır.
+c) Ayrıştırılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini ölçütlerden hareketle adlandırır/etiketler.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Okuma', 'T.O.7.11.', 'Metindeki unsurları sınıflandırabilme
+a) Sınıflandırma ölçütlerini belirler.
+b) Metindeki unsurları belirlediği ölçütlere göre ayrıştırır.
+c) Ayrıştırılan unsurları ayırt edici özelliklerden hareketle tasnif eder.
+ç) Tasniflerini ölçütlerden hareketle adlandırır/etiketler.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Konuşma', 'T.K.7.11.', 'Konuşmasında tahminlerinden yararlanabilme
+a) Mevcut olay, konu, durum vb. ile gözlem ve ön bilgilerini ilişkilendirir.
+b) Mevcut olay, konu, durum vb.ne ilişkin tahminde bulunur.
+c) Mevcut olay, konu, durum vb.ne ilişkin yargıda bulunur.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Dinleme/İzleme', 'T.D.7.12.', 'Dinlediğini/izlediğini yorumlayabilme
+a) Dinlediğindeki/izlediğindeki olay, konu, durum vb.ni inceler.
+b) Dinlediğindeki/izlediğindeki olay, konu, durum vb.ni yazarın, dinleyicinin/izleyicinin veya bunların dışında bir başkasının bakış açısını dikkate alıp genişleterek veya daraltarak dönüştürür.
+c) Dinlediğindeki/izlediğindeki olay, konu, durumu vb.ni seçilen bakış açısıyla kendine özgü bir biçimde yeniden ifade eder.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Konuşma', 'T.K.7.12.', 'Konuşmasında karşılaştırma yapabilme
+a) Karşılaştıracağı unsurların (nesne, kişi, olay, bilgi vb.) özelliklerini belirler.
+b) Belirlenen özelliklere göre benzerlikleri listeler.
+c) Belirlenen özelliklere göre farklılıkları listeler.
+ç) Benzerlik ve farklılıklardan hareketle ulaştığı yargıyı konuşmasında kullanır.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Yazma', 'T.Y.7.12.', 'Yazılı olarak özetleyebilme
+a) Metinde/söylemde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Önemli bilgileri kronolojik akışa/düşünce akışına uygun olarak sıralar.
+ç) Sıraladıklarını kendi cümleleriyle yazıya aktarır.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Konuşma', 'T.K.7.20.', 'Hazırlıklı konuşmasını yapılandırabilme
+a) Konuşma sürecini planlar.
+b) Plana uygun hazırlıklar yapar.
+c) Konuşma içeriğine yönelik metin veya taslak hazırlar.
+ç) Dinleyici/izleyici kitlesinden gelebilecek sorulara yönelik tahminde bulunur.
+d) Konuşmasına yönelik değerlendirme kriteri belirler.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Okuma', 'T.O.7.22.', 'Çoklu ortam ögelerine yönelik çözümleme yapabilme
+a) Çoklu ortam ögelerinin işlevlerini (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) belirler.
+b) Ögeler arasındaki bağlantıları belirler.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Konuşma', 'T.K.7.23.', 'Konuşmasında açık ve örtük ifadeleri kullanabilme
+a) İletileri açık ve anlaşılır şekilde ifade eder.
+b) Örtük iletilerini destekleyecek unsurları (söz sanatları, mecaz, deyim,
+atasözü ve diğer söz varlığı unsurları) kullanır.', 'Türkçe', 19),
+('7. Sınıf', 'Türk Sanatı', 'Okuma', 'T.O.7.26.', 'Metni eleştirebilme
+a) Okuduğunu belirlenen bir özellik açısından sorgular.
+b) Sorgulanan özellikle ilgili akıl yürüterek olumlu/olumsuz yargıya ulaşır.
+c) Olumsuz yargıya yönelik gerekçeli alternatif üretir.', 'Türkçe', 19),
+('7. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.D.7.9.', 'Dinlediğini/izlediğini kendi içinde karşılaştırabilme
+a) İçeriğin farklı bölümlerindeki karşılaştırılabilir unsurlara (duygu, düşünce, görüş, kahraman, dil kullanımı vb.) ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.Y.7.11.', 'Yorumunu yazılı olarak ifade edebilme
+a) Yorumlayacağı olay, konu, durum vb.ni inceler.
+b) Yorumlayacağı olay, konu, durum vb.ni bağlamdan kopmadan kendi öznel-nesnel bakış açısı, hedef kitlenin bakış açısı veya ikisi dışında belirli bir bakış açısına göre genişleterek veya daraltarak dönüştürür.
+c) Yorumlayacağı olay, konu, durum vb.ni belirlediği bakış açısına göre yazısında yeniden ifade eder.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.O.7.12.', 'Metni yorumlayabilme
+a) Metindeki olay, konu, durum vb.ni inceler.
+b) Metindeki olay, konu, durum vb.ni yazarın, okurun veya bunların dışında bir başkasının bakış açısını dikkate alıp genişleterek veya daraltarak dönüştürür.
+c) Metindeki olay, konu, durum vb.ni seçilen bakış açısıyla kendine özgü bir biçimde yeniden ifade eder.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.Y.7.13.', 'Değerlendirmesini yazılı olarak ifade edebilme
+a) Mevcut olay, konu, durum vb.ne ilişkin bir norm belirler.
+b) Belirlediği norma göre olay, konu, durum vb.ni inceler.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucunda ulaştığı yargıyı yazısında kullanır.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Konuşma', 'T.K.7.14.', 'Yorumunu sözlü olarak ifade edebilme
+a) Yorumlayacağı olay, konu, durum vb.ni inceler.
+b) Yorum yapacağı olay, konu, durum vb.ni bağlamdan kopmadan kendi öznel-nesnel bakış açısı, hedef kitlenin bakış açısı veya ikisi dışında belirli bir bakış açısına göre genişleterek veya daraltarak dönüştürür.
+c) Yorumlayacağı olay, konu, durum vb.ni belirlediği bakış açısına göre konuşmasında yeniden ifade eder.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.Y.7.14.', 'Yazılı üretiminde ve yazılı etkileşiminde tartışabilme
+a) Yazısında yer verdiği önermelerine yönelik mantıklı temellendirme yapar.
+b) Karşısındakinin yazısını inceleyerek varsa tutarsız ve geçersiz görüş ve bilgiyi tespit eder.
+c) Doğru görüş ve bilgiyi kabul eder veya tutarsız ve geçersiz görüş ve bilgiyi çürütür.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.D.7.15.', 'Bilgilendirici metinde anahtar kelimeleri belirlemeye yönelik çözümleme yapabilme
+a) Metnin içeriğini yansıtan anahtar kelimeleri belirler.
+b) Anahtar kelimelerin dinlediğiyle/izlediğiyle ilişkisini ortaya koyar.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.Y.7.15.', 'Eleştirisini yazılı olarak ifade edebilme
+a) Eleştireceği olay, konu, problem, durum vb.ni sorgular.
+b) Sorgulanan olay, konu, problem, durum vb.ne ilişkin akıl yürüterek olumlu/olumsuz yargıya ulaşır.
+c) Akıl yürütme ile ulaştığı yargıyı yazısına yansıtır.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Konuşma', 'T.K.7.16.', 'Değerlendirmesini sözlü olarak ifade edebilme
+a) Mevcut olay, konu, durum vb.ne ilişkin bir norm belirler.
+b) Belirlediği norma göre olay, konu, durum vb.ni inceler.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucunda ulaştığı yargıyı konuşmasında kullanır.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.Y.7.16.', 'Problem çözümüne yönelik yazabilme
+a) Problemi tanımlar.
+b) Problemi özetler.
+c) Gözlem, mevcut bilgi, veri ve ön bilgiye dayalı alternatif çözümler üretir.
+ç) Alternatif çözümler arasından en uygun olanı akıl yürüterek belirler.
+d) Çözümü ve çözüm sonrası değerlendirmelerini yazılı olarak ifade eder.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Konuşma', 'T.K.7.18.', 'Eleştirisini sözlü olarak ifade edebilme
+a) Eleştireceği olay, konu, problem, durum vb.ni sorgular.
+b) Sorgulanan olay, konu, problem, durum vb.ne ilişkin akıl yürüterek olumlu/olumsuz yargıya ulaşır.
+c) Akıl yürütme ile ulaştığı yargıyı konuşmasına yansıtır.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Konuşma', 'T.K.7.19.', 'Problem çözümüne yönelik konuşma yapabilme
+a) Problemi tanımlar.
+b) Problemi özetler.
+c) Gözlem, mevcut bilgi, veri ve ön bilgiye dayalı alternatif çözümler üretir.
+ç) Alternatif çözümler arasından en uygun olanı akıl yürüterek belirler.
+d) Çözümü ve çözüm sonrası değerlendirmelerini sözlü olarak ifade eder.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.D.7.22.', 'Dinlediğini/izlediğini özetleyebilme
+a) Dinlediğinde/izlediğinde sunulan bilgileri çözümler.
+b) Çözümlemeden hareketle önemli ve önemsiz bilgileri sınıflandırır.
+c) Dinlediğindeki/izlediğindeki önemli bilgileri kronolojik akışa/düşünce akışına uygun olarak kendi cümleleriyle ifade eder.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.O.7.24.', 'Okuduğunu değerlendirebilme
+a) Metnin içeriğiyle ilgili bir norm belirler.
+b) Okuduklarında belirlediği norma ilişkin inceleme yapar.
+c) İnceleme sonuçlarını belirdiği normla karşılaştırır.
+ç) Karşılaştırma sonucundan hareketle bir yargıya ulaşır.', 'Türkçe', 25),
+('7. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.O.7.27.', 'Metindeki probleme çözüm üretebilme
+a) Metinde yer alan olay ya da durumu problem biçiminde tanımlar.
+b) Olay ya da durumun problemli yönünü özetler.
+c) Ön bilgilerini kullanarak problemin olası çözümlerine yönelik alternatif tahminler oluşturur.
+ç) Alternatif çözümler arasından akıl yürüterek en uygun çözümü belirler.
+d) Ürettiği çözüme ilişkin yansıtma ve değerlendirme yapar.', 'Türkçe', 25),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Konuşma', 'T.K.7.6.', 'Konuşmasında çoklu ortam ögeleriyle içerik oluşturabilme
+a) Amacına uygun olarak kullanacağı çoklu ortam ögelerini (fotoğraf,
+resim, tablo, grafik, harita, sanal gezi uygulamaları, ses kaydı, müzik,
+video, dijital pano, çevrim içi toplantı araçları vb.) belirler.
+b) Belirlediği çoklu ortam ögelerinin işlevlerine (eş anlam oluşturma,
+anlamı destekleme veya tek başına anlam oluşturma) karar verir.
+c) Belirlediği çoklu ortam ögelerini, birbirleriyle etkileşimlerini dikkate
+alarak konuşma içeriğinde kullanır.', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Dinleme/İzleme', 'T.D.7.10.', 'Dinledikleri/izledikleri arasında karşılaştırma yapabilme
+a) Dinlediklerindeki/izlediklerindeki karşılaştırılabilir unsurlara ilişkin özellikleri belirler.
+b) Belirlenen özelliklerden hareketle benzerlikleri listeler.
+c) Belirlenen özelliklerden hareketle farklılıkları listeler.', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Konuşma', 'T.K.7.10.', 'Sözlü sunum yapabilme
+a) Plan yapar.
+b) Plana uygun hazırlıklarını yapar.
+c) Prova yapar.
+ç) Hedef kitleye uygun; ses, beden dili ve görsellerle desteklenen bir sunum yapar.
+d) Dinleyicilerin/izleyicilerin sorularını cevaplar.
+e) Sunumunu amaç, içerik ve dil-anlatım açısından değerlendirir.', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Dinleme/İzleme', 'T.D.7.13.', 'Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme
+a) Şahıs/varlık kadrosunu, mekânı, zamanı ve olay örgüsünü belirler.
+b) Hikâye unsurlarının birbirleriyle bağlantısını belirler.
+c) Hikâye unsurları arasındaki etkileşimleri (zamanın kahramanla, mekânın olayla vb.) belirler.', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Okuma', 'T.O.7.13.', 'Öyküleyici metinlerdeki hikâye unsurlarını belirlemeye yönelik çözümleme yapabilme
+a) Şahıs/varlık kadrosunu, mekânı, zamanı ve olay örgüsünü belirler.
+b) Hikâye unsurlarının birbirleriyle bağlantısını belirler.
+c) Hikâye unsurları arasındaki etkileşimleri (zamanın kahramanla, mekânın olayla vb.) belirler.', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Yazma', 'T.Y.7.19.', 'Yazısında açık ve örtük ifade etmeye yönelik yapıları kullanabilme
+a) İletileri açık ve anlaşılır şekilde ifade eder.
+b) Örtük iletilerini destekleyecek unsurları (söz sanatları, mecaz, deyim, atasözü ve diğer söz varlığı unsurları) kullanır.', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Yazma', 'T.Y.7.20.', 'Uygun geçiş ve bağlantı ifadelerini kullanabilme', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Dinleme/İzleme', 'T.D.7.21.', 'Çoklu ortam ögelerine yönelik çözümleme yapabilme
+a) Çoklu ortam ögelerinin işlevlerini (eş anlam oluşturma, anlamı destekleme veya tek başına anlam oluşturma) belirler.
+b) Ögeler arasındaki bağlantıları belirler.', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Konuşma', 'T.K.7.24.', 'Uygun geçiş ve bağlantı ifadelerini kullanabilme', 'Türkçe', 31),
+('7. Sınıf', 'Hak ve Sorumluluklar', 'Okuma', 'T.O.7.25.', 'Basılı ve dijital medya metinlerini değerlendirebilme
+a) Medya metninin içeriğiyle ilgili bir norm belirler.
+b) Belirlediği norma göre medya metninin içeriğinde inceleme yapar.
+c) İnceleme sonuçlarını belirlediği normla karşılaştırır.
+ç) Karşılaştırma sonucunu ortaya koyup bir yargıya ulaşır.', 'Türkçe', 31),
+('8. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.8.1.14.', 'Dinleme stratejilerini uygular.
+Seçici, yaratıcı, eleştirel, empati kurarak, not alarak dinleme gibi yöntem ve teknikleri uygulamaları sağlanır.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Konuşma', 'T.8.2.1.', 'Hazırlıklı konuşma yapar.
+a) Öğrencilerin düşüncelerini mantıksal bir bütünlük içinde sunmaları, görsel, işitsel vb. destekleyici materyaller kullanmaları, sunu hazırlamaları sağlanır.
+b) Öğrenciler araştırma sonuçlarını sempozyum, panel, forum vb. ortamlarda sunmaya teşvik edilir.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Konuşma', 'T.8.2.2.', 'Hazırlıksız konuşma yapar.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.1.', 'Noktalama işaretlerine dikkat ederek sesli ve sessiz okur.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.5.', 'Bağlamdan yararlanarak bilmediği kelime ve kelime gruplarının anlamını tahmin eder.
+a) Öğrencilerin anlamını tahmin ettikleri kelime ve kelime gruplarını öğrenmek için sözlük, atasözleri ve deyimler sözlüğü vb. araçları kullanmaları sağlanır.
+b) Öğrencinin öğrendiği kelime ve kelime gruplarından sözlük oluşturması teşvik edilir.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.9.', 'Fiilimsilerin cümledeki işlevlerini kavrar.
+Fiilimsilerin türleri fark ettirilir. Ekler ezberletilmez.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.14.', 'Metinle ilgili soruları cevaplar.
+Metin içi ve metin dışı anlam ilişkisi kurulur.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.25.', 'Okudukları ile ilgili çıkarımlarda bulunur.
+Neden-sonuç, amaç-sonuç, koşul, karşılaştırma, benzetme, örneklendirme, abartma, nesnel, öznel ve duygu belirten ifadeler üzerinde durulur.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.28.', 'Metinde önemli noktaların vurgulanış biçimlerini kavrar.
+Altını çizmenin, koyu veya italik yazmanın, renklendirmenin, farklı punto veya font kullanmanın işlevi vurgulanır.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.30.', 'Bilgi kaynaklarını etkili bir şekilde kullanır.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.8.4.2.', 'Bilgilendirici metin yazar.
+a) Öğrencilerin belirledikleri bir konu ve ana fikir etrafında giriş, gelişme ve sonuç bölümlerinden oluşan bir metin taslağı oluşturmaları, gelişme bölümünde düşünceyi geliştirme yollarını kullanarak görüşlerini ifade etmeleri, görüşlerini destekleyecek kanıtlar sunmaları, sonuç bölümünde ise görüşlerini sonuca bağlamaları sağlanır.
+b) Öğrenciler günlük hayattan örnekler vermeye teşvik edilir.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.8.4.15.', 'Yazılarında uygun geçiş ve bağlantı ifadelerini kullanır.
+Oysaki, başka bir deyişle, özellikle, ilk olarak ve son olarak ifadelerinin kullanılması sağlanır.', 'Türkçe', 1),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.26.', 'Metin türlerini ayırt eder.
+a) Fıkra (köşe yazısı), makale, deneme, roman, destan türleri üzerinde durulur.
+b) Metin türlerine ilişkin ayrıntılı bilgi verilmemelidir.', 'Türkçe', 2),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.31.', 'Bilgi kaynaklarının güvenilirliğini sorgular.
+a) Blog ve şahsi internet sayfalarındaki bilgilerin güvenilirliği konusunda çalışmalar yapılır.
+b) Bilimsel çalışmalarda ağırlıklı olarak “edu” ve “gov” uzantılı sitelerin kullanıldığı vurgulanır.', 'Türkçe', 2),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.34.', 'Okuduklarında kullanılan düşünceyi geliştirme yollarını belirler.', 'Türkçe', 2),
+('8. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.8.4.9.', 'Yazılarında anlatım biçimlerini kullanır.', 'Türkçe', 2),
+('8. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.8.4.11.', 'Formları yönergelerine uygun doldurur.', 'Türkçe', 2),
+('8. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.8.4.13.', 'Yazdıklarının içeriğine uygun başlık belirler.', 'Türkçe', 2),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.7.', 'Metindeki söz sanatlarını tespit eder.
+Benzetme (teşbih), kişileştirme (teşhis), konuşturma (intak) ve karşıtlık (tezat), abartma (mübalağa) söz sanatlarının belirlenmesi sağlanır.', 'Türkçe', 3),
+('8. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.8.1.3.', 'Dinlediklerini/izlediklerini özetler.', 'Türkçe', 4),
+('8. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.8.1.4.', 'Dinlediklerine/izlediklerine yönelik sorulara cevap verir.', 'Türkçe', 4),
+('8. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.8.1.7.', 'Dinlediklerine/izlediklerine yönelik farklı başlıklar önerir.', 'Türkçe', 4),
+('8. Sınıf', 'Okuma Kültürü', 'Dinleme/İzleme', 'T.8.1.10.', 'Dinledikleriyle/izledikleriyle ilgili görüşlerini bildirir.', 'Türkçe', 4),
+('8. Sınıf', 'Okuma Kültürü', 'Okuma', 'T.8.3.11.', 'Metindeki anlatım biçimlerini belirler.', 'Türkçe', 4),
+('8. Sınıf', 'Okuma Kültürü', 'Yazma', 'T.8.4.4.', 'Yazma stratejilerini uygular.
+Not alma, özet çıkarma, eleştirel, yaratıcı, serbest, kelime ve kavram havuzundan seçerek yazma, bir metinden ve duyulardan hareketle yazma gibi yöntem ve tekniklerin kullanılması sağlanır.', 'Türkçe', 4),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.2.', 'Metni türün özelliklerine uygun biçimde okur. Öğrencilerin seviyelerine uygun, edebî değeri olan şiirleri ve kısa yazıları türünün özelliğine göre okumaları ve ezberlemeleri sağlanır.
+Öğrencilerin seviyelerine uygun, edebî değeri olan şiirleri ve kısa yazıları türünün özelliğine göre okumaları ve ezberlemeleri sağlanır.', 'Türkçe', 5),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.16.', 'Metnin konusunu belirler.', 'Türkçe', 5),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.17.', 'Metnin ana fikrini/ana duygusunu belirler.', 'Türkçe', 5),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Yazma', 'T.8.4.1.', 'Şiir yazar.', 'Türkçe', 5),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Yazma', 'T.8.4.18.', 'Cümlenin ögelerini ayırt eder.', 'Türkçe', 5),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Dinleme/İzleme', 'T.8.1.11.', 'Dinledikleri/izledikleri medya metinlerini değerlendirir.
+Medya metinlerinin amacını ve kaynağını sorgulamaları sağlanır.', 'Türkçe', 6),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Konuşma', 'T.8.2.3.', 'Konuşma stratejilerini uygular.
+Yaratıcı/güdümlü konuşma, empati kurma, tartışma, ikna etme ve eleştirel konuşma gibi yöntem ve tekniklerinin kullanılması sağlanır.', 'Türkçe', 6),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.3.', 'Farklı yazı karakterleri ile yazılmış yazıları okur.', 'Türkçe', 6),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.15.', 'Metinle ilgili sorular sorar.', 'Türkçe', 6),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.29.', 'Medya metinlerini analiz eder.
+Medya metinlerinin amaçlarının (kültür aktarma, olay yorumlama, bilgilendirme, eğlendirme, ikna etme) belirlenmesi sağlanır.', 'Türkçe', 6),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.33.', 'Edebî eserin yazılı metni ile medya sunumunu karşılaştırır.
+Kahramanlar, mekân, zaman ve olay yönünden karşılaştırılması sağlanır.', 'Türkçe', 6),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Dinleme/İzleme', 'T.8.1.13.', 'Konuşmacının sözlü olmayan mesajlarını kavrar.', 'Türkçe', 7),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.19.', 'Metnin içeriğine uygun başlık/başlıklar belirler.', 'Türkçe', 7),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Yazma', 'T.8.4.17.', 'Yazdıklarını paylaşır.
+Öğrenciler yazdıklarını sınıf ve okul panosu ile sosyal medya ortamlarında paylaşmaya, şiir ve kompozisyon yarışmalarına katılmaya teşvik edilir.', 'Türkçe', 7),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Konuşma', 'T.8.2.4.', 'Konuşmalarında beden dilini etkili bir şekilde kullanır.', 'Türkçe', 8),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Okuma', 'T.8.3.18.', 'Metindeki yardımcı fikirleri belirler.', 'Türkçe', 8),
+('8. Sınıf', 'Millî Mücadele ve Atatürk', 'Yazma', 'T.8.4.6.', 'Bir işi işlem basamaklarına göre yazar.', 'Türkçe', 8),
+('8. Sınıf', 'Erdemler', 'Konuşma', 'T.8.2.7.', 'Konuşmalarında uygun geçiş ve bağlantı ifadelerini kullanır.', 'Türkçe', 10),
+('8. Sınıf', 'Erdemler', 'Yazma', 'T.8.4.3.', 'Hikâye edici metin yazar.
+a) Öğrencilerin anlatımın türü ve konusuna göre gerçekçi veya hayalî ögeleri tasarlamaları, uyumlu bir zaman ve mekân kurgusu yapmaları, serim, düğüm ve çözüm bölümlerine yer vermeleri sağlanır.
+b) Öğrenciler yazım kılavuzundan yararlanmaya, günlük hayattan örnekler vermeye yönlendirilir.', 'Türkçe', 11),
+('8. Sınıf', 'Erdemler', 'Yazma', 'T.8.4.7.', 'Yazılarını zenginleştirmek için atasözleri, deyimler ve özdeyişler kullanır.', 'Türkçe', 11),
+('8. Sınıf', 'Erdemler', 'Yazma', 'T.8.4.12.', 'Kısa metinler yazar.
+Haber metni, günlük ve anı yazmaya teşvik edilir.', 'Türkçe', 12),
+('8. Sınıf', 'Erdemler', 'Dinleme/İzleme', 'T.8.1.5.', 'Dinlediklerinin/izlediklerinin konusunu tespit eder.', 'Türkçe', 13),
+('8. Sınıf', 'Erdemler', 'Dinleme/İzleme', 'T.8.1.6.', 'Dinlediklerinin/izlediklerinin ana fikrini/ana duygusunu tespit eder.', 'Türkçe', 13),
+('8. Sınıf', 'Erdemler', 'Dinleme/İzleme', 'T.8.1.9.', 'Dinlediklerinde/izlediklerinde tutarlılığı sorgular.', 'Türkçe', 13),
+('8. Sınıf', 'Erdemler', 'Okuma', 'T.8.3.6.', 'Deyim, atasözü ve özdeyişlerin metne katkısını belirler.', 'Türkçe', 13),
+('8. Sınıf', 'Erdemler', 'Okuma', 'T.8.3.20.', 'Okuduğu metinlerdeki hikâye unsurlarını belirler.
+Olay örgüsü, mekân, zaman, şahıs ve varlık kadrosu, anlatıcı üzerinde durulur.', 'Türkçe', 13),
+('8. Sınıf', 'Erdemler', 'Okuma', 'T.8.3.24.', 'Metindeki gerçek ve kurgusal unsurları ayırt eder.', 'Türkçe', 13),
+('8. Sınıf', 'Millî Kültürümüz', 'Konuşma', 'T.8.2.5.', 'Kelimeleri anlamlarına uygun kullanır.', 'Türkçe', 14),
+('8. Sınıf', 'Millî Kültürümüz', 'Okuma', 'T.8.3.4.', 'Okuma stratejilerini kullanır.
+Göz atarak, özetleyerek, not alarak, tartışarak ve eleştirerek okuma gibi yöntem ve teknikleri kullanmaları sağlanır.', 'Türkçe', 14),
+('8. Sınıf', 'Millî Kültürümüz', 'Okuma', 'T.8.3.13.', 'Okuduklarını özetler.', 'Türkçe', 14),
+('8. Sınıf', 'Millî Kültürümüz', 'Okuma', 'T.8.3.22.', 'Metinde ele alınan sorunlara farklı çözümler üretir.', 'Türkçe', 14),
+('8. Sınıf', 'Millî Kültürümüz', 'Okuma', 'T.8.3.35.', 'Metindeki iş ve işlem basamaklarını kavrar.
+Kullanım kılavuzları inceletilir.', 'Türkçe', 14),
+('8. Sınıf', 'Millî Kültürümüz', 'Yazma', 'T.8.4.14.', 'Araştırmalarının sonuçlarını yazılı olarak sunar.
+a) Öğrencilerin taslak hazırlamaları, taslaklarında giriş, gelişme, sonuç bölümlerine yer vermeleri sağlanır.
+b) Kaynak gösterme hakkında bilgi verilir.', 'Türkçe', 14),
+('8. Sınıf', 'Millî Kültürümüz', 'Yazma', 'T.8.4.19.', 'Cümle türlerini tanır.
+Kavramsal tanımlamalara girilmez.', 'Türkçe', 14),
+('8. Sınıf', 'Millî Kültürümüz', 'Yazma', 'T.8.4.8.', 'Yazılarında mizahi ögeler kullanır.', 'Türkçe', 15),
+('8. Sınıf', 'Millî Kültürümüz', 'Yazma', 'T.8.4.10.', 'Yazdıklarında yabancı dillerden alınmış, dilimize henüz yerleşmemiş kelimelerin Türkçelerini kullanır.', 'Türkçe', 15),
+('8. Sınıf', 'Millî Kültürümüz', 'Konuşma', 'T.8.2.6.', 'Konuşmalarında yabancı dillerden alınmış, dilimize henüz yerleşmemiş kelimelerin Türkçelerini kullanır.', 'Türkçe', 17),
+('8. Sınıf', 'Millî Kültürümüz', 'Dinleme/İzleme', 'T.8.1.12.', 'Dinlediklerinde/izlediklerinde başvurulan düşünceyi geliştirme yollarını tespit eder.
+Düşünceyi geliştirme yollarından örneklendirme, tanık gösterme ve sayısal verilerden yararlanma
+belirlenir.', 'Türkçe', 18),
+('8. Sınıf', 'Millî Kültürümüz', 'Okuma', 'T.8.3.21.', 'Metnin içeriğini yorumlar.
+a) Yazarın olaylara bakış açısının tespit edilmesi sağlanır.
+b) Metindeki öznel ve nesnel yaklaşımların tespit edilmesi sağlanır.
+c) Metindeki örnek ve ayrıntılara atıf yapılması sağlanır.', 'Türkçe', 18),
+('8. Sınıf', 'Millî Kültürümüz', 'Okuma', 'T.8.3.23.', 'Metinler arasında karşılaştırma yapar.
+Aynı metnin çeviri, farklı baskı vb. özellikleri itibarıyla karşılaştırılması sağlanır.', 'Türkçe', 18),
+('8. Sınıf', 'Bilim ve Teknoloji', 'Okuma', 'T.8.3.32.', 'Grafik, tablo ve çizelgeyle sunulan bilgileri yorumlar.', 'Türkçe', 21),
+('8. Sınıf', 'Bilim ve Teknoloji', 'Yazma', 'T.8.4.5.', 'Anlatımı desteklemek için grafik ve tablo kullanır.', 'Türkçe', 21),
+('8. Sınıf', 'Bilim ve Teknoloji', 'Dinleme/İzleme', 'T.8.1.1.', 'Dinlediklerinde/izlediklerinde geçen olayların gelişimi ve sonucu hakkında tahminde bulunur.', 'Türkçe', 22),
+('8. Sınıf', 'Bilim ve Teknoloji', 'Dinleme/İzleme', 'T.8.1.2.', 'Dinlediklerinde/izlediklerinde geçen bilmediği kelimelerin anlamını tahmin eder.
+Öğrencilerin kelime anlamlarına yönelik tahminleri ile sözlük anlamlarını karşılaştırmaları sağlanır.', 'Türkçe', 22),
+('8. Sınıf', 'Bilim ve Teknoloji', 'Dinleme/İzleme', 'T.8.1.8.', 'Dinlediği/izlediği hikâye edici metinleri canlandırır.', 'Türkçe', 22),
+('8. Sınıf', 'Duygular', 'Okuma', 'T.8.3.12.', 'Görsel ve başlıktan hareketle okuyacağı metnin konusunu tahmin eder.', 'Türkçe', 23),
+('8. Sınıf', 'Duygular', 'Yazma', 'T.8.4.16.', 'Yazdıklarını düzenler.
+a) Dil bilgisine dayalı anlatım bozuklukları bakımından yazdıklarını gözden geçirmesi ve düzeltmesi sağlanır.
+b) Metinde yer alan yazım ve noktalama kuralları ile sınırlı tutulur.', 'Türkçe', 23),
+('8. Sınıf', 'Duygular', 'Yazma', 'T.8.4.20.', 'Fiillerin çatı özelliklerinin anlama olan katkısını kavrar.
+Kavram tanımlarına girilmeden anlamsal farklılıklara değinilir.', 'Türkçe', 23),
+('8. Sınıf', 'Doğa ve Evren', 'Okuma', 'T.8.3.8.', 'Metindeki anlatım bozukluklarını belirler.
+Dil bilgisi yönünden anlatım bozuklukları üzerinde durulur.', 'Türkçe', 28),
+('8. Sınıf', 'Doğa ve Evren', 'Okuma', 'T.8.3.27.', 'Görsellerle ilgili soruları cevaplar.
+a) Çizgi roman ve karikatürleri yorumlayarak görüşlerini bildirmeleri sağlanır.
+b) Haberi/bilgiyi görsel yorumcuların nasıl ilettikleri üzerinde durulur.', 'Türkçe', 30),
+('8. Sınıf', 'Doğa ve Evren', 'Okuma', 'T.8.3.10.', 'Geçiş ve bağlantı ifadelerinin metnin anlamına olan katkısını değerlendirir.
+Oysaki, başka bir deyişle, özellikle, kısaca, böylece, ilk olarak ve son olarak ifadeleri üzerinde durulur.', 'Türkçe', 31),
+('5. Sınıf', 'Geometrik Şekiller', 'Temel Geometrik Çizimler ve İnşalar', 'MAT.5.3.1.', 'Temel geometrik çizimler için matematiksel araç ve teknolojiden yararlanabilme
+a) Nokta, doğru, doğru parçası, ışın, açı, çember ve dikme çiziminde gerekli araç ve teknolojileri tanır.
+b) Nokta, doğru, doğru parçası, ışın, açı, çember ve dikmeyi oluşturmak için uygun olan araç ve teknolojileri belirler.
+c) Nokta, doğru, doğru parçası, ışın, açı, çember ve dikmeyi oluşturmak için uygun araç ve teknolojileri kullanır.', 'İlköğretim Matematik', 1),
+('5. Sınıf', 'Geometrik Şekiller', 'Temel Geometrik Çizimler ve İnşalar', 'MAT.5.3.2.', 'Temel geometrik çizimlere dayalı deneyimlerini yansıtabilme
+a)Temel geometrik çizimlere dayalı deneyimlerini gözden geçirir.
+b)Temel geometrik çizimlerin özelliklerine yönelik çıkarım yapar.
+c)Çıkarımını farklı örnekler üzerinden değerlendirir.', 'İlköğretim Matematik', 2),
+('5. Sınıf', 'Geometrik Şekiller', 'Açı Ölçme', 'MAT.5.3.3.', 'Açıları ölçmek için matematiksel araç ve teknolojiden yararlanabilme
+a)Açı ölçmek için gerekli araç ve teknolojiyi tanır.
+b)Açı ölçmek için uygun araç ve teknolojiyi belirler.
+c)Açı ölçmek için uygun araç ve teknolojiyi kullanır.', 'İlköğretim Matematik', 3),
+('5. Sınıf', 'Geometrik Şekiller', 'Açı Ölçme', 'MAT.5.3.4.', 'Düzlemde iki veya üç doğrunun birbirine göre durumuna bağlı olarak oluşabilecek açılara dair çıkarım yapabilme
+a) Düzlemde iki veya üç doğrunun birbirine göre durumuna bağlı olarak oluşabilecek açılara dair varsayımlarda bulunur.
+b) Düzlemde iki veya üç doğrunun birbirine göre durumuna bağlı olarak oluşan açıları belirleyerek listeler.
+c) Belirlediği açıları varsayımlarıyla karşılaştırır.
+ç) Düzlemde iki veya üç doğrunun birbirine göre durumuna bağlı olarak oluşan açılara dair önerme sunar.
+d) Sunduğu önermelerin, doğruların oluşturduğu açıların incelenmesine yönelik katkısına dair gerekçe sunar.', 'İlköğretim Matematik', 4),
+('5. Sınıf', 'Geometrik Şekiller', 'Çokgenler ve Çember', 'MAT.5.3.5.', 'Çokgenleri düzlemde ardışık olarak kesişen doğruların oluşturduğu kapalı şekiller olarak yorumlayabilme
+a) Düzlemde en az üç doğrunun -son doğru ilk doğruyla kesişecek biçimde- ardışık kesişerek oluşturdukları durumları inceler.
+b) Düzlemde en az üç doğrunun - son doğru ilk doğruyla kesişecek biçimde - ardışık kesişimleri ile çeşitli çokgenler oluşturur.
+c) Çokgenlerin düzlemde en az üç doğrunun -son doğru ilk doğruyla kesişecek biçimde ardışık kesişimleri ile meydana geldiğini ifade eder.', 'İlköğretim Matematik', 5),
+('5. Sınıf', 'Geometrik Şekiller', 'Çokgenler ve Çember', 'MAT.5.3.6.', 'Çokgenlerin özellikleri ile ilgili edindiği deneyimleri yansıtabilme
+a) Çokgenlerin özellikleri ile ilgili edindiği deneyimleri gözden geçirir.
+b) Çokgenlerin kenar ve açı özelliklerine dair çıkarım yapar.
+c) Çıkarımını farklı örnekler üzerinden değerlendirir.', 'İlköğretim Matematik', 6),
+('5. Sınıf', 'Geometrik Şekiller', 'Çokgenler ve Çember', 'MAT.5.3.7.', 'Matematiksel araç ve teknoloji yardımıyla düzlemde iki noktada kesişen çember çiftinin merkezleri ve kesişim noktalarından biri ile inşa edilen üçgenlerin kenar özelliklerine yönelik çıkarım yapabilme
+a) İki noktada kesişen çember çiftinin merkezleri ve kesişim noktalarından biri
+ile inşa edilebilecek üçgenlerin kenar özelliklerine yönelik varsayımlarda bulunur.
+b) Örnek çizimler üzerinden, kesişen iki çemberin merkezleri ve kesişim noktalarından biri ile inşa edilen çeşitkenar, ikizkenar ve eşkenar üçgenleri belirler.
+c) Belirlediği üçgenlerin özelliklerini varsayımları ile karşılaştırır.
+ç)Varsayımlarını, inşa ettiği üçgenler ile karşılaştırarak doğrulayabileceği önermeler şeklinde ifade eder.
+d) Sunduğu önermelerin katkısını değerlendirir.', 'İlköğretim Matematik', 7),
+('5. Sınıf', 'Sayılar ve Nicelikler (1)', 'Çok Basamaklı Sayıları Okuma ve Yazma', 'MAT.5.1.1.', 'Altı basamaklı sayıları okuma ve yazmayı çok basamaklı sayılara genelleyebilme
+a) Günlük hayattaki farklı bağlamlardan yola çıkarak altıdan çok basamaklı sayılar hakkında bilgi toplar.
+b) Sayıların bölükleri ile okunuşları arasındaki ortak özellikleri belirler.
+c) Sayıların bölükleri ile okunuşları arasındaki farklılıkları belirler.
+ç) Sayıların bölükleri ile okunuşları arasındaki örüntüler üzerinden basamak.
+sayısı altıdan çok olan sayıların okunuş ve yazılışları hakkında önermelerde bulunur.', 'İlköğretim Matematik', 9),
+('5. Sınıf', 'Sayılar ve Nicelikler (1)', 'Doğal Sayılarla Dört İşlem İçeren Problem Çözme', 'MAT.5.1.2.', 'Doğal sayılar ve işlemler içeren gerçek yaşam problemlerini çözebilme
+a) Problemin içerdiği sayı ve işlem bileşenlerini belirler.
+b) Problemde verilenler ile istenenlerin gerektirdiği işlemler arasındaki ilişkiyi belirler.
+c) Problem bağlamıyla ilişkili verilenleri uygun matematiksel temsillere dönüştürür.
+ç) Problemi matematiksel temsiller kullanarak kendi ifadeleri ile açıklar.
+d) Problemin sonucuna ilişkin tahminde bulunur ve işlemleri gerçekleştirmek için
+stratejiler geliştirir.
+e) Belirlenen strateji veya stratejileri çözüm için uygular.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek
+kısa yolları değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 11),
+('5. Sınıf', 'Geometrik Nicelikler', 'Dikdörtgenin Çevre Uzunluğu ve Alanı', 'MAT.5.4.1.', 'Kenar uzunlukları doğal sayı olan bir dikdörtgenin çevre uzunluğu verildiğinde kenar uzunluklarını yorumlayabilme
+a) Kenar uzunlukları doğal sayı olan bir dikdörtgenin çevre uzunluğu verildiğinde olası kenar uzunluklarını inceler.
+b) Verilen çevre uzunluğuna sahip ve kenar uzunlukları doğal sayı olan dikdörtgen oluşturur.
+c) Kenar uzunlukları doğal sayı olan farklı dikdörtgenlerin aynı çevre uzunluğuna sahip olabileceğini açıklar.', 'İlköğretim Matematik', 14),
+('5. Sınıf', 'Geometrik Nicelikler', 'Dikdörtgenin Çevre Uzunluğu ve Alanı', 'MAT.5.4.2.', 'Birim karelerden yola çıkarak dikdörtgenin alanını değerlendirebilme
+a) Dikdörtgenin alanını ölçmede, seçtiği birim kareleri ölçüt olarak belirler.
+b) Dikdörtgenin alanını seçilen birim karelerle ölçer.
+c) Birim kare sayısının dikdörtgenin iki ardışık kenar uzunluğu ile ilişkisini inceler.
+ç) Dikdörtgenin alan bağıntısına (iki ardışık kenarın uzunlukları çarpımı) ilişkin yargıda bulunur.', 'İlköğretim Matematik', 15),
+('5. Sınıf', 'Geometrik Nicelikler', 'Dikdörtgenin Çevre Uzunluğu ve Alanı', 'MAT.5.4.3.', 'Kenar uzunlukları doğal sayı olan bir dikdörtgenin alanının ölçüsü verildiğinde çevre uzunluğunu, çevre uzunluğu verildiğinde alanını yorumlayabilme
+a) Alanının ölçüsü verilen bir dikdörtgenin çevre uzunluğunu, çevre uzunluğu verilen bir dikdörtgenin alanını inceler.
+b) Aynı alana sahip farklı dikdörtgenlerin çevre uzunluklarını ve aynı çevre uzunluğuna sahip farklı dikdörtgenlerin alanlarını belirler.
+c) Aynı çevre uzunluğuna sahip dikdörtgenlerin farklı alanlara ve aynı alana sahip dikdörtgenlerin farklı çevre uzunluklarına sahip olabileceğini ifade eder.', 'İlköğretim Matematik', 16),
+('5. Sınıf', 'Geometrik Nicelikler', 'Dikdörtgenin Çevre Uzunluğu ve Alanı', 'MAT.5.4.4.', 'Dikdörtgenin çevre uzunluğu ve alanı ile ilgili problemleri çözebilme
+a) Dikdörtgenin çevre uzunluğu ve alanı ile ilgili problemlerde ilgili matematiksel
+bileşenleri (şekil, uzunluk, alan ölçüleri gibi) belirler.
+b) Matematiksel bileşenler arasındaki ilişkileri belirler.
+c) Problem bağlamındaki temsilleri farklı temsillere dönüştürür.
+ç) Matematiksel temsillere dönüştürdüğü problemi kendi ifadeleri ile açıklar.
+d) Problemin sonucuna ilişkin tahminde bulunur ve işlemleri gerçekleştirmek için stratejiler geliştirir.
+e) Belirlediği stratejileri çözüm için uygular.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek alternatif çözüm yollarını değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 17),
+('5. Sınıf', 'Sayılar ve Nicelikler (2)', 'Kesirlerin Farklı Gösterimleri', 'MAT.5.1.3.', 'Gerçek yaşam durumlarına karşılık gelen kesirleri farklı biçimlerde temsil edebilme
+a) Kesirlerin farklı gösterimlerinin (bileşik, tam sayılı, ondalık, yüzde) gerçek yaşam durumu içerisindeki kullanımını anlar.
+b) Gerçek yaşam durumlarında karşılaşılan kesirlerin farklı gösterimlerini ilişkilendirmek için farklı modelleri (yüzlük kart, somut modeller, sayı doğrusu gibi) seçer.
+c) Seçilen modelleri kullanır.
+ç)Kullanılan modelleri kesirlerin farklı gösterimleri ile yorumlar.
+d) Benzer durumlarda kullanılabilecek farklı modelleri kullanışlılık açısından karşılaştırır.
+e) Karşılaştırdığı modellerin kullanışlılığına ilişkin karar verir.', 'İlköğretim Matematik', 19),
+('5. Sınıf', 'Sayılar ve Nicelikler (2)', 'Kesirlerin Karşılaştırılması', 'MAT.5.1.4.', 'Farklı gösterimlerle ifade edilen kesirlerin karşılaştırılmasına yönelik çıkarım yapabilme
+a) Farklı gösterimlerle ifade edilen kesirlerin karşılaştırılmasına yönelik varsayımda bulunur.
+b) Varsayımındaki ilişkileri inceleyerek kesirlerin karşılaştırılmasına yönelik genellemeleri belirler.
+c) Elde ettiği genellemelerin varsayımını karşılayıp karşılamadığını sayı doğrusu, şekil gibi temsiller üzerinde gösterir.
+ç) Varsayımı ile ilgili ulaştığı sonuca yönelik matematiksel önermeleri sözel ya da sembolik temsil ile sunar.
+d) Sunduğu önermelerin tahmin etme becerisine katkısını gerekçelerle açıklar.', 'İlköğretim Matematik', 22),
+('5. Sınıf', 'İstatistiksel Araştırma Süreci', 'Kategorik Veri Dağılımları', 'MAT.5.5.1.', 'Kategorik veri ile çalışabilme ve veriye dayalı karar verebilme
+a) Kategorik veriye dayanan istatistiksel araştırma gerektiren durumları fark eder.
+b) Kategorik veriye dayanan betimleme veya karşılaştırma gerektirebilecek araştırma soruları oluşturur.
+c) Kategorik veriye ulaşmak için plan yapar.
+ç) Araştırma sorusuna uygun hazırlanan anket sorularını kullanarak veri toplar veya hazır veriye ulaşır.
+d) Veri görselleştirme aracını (sıklık tablosu, sütun grafiği, daire grafiği, nokta grafiği gibi) seçme gerekçelerini belirtir.
+e) Toplanan veriyi uygun araçlar ile analiz eder.
+f) Araştırmada ulaştığı sonuçlara yönelik gerekçeler sunar.
+g) Araştırma sonuçlarının araştırma sorusuna ne düzeyde cevap verdiğini değerlendirerek araştırma sürecine uygun olmayan adımları yeniden planlar.', 'İlköğretim Matematik', 26),
+('5. Sınıf', 'İstatistiksel Araştırma Süreci', 'Kategorik Veri Dağılımları', 'MAT.5.5.2.', 'Başkaları tarafından oluşturulan kategorik veriye dayalı istatistiksel sonuç veya yorumları tartışabilme
+a) Başkaları tarafından oluşturulan kategorik veriye dayalı istatistiksel sonuç veya yorumlara yönelik istatistiksel temellendirme yapar.
+b) Başkaları tarafından oluşturulan kategorik veriye dayalı istatistiksel sonuç veya yorumlara yönelik hataları ya da yanlılıkları tespit eder.
+c) Başkaları tarafından oluşturulan kategorik veriye dayalı sonuç veya yorumları
+çürütür ya da kabul eder.', 'İlköğretim Matematik', 29),
+('5. Sınıf', 'İSTATİSTİKSEL ARAŞTIRMA SÜRECİ iŞLEMLERLE CEBİRSEL DÜŞÜNME', 'Değişme-Birleşme ve Dağılma Özellikleri', 'MAT.5.2.1.', 'Eşitliğin korunumuna ve işlem özelliklerine yönelik çıkarım yapabilme
+a) Eşitliğin korunumuna, doğal sayılarla toplama ve çarpma işlemlerinin değişme, birleşme; çarpmanın toplama ve çıkarma işlemleri üzerine dağılma
+özelliklerine yönelik varsayımlarda bulunur.
+b) İncelediği örnekler üzerinden varsayımına yönelik genellemeleri belirler.
+c) Elde ettiği genellemelerin varsayımını karşılayıp karşılamadığını çeşitli ör nekler üzerinden sınar.
+ç) Varsayımı ile ilgili ulaştığı sonuca yönelik doğrulayabileceği matematiksel
+bir önermeyi sözel ve sembolik temsil ile sunar.
+d) Sunduğu önermenin katkısına yönelik gerekçe sunar.', 'İlköğretim Matematik', 30),
+('5. Sınıf', 'iŞLEMLERLE CEBİRSEL DÜŞÜNME', 'İşlem Önceliği', 'MAT.5.2.2.', 'Karşılaştığı günlük hayat ya da matematiksel durumlarda işlem önceliğini yorumlayabilme
+a) Doğal sayılarla dört işlem içeren problemlerde ve sayı cümlelerinde işlem önceliğini inceler.
+b) Karşılaştığı doğal sayılarla dört işlem içeren problemlerde ve sayı cümlelerinde işlem önceliğini uygular.
+c) Karşılaştığı durumlarda işlem önceliğini açıklar.', 'İlköğretim Matematik', 32),
+('5. Sınıf', 'iŞLEMLERLE CEBİRSEL DÜŞÜNME', 'Örüntüler', 'MAT.5.2.3.', 'Sayı ve şekil örüntülerinin kuralına ilişkin muhakeme yapabilme
+a) Örüntülerdeki ilişkilere yönelik varsayımda bulunur.
+b) Varsayıma yönelik örüntüdeki terimleri inceleyerek örüntünün kuralına ilişkin genellemeleri belirler.
+c) Genellediği ilişkilerin varsayımını karşılayıp karşılamadığını sınar.
+ç) Varsayımı ile ilgili ulaştığı sonuca yönelik doğrulayabileceği önermeyi sözel ve sembolik temsiller kullanarak sunar.
+d) Sunduğu önermenin kullanışlılığına yönelik gerekçeler sunar.
+e) Sunduğu önermenin geçerliliğini destekleyen kapsayıcı örnekler verir.
+f) İşe koştuğu doğrulamanın benzer önermelere uygulanıp uygulanamayacağını değerlendirir.', 'İlköğretim Matematik', 32),
+('5. Sınıf', 'iŞLEMLERLE CEBİRSEL DÜŞÜNME', 'Temel Aritmetik İşlemler ve Algoritma', 'MAT.5.2.4.', 'Temel aritmetik işlem içeren durumlardaki algoritmaları yorumlayabilme
+a) Temel aritmetik işlem içeren durumlardaki algoritmik yapıyı inceler.
+b) İncelediği durumlardaki algoritmik yapıyı tablo temsiline veya aritmetik işlemlere dönüştürür.
+c) Dönüştürdüğü algoritmik yapının içerdiği matematiksel ilişkileri sözlü olarak
+ifade eder.', 'İlköğretim Matematik', 34),
+('5. Sınıf', 'Veriden Olasılığa', 'Öznel Olasılık', 'MAT.5.6.1.', 'Herhangi bir olayın olasılığının 0 (imkânsız) ile 1 (kesin) arasında (0 ve 1 dâhil) olduğunu (olasılık spektrumu) yorumlayabilme
+a) Olayları ve olası durumları inceler.
+b) Bir olayın olasılığına dair tahminlerini farklı sayı temsillerine dönüştürür.
+c) Kendi ifadeleriyle tahminde bulunduğu bir olayın olasılığının 0 ile 1 arasında (0
+ve 1 dâhil) olduğunu ifade eder.', 'İlköğretim Matematik', 35),
+('5. Sınıf', 'Veriden Olasılığa', 'Öznel Olasılık', 'MAT.5.6.2.', 'Olayları az ya da çok olasılıklı şeklinde yapılandırabilme
+a) Olayların olasılıklarına ilişkin nedensel veya mantıksal ilişkiler ortaya koyar.
+b) Kendi öz bilgisi ile elde ettiği ilişkilere dayanarak olayların olasılıklarını az veya
+çok olasılıklı şeklinde ortaya koyar.', 'İlköğretim Matematik', 36),
+('6. Sınıf', 'Sayılar ve Nicelikler (1)', 'Bir Doğal Sayının Çarpanları ve Katları', 'MAT.6.1.1.', 'Karşılaştığı problem durumlarında bir doğal sayının çarpan ve katlarına yönelik muhakeme yapabilme
+a) Karşılaştığı durumlarda bir doğal sayının çarpan ve katlarına yönelik varsayımlarda bulunur.
+b) Varsayımına yönelik örnek durumların içerdiği ilişkileri inceleyerek bir doğal sayının çarpan ve katlarına ilişkin genellemeleri belirler.
+c) Elde ettiği genellemelerin varsayımını karşılayıp karşılamadığını çeşitli modellerle gösterir.
+ç) Varsayımı ile ilgili ulaştığı sonuca yönelik doğrulayabileceği matematiksel bir önermeyi sözel ya da sembolik temsil ile sunar.
+d) Farklı problemlerin pratik yoldan çözümüne yönelik oluşturduğu önermenin gerekçelerini sunar.
+e) Önermenin geçerliliğini destekleyen kapsayıcı örnekler verir.
+f) İşe koştuğu doğrulamanın benzer önermelere uygulanıp uygulanamayacağını değerlendirir.', 'İlköğretim Matematik', 1),
+('6. Sınıf', 'Sayılar ve Nicelikler (1)', 'Bölünebilme Kriterleri', 'MAT.6.1.2.', 'Bir doğal sayının 2, 3, 4, 5, 6, 9 ve 10 ile tam bölünebilme kriterlerine ilişkin çıkarım yapabilme
+a) Bir doğal sayının katlarını veya basamak değerlerini dikkate alarak 2, 3, 4, 5, 6, 9 ve 10''a tam bölünebilme kriterleri ile ilgili varsayımlarda bulunur.
+b) 2, 3, 4, 5, 6, 9 ve 10''un katlarını ve basamak değerlerini inceleyerek genellemeleri belirler.
+c) Elde ettiği genellemelerin, varsayımını karşılayıp karşılamadığını örnekler ile sınar.
+ç) Bir doğal sayının 2, 3, 4, 5, 6, 9 ve 10 ile tam bölünebilmesindeki kriterlere ilişkin önerme sunar.
+d) Bir doğal sayının 2, 3, 4, 5, 6, 9 ve 10 ile tam bölünebilmesindeki kriterlerin farklı durumlarda kullanışlılığını değerlendirir.', 'İlköğretim Matematik', 2),
+('6. Sınıf', 'Sayılar ve Nicelikler (1)', 'Asal Sayılar ve Asal Çarpanlar', 'MAT.6.1.3.', 'Bir doğal sayının asal olma durumunu ve asal çarpanlarını çözümleyebilme
+a) Bir doğal sayının asal olup olmadığını ve asal çarpanlarını belirler.
+b) Asal sayıların özelliklerini ve bir doğal sayı ile asal çarpanları arasındaki ilişkileri belirler.', 'İlköğretim Matematik', 3),
+('6. Sınıf', 'Sayılar ve Nicelikler (1)', 'Bir Doğal Sayının Çarpanları ve Katları', 'MAT.6.1.4.', 'Günlük hayat problemleri ya da matematiksel durumlar üzerinden ortak kat ve ortak böleni yorumlayabilme
+a) Problemlerde ya da matematiksel durumlarda verilen iki sayının ortak katlarını ve ortak bölenlerini inceler.
+b) İncelediği ortak kat veya ortak bölen ilişkilerini çizim, tablo ve sayı doğrusu gibi matematiksel temsillerle ifade eder.
+c) İki sayının ortak katlarını ve ortak bölenlerini kendi ifadelerini kullanarak açıklar.', 'İlköğretim Matematik', 3),
+('6. Sınıf', 'Veriden Olasılığa', 'Deneysel Olasılık', 'MAT.6.6.1.', 'Bir olayın olasılığını gözleme dayalı tahmin edebilme
+a) Bir olayın olasılığı ile deneylerden elde ettiği veriyi ilişkilendirir.
+b) Deneye ait tekrar sayısı ile deneyin çıktılarının göreli sıklıklarının ilişkisine yönelik çıkarım yapar.
+c) Çıkarımlardan hareketle olasılık değerini belirleme için göreli sıklığın kullanımına yönelik yargıda bulunur.', 'İlköğretim Matematik', 4),
+('6. Sınıf', 'Sayılar ve Nicelikler(2)', 'Ondalık Gösterimleri Çözümleme', 'MAT.6.1.5.', 'Gerçek yaşam durumlarında ondalık gösterimlerin basamak değerlerini kesirlerden yararlanarak yorumlayabilme
+a) Ondalık gösterimlerin basamak değerlerini inceler.
+b) Ondalık gösterimlerin basamak değerlerini paydası 10, 100 ve 1000 olan kesirlerin toplamlarını kullanarak yeniden ifade eder.
+c) Ondalık gösterimlerin basamak değerlerini kendi cümleleriyle açıklar.', 'İlköğretim Matematik', 5),
+('6. Sınıf', 'Sayılar ve Nicelikler (2)', 'Kesir-Bölme İlişkisi', 'MAT.6.1.6.', 'Kesir ve bölme işlemi arasındaki ilişkiye yönelik tümevarımsal akıl yürütebilme
+a) Kâğıt-kalemle ve hesap makinesinde bölme işlemi gerçekleştirerek kesirlerin ondalık gösterimlerine ilişkin gözlem yapar.
+b) Kesirlerin sonlu ve devirli ondalık gösterimlerine ait örüntüleri belirler.
+c) Örüntülerde keşfedilen ilişkileri geneller.', 'İlköğretim Matematik', 6),
+('6. Sınıf', 'Sayılar ve Nicelikler (2)', 'Kesirlerle Dört İşlem İçeren Problem Çözme', 'MAT.6.1.7.', 'Gerçek yaşam durumlarında karşılaşılan kesir, ondalık ve yüzde gösterimleri ile ilgili dört işlem gerektiren problemleri çözebilme
+a) Kesir, ondalık ve yüzde gösterimleri ile ilgili dört işlem problemlerinde sayı ve işlem bileşenlerini belirler.
+b) Kesir, ondalık ve yüzde gösterimleri ile ilgili dört işlem problemlerinde verilenler ile istenenlerin gerektirdiği işlemler arasındaki ilişkiyi belirler.
+c) Kesir, ondalık ve yüzde gösterimleri ile ilgili dört işlem problemlerinde problem bağlamına uygun temsilleri (şekil, tablo, diyagram gibi) kullanır.
+ç) Kullanılan temsil üzerinden problemi kendi ifadeleri ile açıklar.
+d) Problemlerin sonucuna ilişkin tahminde bulunur ve işlemleri gerçekleştirmek için stratejiler geliştirir.
+e) Stratejileri işe koşarak problemleri çözer.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemlerin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek kısa yolları değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini değerlendirir.', 'İlköğretim Matematik', 8),
+('6. Sınıf', 'Sayılar ve Nicelikler (2)', 'Uzunluk Ölçme', 'MAT.6.1.8.', 'Karşılaştığı günlük hayat ya da matematiksel durumlarda standart uzunluk ölçme birimlerini değerlendirebilme
+a) Uzunluk ölçme birimlerinden metreyi ölçüt olarak belirler.
+b) Standart ölçme birimlerini kullanarak ölçme yapar.
+c) Ölçme sonuçlarını belirlediği ölçme birimleri ile karşılaştırır.
+ç) Karşılaştırmalarına ilişkin yargıda bulunur.', 'İlköğretim Matematik', 12),
+('6. Sınıf', 'İstatistiksel Araştırma Süreci', 'Kategorik ve Nicel (Kesikli) Veri Dağılımları', 'MAT.6.5.1.', 'Kategorik veya nicel (kesikli) veri ile çalışabilme ve veriye dayalı karar verebilme
+a) Kategorik veya nicel (kesikli) veriye dayanan istatistiksel araştırma gerektiren durumları fark eder.
+b) Kategorik veya nicel (kesikli) veriye dayanan betimleme veya karşılaştırma gerektirebilecek araştırma soruları oluşturur.
+c) Kategorik veya nicel (kesikli) veriye ulaşmak için plan yapar.
+ç) Araştırma sorusuna uygun hazırlanan anket sorularını kullanarak veri toplar
+veya hazır veriye ulaşır.
+d) Veri görselleştirme (kök-yaprak gösterimi, nokta grafiği gibi) ve özetleme (aritmetik ortalama, ortanca, tepe değer ve açıklık) araçlarını seçme gerekçelerini belirtir.
+e) Toplanan veriyi uygun araçlarla analiz eder.
+f) Araştırmada ulaştığı sonuçlara yönelik gerekçeler sunar.
+g) Araştırma sonuçlarının araştırma sorusuna ne düzeyde cevap verdiğini değerlendirerek araştırma sürecine uygun olmayan adımları yeniden planlar.', 'İlköğretim Matematik', 13),
+('6. Sınıf', 'İstatistiksel Araştırma Süreci', 'Kategorik ve Nicel (Sürekli) Veri Dağılımları', 'MAT.6.5.2.', 'Başkaları tarafından oluşturulan kategorik veya nicel (kesikli) veriye dayalı istatistiksel sonuç veya yorumları tartışabilme
+a) Başkaları tarafından oluşturulan kategorik veya nicel (kesikli) veriye dayalı istatistiksel sonuç veya yorumlara yönelik istatistiksel temellendirme yapar.
+b) Başkaları tarafından oluşturulan kategorik veya nicel (kesikli) veriye dayalı istatistiksel sonuç veya yorumlara yönelik hataları ya da yanlılıkları tespit eder.
+c) Başkaları tarafından oluşturulan kategorik veya nicel (kesikli) veriye dayalı istatistiksel sonuç veya yorumları çürütür ya da kabul eder.', 'İlköğretim Matematik', 18),
+('6. Sınıf', 'Geometrik Şekiller', 'İki Paralel Doğrunun Bir Kesenile Oluşturduğu Açılar', 'MAT.6.3.1.', 'Düzlemde iki paralel doğru ve bir kesen ile oluşan açıları sınıflandırabilme
+a) Düzlemde iki paralel doğru ve bir kesen ile oluşan açıları belirler.
+b) Düzlemde iki paralel doğru ve bir kesen ile oluşan açıları ayrıştırır.
+c) Düzlemde iki paralel doğru ve bir kesen ile oluşan açıları tasnif eder.
+ç) Bu tasnife göre açıları adlandırır.', 'İlköğretim Matematik', 19),
+('6. Sınıf', 'Geometrik Şekiller', 'Üçgenin Açıları', 'MAT.6.3.2.', 'Matematiksel araç ve teknolojiden yararlanarak iki paralel doğrunun iki kesenle oluşturduğu şekillerin özelliklerine dair çıkarım yapabilme
+a) Düzlemde iki paralel doğrunun iki kesenle oluşturduğu şekillerin özelliklerine dair varsayımda bulunur.
+b) Oluşan şekilleri çeşitli özelliklerine göre listeler.
+c) Oluşan şekilleri kenar ve açı özelliklerini dikkate alarak varsayımları ile karşılaştırır.
+ç) Oluşan şekillerin iç açılarının ölçüleri toplamına ve yamuk, paralelkenar, eşkenar dörtgen, dikdörtgen, karenin ortak özelliklerine dair önermeler sunar.
+d) Sunduğu önermelerin dörtgenlerin sınıflandırılmasına yönelik katkısını değerlendirir.', 'İlköğretim Matematik', 20),
+('6. Sınıf', 'Geometrik Şekiller', 'Yamuk, Paralelkenar, Eşkenar Dörtgen, Dikdörtgen ve Karenin Kenar, Açı ve Köşegen Özellikleri', 'MAT.6.3.3.', 'Matematiksel araç ve teknolojiden yararlanarak birbirlerini ortalayan doğru parçalarını köşegen kabul eden dörtgenlere yönelik çıkarım yapabilme
+a) Birbirlerini ortalayan doğru parçalarını köşegen kabul eden dörtgenlere yönelik varsayımlarda bulunur.
+b) Birbirlerini ortalayan doğru parçalarını köşegen kabul eden dörtgenleri oluşturur ve listeler.
+c) Oluşturulan dörtgenleri varsayımları ile karşılaştırır.
+ç) Özelliklerine bağlı olarak birbirlerini ortalayan doğru parçalarını köşegen kabul eden dörtgenlere yönelik önermeler sunar.
+d) Sunduğu önermelerin dörtgenlerin farklı yollardan tanımlanmasına yönelik katkısını değerlendirir.', 'İlköğretim Matematik', 21),
+('6. Sınıf', 'Geometrik Şekiller', 'Üçgenin Açıları', 'MAT.6.3.4.', 'Üçgen, yamuk, paralelkenar, eşkenar dörtgen, dikdörtgen ve karenin açıları ile ilgili problemleri çözebilme
+a) Üçgen, yamuk, paralelkenar, eşkenar dörtgen, dikdörtgen ve karenin açıları ile
+ilgili problemlerde matematiksel bileşenleri (şekil, açı ölçüsü, kenar uzunluğu, paralellik, diklik gibi) belirler.
+b) Matematiksel bileşenler arasındaki ilişkiyi belirler.
+c) Problem bağlamındaki temsilleri farklı temsillere dönüştürür.
+ç) Matematiksel temsillere dönüştürdüğü problemi kendi ifadeleri ile açıklar.
+d) Problemin çözümü için stratejiler geliştirir.
+e) Belirlenen stratejileri çözüm için uygular.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek
+alternatif çözüm yollarını değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 22),
+('6. Sınıf', 'İşlemlerle Cebirsel Düşünme ve Değişimler', 'Bilinmeyen Nicelikler', 'MAT.6.2.1.', 'Gerçek yaşam durumlarında bilinen niceliklerden bilinmeyen niceliklere ilişkin muhakeme yapabilme
+a) Gerçek yaşam durumlarında nicelikleri belirler.
+b) Nicelikler arasındaki ilişkileri tablo temsili kullanarak belirler.
+c) Nicelikler arasındaki ilişkileri cebirsel olarak ifade eder.
+ç) Cebirsel ifadenin anlamını kendi cümleleri ile açıklar.
+d) Yorumladığı cebirsel ifadelere karşılık gelen durumlara yönelik varsayımda bulunur.
+e) Verilen cebirsel ifadelere yönelik varsayımda bulunduğu durumları inceleyerek değişkenlerin ve cebirsel ifadelerin anlamlarına yönelik genellemeleri belirler.
+f) Elde ettiği genellemelerin varsayımını karşılayıp karşılamadığını farklı sözel ve cebirsel ifadeler ile sınar.
+g) Doğrulayabileceği sözel ve cebirsel ifadeleri farklı değişken ve değerlerle sözel ve cebirsel olarak yeniden ifade eder.
+ğ) Cebirsel ifadelerin matematiğin farklı alanlarında ve gerçek yaşam durumlarında kullanımına yönelik katkısını ifade eder.', 'İlköğretim Matematik', 23),
+('6. Sınıf', 'İşlemlerle Cebirsel Düşünme ve Değişimler', 'Örüntü', 'MAT.6.2.2.', 'Sayı ve şekil örüntülerini yorumlayabilme
+a) Sayı ve şekil örüntülerindeki ilişkileri inceler.
+b) İncelediği ilişkileri tablo, grafik ve sözel temsiller aracılığıyla ifade eder.
+c) Farklı temsillerle gösterilen ilişkilerden yola çıkarak örüntülerdeki yapıları cebirsel olarak ifade eder.', 'İlköğretim Matematik', 26),
+('6. Sınıf', 'İşlemlerle Cebirsel Düşünme ve Değişimler', 'Cebirsel İfadeler ve Algoritma', 'MAT.6.2.3.', 'Cebirsel ifadeler içeren durumlardaki algoritmaları yorumlayabilme
+a) Cebirsel ifadeler içeren durumlardaki algoritmik yapıyı inceler.
+b) İncelediği durumlardaki algoritmik yapıyı tablo temsiline veya cebirsel ifadelere dönüştürür.
+c) Dönüştürdüğü algoritmik yapının içerdiği matematiksel ilişkileri sözel olarak ifade eder.', 'İlköğretim Matematik', 28),
+('6. Sınıf', 'Geometrik Nicelikler', 'Uzunluk ve Alan Ölçme Birimleri Arasındaki İlişki', 'MAT.6.4.1.', 'Uzunluk ve alan ölçme birimleri arasındaki ilişkilerle ilgili analojik akıl yürütebilme
+a) Uzunluk ve alan ölçme birimleri arasındaki ilişkileri gözlemler.
+b) Uzunluk ve alan ölçme birimleri arasındaki ilişkiyi tespit eder.
+c) Uzunluk ve alan ölçme birimleri arasında kurulan ilişkiden hareketle alan ölçme birimleri arasındaki ilişkiye dair çıkarım yapar.', 'İlköğretim Matematik', 30),
+('6. Sınıf', 'Geometrik Nicelikler', 'Paralelkenar ve Üçgenin Alanı', 'MAT.6.4.2.', 'Dikdörtgenin alan bağıntısına yönelik deneyimlerini paralelkenar ve üçgenin alan bağıntılarına yansıtabilme
+a) Dikdörtgenin alan bağıntısını gözden geçirir.
+b) Dikdörtgenin alan bağıntısından yola çıkarak paralelkenar ve üçgenin alan bağıntıları hakkında çıkarım yapar.
+c) Çıkarımını farklı örnekler üzerinden değerlendirir.', 'İlköğretim Matematik', 31),
+('6. Sınıf', 'Geometrik Nicelikler', 'Paralelkenar ve Üçgenin Alanı', 'MAT.6.4.3.', 'Geometrik şekillerin alanları ile modellenen gerçek yaşam durumlarına yönelik problem çözebilme
+a) Geometrik şekillerin alanları ile modellenen gerçek yaşam probleminde ilgili matematiksel bileşenleri (alan, şekil, uzunluk, alan ölçme birimleri gibi) belirler.
+b) Matematiksel bileşenler arasındaki ilişkiyi belirler.
+c) Problem bağlamıyla ilişkili verilenleri uygun matematiksel temsillere dönüştürür.
+ç) Matematiksel temsillere dönüştürdüğü problemi kendi ifadeleri ile açıklar.
+d) Problemin sonucuna ilişkin tahminde bulunur ve işlemleri gerçekleştirmek için stratejiler geliştirir.
+e) Belirlediği stratejileri çözüm için uygular.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek alternatif çözüm yollarını değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 32),
+('6. Sınıf', 'Geometrik Nicelikler', 'Çemberin ve Çapın Uzunlukları Arasındaki İlişki', 'MAT.6.4.4.', 'Çemberin uzunluğu ile çap uzunluğu arasındaki ilişkiye yönelik çıkarım yapabilme
+a) Çemberin uzunluğu ile çap uzunluğu arasındaki ilişkiye yönelik varsayımlarda bulunur.
+b) Çemberlerin uzunlukları ile çap uzunlukları arasındaki ilişkileri listeler.
+c) Çemberin uzunluğu ile çap uzunluğu arasındaki ilişkiyi varsayımlarıyla karşılaştırır.
+ç) Çemberin uzunluğu ile çap uzunluğu arasındaki ilişkiye yönelik önermeler sunar.
+d) Elde ettiği ilişkiye yönelik değerlendirmeler yapar.', 'İlköğretim Matematik', 34),
+('6. Sınıf', 'Geometrik Nicelikler', 'Çemberin ve Çapın Uzunlukları Arasındaki İlişki', 'MAT.6.4.5.', 'Çap veya yarıçap uzunluğu verilen bir çemberin uzunluğu ile ilgili problemleri çözebilme
+a) Çap veya yarıçap uzunluğu verilen bir çemberin uzunluğu ile ilgili problemlerde ilgili matematiksel bileşenleri (çap, yarıçap, çevre uzunluğu gibi) belirler.
+b) Matematiksel bileşenler arasındaki ilişkiyi belirler.
+c) Problem bağlamıyla ilişkili verilenleri uygun matematiksel temsillere dönüştürür.
+ç) Matematiksel temsillere dönüştürdüğü problemi kendi ifadeleri ile açıklar.
+d) Problemlerin sonucuna ilişkin tahminde bulunur ve işlemleri gerçekleştirmek için stratejiler geliştirir.
+e) Belirlediği stratejileri çözüm için uygular.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek alternatif çözüm yollarını değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 36),
+('6. Sınıf', 'Geometrik Nicelikler', 'Çemberde Merkez Açı ve Gördüğü Yay Uzunluğu', 'MAT.6.4.6.', 'Çemberde merkez açının ölçüsü ile gördüğü yayın uzunluğu arasındaki ilişkiye dair tümevarımsal akıl yürütebilme
+a) Çemberde farklı ölçülere sahip merkez açıların gördüğü yayların uzunluklarına ilişkin gözlem yapar.
+b) Merkez açıların ölçüleri ile gördükleri yayların uzunlukları arasındaki ilişkiye dair örüntü bulur.
+c) Merkez açının ölçüsü ile gördüğü yayın uzunluğu arasındaki ilişkiye dair genelleme yapar.', 'İlköğretim Matematik', 36),
+('7. Sınıf', 'Sayılar ve Nicelikler (1)', 'Tam Sayılar', 'MAT.7.1.1.', 'Gerçek yaşam ya da matematiksel durumlarda doğal sayı, tam sayı ve rasyonel sayıları yorumlayabilme
+a) Tam sayıları inceler.
+b) Tam sayıları rasyonel sayılara genişletir ve mutlak değerle sayı doğrusunda
+açıklar.
+c) Sayı doğrusu üzerinde her rasyonel sayının bir noktaya karşılık geldiğini açıklar.', 'İlköğretim Matematik', 1),
+('7. Sınıf', 'Sayılar ve Nicelikler (1)', 'Rasyonel Sayılar ve Farklı Temsilleri', 'MAT.7.1.2.', 'Gerçek yaşam durumlarında rasyonel sayıların ondalık gösterimlerini yansıtabilme
+a) Bölme işlemini kullanarak her rasyonel sayının bir ondalık gösterimi olduğunu inceler.
+b) Rasyonel sayıların ondalık gösterimlerinden bazılarının devirli olduğuna dair çıkarım yapar.
+c) Her rasyonel sayının devirli ya da devirsiz ondalık açılımları olduğunu değerlendirir.', 'İlköğretim Matematik', 3),
+('7. Sınıf', 'Sayılar ve Nicelikler (1)', 'Rasyonel Sayılarda Karşılaştırma ve Sıralama', 'MAT.7.1.3.', 'Rasyonel sayıların karşılaştırma ve sıralama ilişkilerini yorumlayabilme
+a) Paydası 1 olan rasyonel sayılardan (tam sayılardan) başlayarak rasyonel sayıları sayı doğrusunda inceler.
+b) Rasyonel sayıların karşılaştırma ve sıralama ilişkilerini sembolik olarak ifade eder.
+c) Rasyonel sayıların karşılaştırma ve sıralama ilişkisini sayı doğrusu üzerinde kendi ifadeleriyle açıklar.', 'İlköğretim Matematik', 4),
+('7. Sınıf', 'Sayılar ve Nicelikler (1)', 'Rasyonel Sayılarla İşlemler ve Problem Çözme', 'MAT.7.1.4.', 'Rasyonel sayılar ve işlemler içeren gerçek yaşam problemlerini çözebilme
+a) Rasyonel sayılarla toplama, çıkarma, çarpma ve bölme işlemlerini içeren problemlerde sayı ve işlem bileşenlerini belirler.
+b) Rasyonel sayılarla toplama, çıkarma, çarpma ve bölme işlemlerini içeren problemlerde istenenler ve seçilen işlemler arasındaki ilişkileri belirler.
+c) Rasyonel sayılarla toplama, çıkarma, çarpma ve bölme işlemlerini içeren problemlerde problem bağlamını uygun temsillere (şekil, sayı doğrusu gibi) dönüştürür.
+ç) Kullanılan temsil üzerinden problemi kendi ifadeleri ile açıklar.
+d) Problemlerin çözümü için stratejiler oluşturur.
+e) Stratejileri işe koşarak problemi çözer.
+f) Problemin çözümünü kontrol eder.
+g) Problemlerin olası farklı çözüm stratejilerini inceler.
+ğ) Çözüme ulaştıran stratejilere uygun genellemeler yapar.
+h) Genellemelerin geçerliliğini değerlendirir.', 'İlköğretim Matematik', 6),
+('7. Sınıf', 'Geometrik Nicelikler (1)', 'Cisimlerin Farklı Yönlerden Görünümleri', 'MAT.7.4.1.', 'Eş küplerle oluşturulan yapılar ile görünümleri arasındaki ilişkiyi çözümleyebilme
+a) Eş küplerle oluşturulan yapıların farklı yönlerden görünümlerini çizer ve görünümleri verilen yapıları eş küplerle oluşturur.
+b) Oluşturduğu yapı ile görünümleri arasındaki ilişkileri belirler.', 'İlköğretim Matematik', 8),
+('7. Sınıf', 'Geometrik Nicelikler (1)', 'Dikdörtgenler Prizmasının Hacmi ve Yüzey Alanı', 'MAT.7.4.2.', 'Dikdörtgenler prizmasının yüzey alanını yorumlayabilme
+a) Dikdörtgenler prizmasının farklı yüzey açınımlarını inceler.
+b) Dikdörtgenler prizmasının yüzey açınımı ile yüzey alanı arasındaki ilişkileri ifade eder.
+c) Dikdörtgenler prizmalarının yüzey açınımlarından yararlanarak yüzey alanlarını hesaplar.', 'İlköğretim Matematik', 9),
+('7. Sınıf', 'Geometrik Nicelikler (1)', 'Dikdörtgenler Prizmasının Hacmi ve Yüzey Alanı', 'MAT.7.4.3.', 'Dikdörtgenler prizmasının hacmini eş nesneler aracılığıyla yorumlayabilme
+a) Dikdörtgenler prizmalarının hacimlerini karşılaştırarak inceler.
+b) Eş nesneler ile doldurulmuş dikdörtgenler prizmasını oluşturur.
+c) Dikdörtgenler prizmasını oluşturan eş nesnelerin sayısını prizmanın hacmi olarak ifade eder.', 'İlköğretim Matematik', 9),
+('7. Sınıf', 'Geometrik Nicelikler (1)', 'Dikdörtgenler Prizmasının Hacmi ve Yüzey Alanı', 'MAT.7.4.4.', 'Dikdörtgenler prizmasının hacim bağıntısını değerlendirebilme
+a) Dikdörtgenler prizmasının hacmini belirlemede ölçüt olarak birim küpleri belirler.
+b) Dikdörtgenler prizmasının hacmini belirlemek için prizmaların içine yerleştirilen birim küpleri sayar.
+c) Toplam birim küp sayısı ile dikdörtgenler prizmasının ayrıt uzunluklarını karşılaştırır.
+ç) Birim küpleri farklı stratejilerle sayarak dikdörtgenler prizmasının hacmini taban alanı ile yüksekliğin çarpımı olarak ifade eder.', 'İlköğretim Matematik', 9),
+('7. Sınıf', 'Geometrik Nicelikler (1)', 'Hacim Ölçme Birimleri', 'MAT.7.4.5.', 'Hacim ölçme birimleri arasındaki ilişkileri değerlendirebilme
+a) Bir cismin hacmini ölçmede metreküpü ve litreyi ölçüt olarak belirler.
+b) Metreküp ve litreyi kullanarak ölçme yapar.
+c) Hacim ölçme sonuçlarını desimetreküp, santimetreküp ve milimetreküp; sıvı ölçme sonuçlarını desilitre, santilitre ve mililitre ile ilişkilendirerek karşılaştırır.
+ç) Karşılaştırmalarına ilişkin yargıda bulunur.', 'İlköğretim Matematik', 10),
+('7. Sınıf', 'Geometrik Nicelikler (1)', 'Dikdörtgenler Prizmasının Hacmi ve Yüzey Alanı', 'MAT.7.4.6.', 'Günlük hayat durumlarında dikdörtgenler prizmaları ile modellenen cisimlerin yüzey alanı ve hacmine yönelik problem çözebilme
+a) Dikdörtgenler prizmaları ile modellenen cisimlerin yüzey alanı ve hacmine yönelik problemde ilgili matematiksel bileşenleri (şekil, cisim, uzunluk, alan, yükseklik gibi) belirler.
+b) Matematiksel bileşenler arasındaki ilişkileri belirler.
+c) Problem bağlamındaki temsilleri farklı temsillere dönüştürür.
+ç) Matematiksel temsillere dönüştürdüğü problemi kendi ifadeleri ile açıklar.
+d) Problemin sonucuna ilişkin tahminde bulunarak işlemleri gerçekleştirmek için stratejiler geliştirir.
+e) Belirlediği stratejileri çözüm için uygular.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek alternatif çözüm yollarını değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 11),
+('7. Sınıf', 'İstatistiksel Araştırma Süreci', 'Kategorik ve Nicel (Sürekli) Veri Dağılımları', 'MAT.7.6.1.', 'Kategorik veya nicel (sürekli) veri ile çalışabilme ve veriye dayalı karar verebilme
+a) Kategorik veya nicel (sürekli) veriye dayanan istatistiksel araştırma gerektiren durumları fark eder.
+b) Kategorik veya nicel (sürekli) veriye dayanan betimleme veya karşılaştırma gerektirebilecek araştırma soruları oluşturur.
+c) Kategorik veya nicel (sürekli) veriye ulaşmak için plan yapar.
+ç) Araştırma sorusuna uygun hazırlanan anket sorularını kullanarak veri toplar veya hazır veriye ulaşır.
+d) Veri görselleştirme (çizgi grafiği, nokta grafiği gibi) ve özetleme (aritmetik orta
+lama, ortanca, tepe değer, açıklık ve ortalama mutlak sapma) araçlarını seçme gerekçelerini belirtir.
+e) Toplanan veriyi uygun araçlarla analiz eder.
+f) Araştırmada ulaştığı sonuçlara yönelik gerekçeler sunar.
+g) Araştırma sonuçlarının araştırma sorusuna ne düzeyde cevap verdiğini değerlendirerek araştırma sürecine uygun olmayan adımları yeniden planlar.', 'İlköğretim Matematik', 12),
+('7. Sınıf', 'İstatistiksel Araştırma Süreci', 'Kategorik ve Nicel (Sürekli) Veri Dağılımları', 'MAT.7.6.2.', 'Başkaları tarafından oluşturulan kategorik veya nicel (sürekli) veriye dayalı istatistiksel sonuç veya yorumları tartışabilme
+a) Başkaları tarafından oluşturulan kategorik veya nicel (sürekli) veriye dayalı istatistiksel sonuç veya yorumlara yönelik istatistiksel temellendirme yapar.
+b) Başkaları tarafından oluşturulan kategorik veya nicel (sürekli) veriye dayalı istatistiksel sonuç veya yorumlara yönelik hataları ya da yanlılıkları tespit eder.
+c) Başkaları tarafından oluşturulan kategorik veya nicel (sürekli) veriye dayalı istatistiksel sonuç veya yorumları çürütür ya da kabul eder.', 'İlköğretim Matematik', 15),
+('7. Sınıf', 'Dönüşüm', 'Yansıma Dönüşümü', 'MAT.7.3.1.', 'Şekillerin yansıma dönüşümü altındaki görüntülerinin oluşturulmasına dair çıkarım yapabilme
+a) Şekillerin yansıma dönüşümleri altındaki görüntülerini oluşturmaya dair varsayımlarda bulunur.
+b) Şekillerin yansıma dönüşümü altındaki görüntülerini oluşturur.
+c) Varsayımlarını doğrulamaya yönelik karşılaştırmalar yapar.
+ç) Bir şekil ile yansıma dönüşümü altındaki görüntüsü arasındaki ilişkilere dair önermeler sunar.
+d) Önermenin verilen iki eş şeklin bir doğruya göre simetrik olup olmadığını belirlemeye ve simetrik bir şeklin simetri doğrusunu oluşturmaya yönelik katkısını değerlendirir.', 'İlköğretim Matematik', 17),
+('7. Sınıf', 'Dönüşüm', 'Orta Dikme ve Açıortay İnşası', 'MAT.7.3.2.', 'Yansıma dönüşümündeki deneyimlerini orta dikme ve açıortay inşasına yansıtabilme
+a) Yansıma dönüşümünde simetri doğrusunun özelliklerini gözden geçirir.
+b) Simetri doğrusunun özelliklerinden hareketle bir doğru parçasına ait orta dikmenin ve bir açıya ait açıortayın inşasına dair çıkarım yapar.
+c) Çıkarımını farklı örnekler üzerinden değerlendirir.', 'İlköğretim Matematik', 18),
+('7. Sınıf', 'Geometrik Şekiller', 'Üçgenlerde Kenarortay ve İnşası, Açıortay, Yükseklik', 'MAT.7.5.1.', 'Matematiksel araç ve teknolojiden yararlanarak üçgende kenarortayı, açıortayı ve yüksekliği çözümleyebilme
+a) Üçgende kenarortayı, açıortayı ve yüksekliği belirler.
+b) Üçgende kenarortay, açıortay ve yükseklik arasındaki ilişkileri belirler.', 'İlköğretim Matematik', 19),
+('7. Sınıf', 'Geometrik Şekiller', 'Üçgenlerde Kenarortay ve İnşası, Açıortay, Yükseklik', 'MAT.7.5.2.', 'Orta dikme inşasına yönelik deneyimlerini üçgende kenarortay inşasına yansıtabilme
+a) Orta dikme inşasına yönelik deneyimlerini gözden geçirir.
+b) Üçgende kenarortay inşasına yönelik çıkarım yapar.
+c) Çıkarımını farklı örnekler üzerinden değerlendirir.', 'İlköğretim Matematik', 19),
+('7. Sınıf', 'Sayılar ve Nicelikler (2)', 'Oran', 'MAT.7.1.5.', 'Gerçek yaşam durumları üzerinden oran ilişkileri hakkında muhakeme yapabilme
+a) Gerçek yaşam durumları üzerinden iki niceliğin karşılaştırılmasında toplamsal (mutlak) ve çarpımsal (bağıl) ilişkileri ayırt eder.
+b) Gerçek yaşam durumları üzerinden oranın iki niceliğin çarpımsal ilişkiler kurularak karşılaştırılması olduğunu belirler.
+c) Çözümlediği gerçek yaşam durumlarının içerdiği oranı birimli ve birimsiz oran olarak ifade eder.
+ç) Birimli ve birimsiz oranı kendi ifadeleriyle açıklar.
+d) Yorumladığı gerçek yaşam durumundaki ilişkilere dayalı olarak denk orana ve birim orana ilişkin varsayımlarda bulunur.
+e) Varsayımındaki örneklere ait ilişkileri inceleyerek denk oran ve birim orana ilişkin genellemeleri belirler.
+f) Elde ettiği genellemelerin varsayımını karşılayıp karşılamadığını çeşitli temsiller (oran tabloları, çubuk diyagramı, çift sayı doğrusu, grafik, somut materyaller) ile sınar.
+g) Varsayımı ile ilgili ulaştığı sonuca yönelik doğrulayabileceği matematiksel bir önermeyi sunar.
+ğ) Sunduğu önermenin katkısına yönelik gerekçeler sunar.', 'İlköğretim Matematik', 20),
+('7. Sınıf', 'Sayılar ve Nicelikler (2)', 'Orantılı Durumlar', 'MAT.7.1.6.', 'Gerçek yaşam durumları üzerinden orantılı durumları yorumlayabilme
+a) Gerçek yaşam durumlarında iki durumun orantılı olup olmadığını inceler.
+b) Orantılı olan iki durumun ilişkisini temsiller ile ifade eder.
+c) Orantı kavramını kendi ifadeleriyle yeniden açıklar.', 'İlköğretim Matematik', 21),
+('7. Sınıf', 'Sayılar ve Nicelikler (2)', 'Doğru Orantılı Durumlara İlişkin Problem Çözme', 'MAT.7.1.7.', 'Gerçek yaşam durumları üzerinden doğru orantılı durumlara ilişkin problemleri çözebilme
+a) Doğru orantılı durumlara ilişkin problemlerde nicelikleri belirler.
+b) Doğru orantılı durumlar arasındaki ilişkileri belirler.
+c) Bu ilişkileri tablo ve grafik temsillerine dönüştürür.
+ç) Dönüştürdüğü temsillerin problem bağlamındaki anlamını ifade eder.
+d) Elde ettiği ve yorumladığı farklı temsillere dayalı olarak problemin çözümü için stratejiler oluşturur.
+e) Belirlediği stratejileri kullanır.
+f) Elde ettiği çözümü farklı stratejileri kullanarak doğrular.
+g) Problemin olası farklı çözüm stratejilerini inceler.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 22),
+('7. Sınıf', 'Veriden Olasılığa', 'Teorik Olasılık', 'MAT.7.7.1.', 'Bir olayın ve tümleyeninin olasılığına ilişkin tümevarımsal akıl yürütebilme
+a) Bir olayın olasılığını hesaplamaya ilişkin olası tüm çıktıları gözlemler.
+b) Bir olayın ve tümleyeninin olasılığını hesaplamak için matematiksel ilişkiyi bulur.
+c) Bir olayın ve tümleyeninin olasılığının ilişkisine yönelik genelleme yapar.', 'İlköğretim Matematik', 23),
+('7. Sınıf', 'Veriden Olasılığa', 'Teorik Olasılık', 'MAT.7.7.2.', 'Aynı deneye ait olayların eşit olasılıklı olma durumlarını değerlendirebilme
+a) Eşit olasılıklı olan ve eşit olasılıklı olmayan olaylara ilişkin ölçüt belirler.
+b) Olayların eşit olasılıklı olma veya olmama olasılığına ilişkin hesaplama yapar.
+c) Hesaplama sonuçlarını belirlediği ölçütlerle karşılaştırır.
+ç) Karşılaştırmalarına ilişkin yargıda bulunur.', 'İlköğretim Matematik', 23),
+('7. Sınıf', 'Veriden Olasılığa', 'Teorik Olasılık', 'MAT.7.7.3.', 'Olayları ayrık olma ve ayrık olmama durumlarına göre sınıflandırabilme
+a) Olayların ayrık olma ve ayrık olmama durumlarını olaylara ait çıktıların ortak olup olmamasını ölçüt alarak belirler.
+b) Olayları ayrık olma ve ayrık olmama durumuna göre ayrıştırır.
+c) Ayrık olan ve ayrık olmayan olayları tasnif eder.
+ç) Olayları ayrık olma veya olmama durumuna göre etiketler', 'İlköğretim Matematik', 24),
+('7. Sınıf', 'İşlemlerle Cebirsel Düşünme ve Değişimler', 'Cebirsel İfadelerle İşlemler', 'MAT.7.2.1.', 'Gerçek yaşam durumları ya da matematiksel durumlar üzerinden cebirsel ifadelerle toplama, çıkarma ve bir rasyonel sayıyla çarpma işlemlerini yorumlayabilme
+a) Gerçek yaşam durumlarına ya da matematiksel durumlara karşılık gelen cebirsel ifadelerle işlemleri inceler.
+b) Toplama ve çarpma işlemlerinin özelliklerini, cebirsel ifadelerde işlem yaparken kullanır.
+c) Bu işlemler ve sonuçları arasındaki denkliği açıklar.', 'İlköğretim Matematik', 25),
+('7. Sınıf', 'İşlemlerle Cebirsel Düşünme ve Değişimler', 'Denklem ve Eşitsizlikler', 'MAT.7.2.2.', 'Birinci dereceden bir bilinmeyenli denklem ve birinci dereceden bir bilinmeyenli eşitsizlik içeren gerçek yaşam problemlerini çözebilme
+a) Verilen gerçek yaşam problemlerindeki nicelikleri belirler.
+b) Nicelikler arasındaki eşitlik ve eşitsizlik ilişkilerini belirler.
+c) Belirlenen nicelikleri cebirsel olarak ifade eder.
+ç) Belirlenen nicelikleri ve ilişkileri denklem veya eşitsizlik olarak ifade eder.
+d) Denklem ve eşitsizliklerin çözümünde bir strateji oluşturur.
+e) Belirlediği stratejiyi çözüm için uygular.
+f) Çözümün doğruluğunu uygun örnek ve temsiller ile kontrol ederek çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için olası farklı çözüm stratejilerini inceler.
+ğ) Çözüme ulaştıran stratejilerin uyarlanabileceği uygun genelleme ve sınıflamalar yapar.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 27),
+('7. Sınıf', 'İşlemlerle Cebirsel Düşünme ve Değişimler', 'İspat', 'MAT.7.2.3.', 'Sayılar ve özelliklerini içeren ispatlara ilişkin matematiksel muhakeme yapabilme
+a) Sayılar ve özellikleriyle ilgili ilişkilere yönelik örneklere ve örüntülere dayalı varsayımlarda bulunur.
+b) Varsayımına yönelik sayı örüntülerini listeler.
+c) Elde ettiği örüntülerin, varsayımını karşılayıp karşılamadığını sınar.
+ç) Ulaştığı sonuca yönelik doğrulayabileceği matematiksel bir önermeyi sözel veya cebirsel olarak ifade eder.
+d) Sunduğu önermenin katkısına yönelik gerekçeler sunar.
+e) Sayılar ve özelliklerine ilişkin durumlarda cebirsel ispat yöntemlerini seçerek işe koşar.
+f) Önermeyi gözden geçirerek yeni durumlara uyarlar.', 'İlköğretim Matematik', 30),
+('7. Sınıf', 'İşlemlerle Cebirsel Düşünme ve Değişimler', 'Cebirsel İfadelerle İşlemler ve Algoritma', 'MAT.7.2.4.', 'Temel aritmetik ve cebirsel ifadelerle işlem içeren durumlardaki süreci algoritma ifade yöntemlerini kullanarak yapılandırabilme
+a) Aritmetik ve cebirsel ifadelerle işlem içeren durumlardaki adımları ve ilişkileri açıklar.
+b) Algoritma ifade yöntemlerini kullanarak incelediği adımlar ve ilişkilerden uyumlu bir bütün oluşturur.', 'İlköğretim Matematik', 32),
+('7. Sınıf', 'Geometrik Nicelikler (2)', 'Daire ve Daire Diliminin Alanı', 'MAT.7.4.7.', 'Dikdörtgenin, paralelkenarın alanına ve çemberin uzunluğuna ilişkin deneyimlerini dairenin alan bağıntısına yansıtabilme
+a) Dikdörtgenin, paralelkenarın alanı ve çemberin uzunluğuna yönelik deneyimlerini gözden geçirir.
+b) Dikdörtgenin alan bağıntısı ve çemberin uzunluğundan yola çıkarak dairenin
+alan bağıntısına yönelik çıkarım yapar.
+c) Çıkarımını farklı örnekler üzerinden değerlendirir.', 'İlköğretim Matematik', 33),
+('7. Sınıf', 'Geometrik Nicelikler (2)', 'Daire ve Daire Diliminin Alanı', 'MAT.7.4.8.', 'Çemberde merkez açı ve gördüğü yay uzunluğu arasındaki ilişkiden yola çıkarak daire ve daire diliminin alanları arasındaki ilişkiye yönelik analojik akıl yürütebilme
+a) Çemberde merkez açı ve gördüğü yay uzunluğu ile daire ve daire diliminin alanı arasındaki ilişkileri gözlemler.
+b) Çemberde merkez açı ve gördüğü yay uzunluğu ile daire ve daire diliminin alanı arasındaki ilişkiyi tespit eder.
+c) Çemberde merkez açı ve gördüğü yay uzunluğuyla daire ve daire diliminin alanı arasında kurulan ilişkiden hareketle daire diliminin alanına dair çıkarım
+yapar.', 'İlköğretim Matematik', 33),
+('7. Sınıf', 'Geometrik Nicelikler (2)', 'Eşkenar Dörtgen ve Yamuk', 'MAT.7.4.9.', 'Eşkenar dörtgen ve yamuğun alan bağıntılarına dair çıkarım yapabilme
+a) Dikdörtgen, paralelkenar ve üçgenin alan bağıntısına dair ön bilgisiyle eşkenar dörtgenin ve yamuğun alan hesabına yönelik varsayımda bulunur.
+b) Eşkenar dörtgeni ve yamuğu parçalayarak veya tamamlayarak oluşturduğu geometrik şekillerin alanlarını belirler.
+c) Oluşturulan geometrik şekillerin alanlarını varsayımlarıyla karşılaştırır.
+ç) Eşkenar dörtgenin ve yamuğun alan bağıntılarına dair önermeler sunar.
+d) Çeşitli geometrik şekillerin alanlarının hesaplanmasında eşkenar dörtgenin ve yamuğun alan bağıntılarının katkılarını değerlendirir.', 'İlköğretim Matematik', 35),
+('7. Sınıf', 'Geometrik Nicelikler (2)', 'Daire ve Daire Diliminin Alanı', 'MAT.7.4.10.', 'Günlük hayat durumlarında daire, daire dilimi, eşkenar dörtgen ve yamuğun alanına ilişkin problem çözebilme
+a) Günlük hayat durumlarında daire, daire dilimi, eşkenar dörtgen ve yamuğun
+alanlarına ilişkin problemde ilgili matematiksel bileşenleri (şekil, uzunluk, alan, açı, köşegen, yarıçap, yükseklik gibi) belirler.
+b) Matematiksel bileşenler arasındaki ilişkileri belirler.
+c) Problem bağlamındaki temsilleri farklı temsillere dönüştürür.
+ç) Matematiksel temsillere dönüştürdüğü problemi kendi ifadeleri ile açıklar.
+d) Problemin sonucuna ilişkin tahminde bulunur ve işlemleri gerçekleştirmek için stratejiler geliştirir.
+e) Belirlenen stratejileri çözüm için uygular.
+f) Çözüm yollarını kontrol eder ve çözüme ulaştırmayan stratejiyi değiştirir.
+g) Problemin çözümü için kullandığı veya geliştirdiği stratejileri gözden geçirerek alternatif çözüm yollarını değerlendirir.
+ğ) Kullandığı strateji veya stratejileri farklı problemlerin çözümlerine geneller.
+h) Genellemenin geçerliliğini matematiksel örneklerle değerlendirir.', 'İlköğretim Matematik', 36),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Çarpanlar ve Katlar', 'M.8.1.1.1.', 'Verilen pozitif tam sayıların pozitif tam sayı çarpanlarını bulur, pozitif tam sayıların pozitif tam sayı çarpanlarını üslü ifadelerin çarpımı şeklinde yazar.
+Bir pozitif tam sayının asal çarpanlarını bulmaya yönelik çalışmalara da yer verilir.', 'İlköğretim Matematik', 1),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Çarpanlar ve Katlar', 'M.8.1.1.2.', 'İki doğal sayının en büyük ortak bölenini (EBOB) ve en küçük ortak katını (EKOK) hesaplar, ilgili problemleri çözer.
+Alan ve hacim hesaplamayı gerektiren problemlere girilmez.', 'İlköğretim Matematik', 2),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Çarpanlar ve Katlar', 'M.8.1.1.3.', 'Verilen iki doğal sayının aralarında asal olup olmadığını belirler.', 'İlköğretim Matematik', 2),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Üslü İfadeler', 'M.8.1.2.1.', 'Tam sayıların, tam sayı kuvvetlerini hesaplar.', 'İlköğretim Matematik', 3),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Üslü İfadeler', 'M.8.1.2.2.', 'Üslü ifadelerle ilgili temel kuralları anlar, birbirine denk ifadeler oluşturur.', 'İlköğretim Matematik', 3),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Üslü İfadeler', 'M.8.1.2.3.', 'Sayıların ondalık gösterimlerini 10''un tam sayı kuvvetlerini kullanarak çözümler.
+Örneğin 82,53 = 8.10¹ + 2.10⁰ + 5.10⁻¹ + 3.10⁻²', 'İlköğretim Matematik', 4),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Üslü İfadeler', 'M.8.1.2.4.', 'Verilen bir sayıyı 10''un farklı tam sayı kuvvetlerini kullanarak ifade eder.', 'İlköğretim Matematik', 4),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Üslü İfadeler', 'M.8.1.2.5.', 'Çok büyük ve çok küçük sayıları bilimsel gösterimle ifade eder ve karşılaştırır.', 'İlköğretim Matematik', 5),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.1.', 'Tamkare pozitif tam sayılarla bu sayıların karekökleri arasındaki ilişkiyi belirler.
+Kare modelleri kullanılarak alanla kenar arasındaki ilişkiden yararlanılarak bir sayıyla karekökü arasındaki ilişki ele alınabilir.', 'İlköğretim Matematik', 6),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.2.', 'Tam kare olmayan kareköklü bir sayının hangi iki doğal sayı arasında olduğunu belirler.
+Örneğin √31 sayısının 5 ile 6 sayıları arasında bulunduğunu ve 6''ya daha yakın olduğunu belirlemeye yönelik çalışmalar yapılır.', 'İlköğretim Matematik', 6),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.3.', 'Kareköklü bir ifadeyi a√b şeklinde yazar ve a√b şeklindeki ifadede katsayıyı kök içine alır.', 'İlköğretim Matematik', 7),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.4.', 'Kareköklü ifadelerde çarpma ve bölme işlemlerini yapar.', 'İlköğretim Matematik', 8),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.5.', 'Kareköklü ifadelerde toplama ve çıkarma işlemlerini yapar.', 'İlköğretim Matematik', 8),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.6.', 'Kareköklü bir ifade ile çarpıldığında, sonucu bir doğal sayı yapan çarpanlara örnek verir.', 'İlköğretim Matematik', 9),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.7.', 'Ondalık ifadelerin kareköklerini belirler.
+Kesir olarak ifade edildiğinde payı ve paydası tam kare olan ondalık gösterimlerin kareköklerini bulmaya yönelik çalışmalara yer verilir.', 'İlköğretim Matematik', 10),
+('8. Sınıf', 'Sayılar ve İşlemler', 'Kareköklü İfadeler', 'M.8.1.3.8.', 'Gerçek sayıları tanır, rasyonel ve irrasyonel sayılarla ilişkilendirir.
+Tam kare olmayan sayıların kareköklerinin rasyonel sayı olarak belirtilemediğine (iki tam sayının oranı şeklinde yazılamadığına) dikkat çekilir. π sayısı bir irrasyonel sayı olarak tanıtılır. İrrasyonel sayı olmasına rağmen işlemlerde kolaylık sağlaması açısından π sayısı yerine 3; 3,14 veya 22/7 de alınabileceği vurgulanır.', 'İlköğretim Matematik', 10),
+('8. Sınıf', 'Veri İşleme', 'Veri Analizi', 'M.8.4.1.1.', 'En fazla üç veri grubuna ait çizgi ve sütun grafiklerini yorumlar.', 'İlköğretim Matematik', 11),
+('8. Sınıf', 'Veri İşleme', 'Veri Analizi', 'M.8.4.1.2.', 'Verileri sütun, daire veya çizgi grafiği ile gösterir ve bu gösterimler arasında uygun olan dönüşümleri yapar.
+Farklı gösterimlerin birbirlerine göre üstün ve zayıf yönleri üzerinde durulur.', 'İlköğretim Matematik', 12),
+('8. Sınıf', 'Olasılık', 'Basit Olayların Olma Olasılığı', 'M.8.5.1.1.', 'Bir olaya ait olası durumları belirler.
+Örneğin 3 kırmızı, 5 mavi renkli topun bulunduğu bir torbadan top çekilmesi olayı ile ilgili olası durumların sayısının 8 olduğu ifade edilir. Birden fazla olayın olası durumları ele alınmaz', 'İlköğretim Matematik', 13),
+('8. Sınıf', 'Olasılık', 'Basit Olayların Olma Olasılığı', 'M.8.5.1.2.', '“Daha fazla”, “eşit”, “daha az” olasılıklı olayları ayırt eder, örnek verir.
+Olasılığı hesaplamayı gerektirmeyen sezgisel durumlar ele alınır. Örneğin bir okuldaki tüm öğretmen ve öğrencilerin isimlerinin yazılı olduğu bir listeden rastgele çekilen bir ismin öğrenciye ait olma olasılığının daha fazla olduğu, 15''i erkek öğrenci ve 15''i kız öğrenci olan bir sınıftan rastgele seçilen birinin kız öğrenci olma olasılığı ile erkek öğrenci olma olasılığının eşit olduğunu belirten çalışmalar yapılır.', 'İlköğretim Matematik', 13),
+('8. Sınıf', 'Olasılık', 'Basit Olayların Olma Olasılığı', 'M.8.5.1.3.', 'Eşit şansa sahip olan olaylarda her bir çıktının olasılık değerinin eşit olduğunu ve bu değerin 1/n olduğunu açıklar.
+a) Kazanım ifadesindeki n, olası durum sayısını temsil etmektedir.
+b) Eşit şansa sahip olan ve olmayan olayları ayırt etmeye yönelik çalışmalara yer verilir.
+c) Olasılığın bir olayın olma şansına (olabilirliğine) ilişkin bir ölçüm olduğu vurgulanır.', 'İlköğretim Matematik', 14),
+('8. Sınıf', 'Cebir', 'Cebirsel İfadeler ve Özdeşlikler', 'M.8.2.1.1.', 'Basit cebirsel ifadeleri anlar ve farklı biçimlerde yazar.
+a) Terim, katsayı ve değişkenin anlamları üzerinde durulur. Sabit terimin de bir katsayı olduğu vurgulanır.
+b) x+5, 3x, x², -6y², a².b, 2a+2b gibi temel cebirsel ifadeler üzerinde durulur.', 'İlköğretim Matematik', 15),
+('8. Sınıf', 'Olasılık', 'Basit Olayların Olma Olasılığı', 'M.8.5.1.4.', 'Olasılık değerinin 0 ile 1 arasında (0 ve 1 dâhil) olduğunu anlar.
+a) İmkânsız olay ve kesin olayın olasılık değerleri vurgulanır.
+b) Bir olayın olma olasılığı ile olmama olasılığının toplamının 1 olduğu fark ettirilir.', 'İlköğretim Matematik', 15),
+('8. Sınıf', 'Cebir', 'Cebirsel İfadeler ve Özdeşlikler', 'M.8.5.1.5.', 'Basit bir olayın olma olasılığını hesaplar.
+a) Zar atıldığında tek sayı gelmesi gibi örnekler verilir.
+b) Ayrık olan ve olmayan, bağımlı ve bağımsız olayların olasılığına girilmez. c) Birden fazla olayın olma olasılığı ele alınmaz.', 'İlköğretim Matematik', 15),
+('8. Sınıf', 'Cebir', 'Cebirsel İfadeler ve Özdeşlikler', 'M.8.2.1.2.', 'Cebirsel ifadelerin çarpımını yapar.
+a) y(3y-2), (2x+3)(5x-1) gibi işlemler üzerinde durulur.
+b) Cebirsel ifadelerdeki katsayılar tamsayılardan seçilir.
+c) Cebirsel ifadelerle çarpma işlemini modellerle yapmaya yönelik çalışmalara yer verilir.', 'İlköğretim Matematik', 16),
+('8. Sınıf', 'Cebir', 'Cebirsel İfadeler ve Özdeşlikler', 'M.8.2.1.3.', 'Özdeşlikleri modellerle açıklar.
+a) (a ± b)² = a² ± 2ab + b² ve a² - b² = (a-b)(a+b) özdeşlikleriyle sınırlı kalınır.
+b) Özdeşliklerdeki katsayılar tam sayılardan seçilir.', 'İlköğretim Matematik', 17),
+('8. Sınıf', 'Cebir', 'Cebirsel İfadeler ve Özdeşlikler', 'M.8.2.1.4.', 'Cebirsel ifadeleri çarpanlara ayırır.
+a) Ortak çarpan parantezine alma ile iki kare farkı ve a² ± 2ab + b² biçimindeki tam kare ifadelerin çarpanlara ayırma işlemleri ele alınır.
+b) Cebirsel ifadelerdeki katsayılar ve kökleri tam sayılar içinde kalacak biçimde seçilir.
+c) Gruplandırarak çarpanlarına ayırma yöntemine girilmez.
+ç) Tam kare olmayan ikinci dereceden ifadelerin çarpanlara ayrılma işlemlerine girilmez.', 'İlköğretim Matematik', 18),
+('8. Sınıf', 'Cebir', 'Doğrusal Denklemler', 'M.8.2.2.1.', 'Birinci dereceden bir bilinmeyenli denklemleri çözer.
+Bu sınıf düzeyinde katsayıları rasyonel sayı olan denklemlere yer verilir.', 'İlköğretim Matematik', 18),
+('8. Sınıf', 'Cebir', 'Doğrusal Denklemler', 'M.8.2.2.2.', 'Koordinat sistemini özellikleriyle tanır ve sıralı ikilileri gösterir.
+Koordinat sistemi üzerinde yer belirlemeyle gerçek hayat durumlarını ilişkilendirmeye yönelik çalışmalara yer verilir.', 'İlköğretim Matematik', 19),
+('8. Sınıf', 'Cebir', 'Doğrusal Denklemler', 'M.8.2.2.3.', 'Aralarında doğrusal ilişki bulunan iki değişkenden birinin diğerine bağlı olarak nasıl değiştiğini tablo ve denklem ile ifade eder.
+a) Tablo ile yapılan gösterimlerde sıralı ikililer biçiminde ifadelere de yer verilir.
+b) İki değişkenden birinin değerinin, diğer değişkenin aldığı değere göre nasıl değiştiği ve bu durumda hangisinin bağımlı hangisinin bağımsız değişken olduğu incelenir.', 'İlköğretim Matematik', 20),
+('8. Sınıf', 'Cebir', 'Doğrusal Denklemler', 'M.8.2.2.4.', 'Doğrusal denklemlerin grafiğini çizer.
+Doğrunun eksenleri hangi noktalarda kestiği, eksenlere paralelliği, orijinden geçip geçmediği durumlar ele alınır.', 'İlköğretim Matematik', 21),
+('8. Sınıf', 'Cebir', 'Doğrusal Denklemler', 'M.8.2.2.5.', 'Doğrusal ilişki içeren gerçek hayat durumlarına ait denklem, tablo ve grafiği oluşturur ve yorumlar.
+Doğrunun grafiği yorumlanırken doğru üzerindeki noktaların x ve y koordinatları arasındaki ilişki, eksenleri hangi noktalarda kestiği, orijinden geçip geçmediği, eksenlere paralelliği durumları ele alınır.', 'İlköğretim Matematik', 22),
+('8. Sınıf', 'Cebir', 'Doğrusal Denklemler', 'M.8.2.2.6.', 'Doğrunun eğimini modellerle açıklar, doğrusal denklemleri ve grafiklerini eğimle ilişkilendirir.
+a) Eğimin işaretinin ve büyüklüğünün anlamı üzerinde durulur.
+b) Günlük hayatla ilişkili modellemelerde eğimin dikey uzunluğun yatay uzunluğa oranı olduğu dikkate alınarak işareti üzerinde durulmaz.
+c) Gerektiğinde uygun bilgi ve iletişim teknolojilerinden yararlanılır.', 'İlköğretim Matematik', 23),
+('8. Sınıf', 'Cebir', 'Eşitsizlikler', 'M.8.2.3.1.', 'Birinci dereceden bir bilinmeyenli eşitsizlik içeren günlük hayat durumlarına uygun matematik cümleleri yazar.
+Örneğin “Anaokuluna en az 3 yaşında olan çocuklar kabul ediliyor.” ifadesinde çocukların yaşı x ile temsil edildiğinde, eşitsizlik x ≥ 3 olarak belirtilebilir.', 'İlköğretim Matematik', 24),
+('8. Sınıf', 'Cebir', 'Eşitsizlikler', 'M.8.2.3.2.', 'Birinci dereceden bir bilinmeyenli eşitsizlikleri sayı doğrusunda gösterir.
+x ≥ -1, -3 ≤ t < 7, a < 1 gibi durumlar inceletilir.', 'İlköğretim Matematik', 25),
+('8. Sınıf', 'Cebir M.8.3. Geometri ve Ölçme', 'Eşitsizlikler', 'M.8.2.3.3.', 'Birinci dereceden bir bilinmeyenli eşitsizlikleri çözer.
+a) En çok iki işlem gerektiren eşitsizlikler seçilir.
+b) Eşitsizliğin her iki tarafı negatif bir sayı ile çarpılır veya bölünürse eşitsizliğin yön değiştireceğinin fark edilmesine yönelik çalışmalara yer verilir.', 'İlköğretim Matematik', 26),
+('8. Sınıf', 'Cebir M.8.3. Geometri ve Ölçme', 'Üçgenler', 'M.8.3.1.1.', 'Üçgende kenarortay, açıortay ve yüksekliği inşa eder.
+a) Kâğıtları katlayarak, keserek veya kareli kâğıt üzerinde çizim yaparak üçgenin elemanlarını oluşturmaya yönelik çalışmalara yer verilir.
+b) Eşkenar, ikizkenar ve dik üçgen gibi özel üçgenlerde kenarortay, açıortay ve yüksekliğin özelliklerini belirlemeye yönelik çalışmalara da yer verilir.', 'İlköğretim Matematik', 26),
+('8. Sınıf', 'Geometri ve Ölçme', 'Üçgenler', 'M.8.3.1.2.', 'Üçgenin iki kenar uzunluğunun toplamı veya farkı ile üçüncü kenarının uzunluğunu ilişkilendirir.
+a) Somut modeller kullanılarak yapılacak etkinliklere yer verilebilir.
+b) Uygun bilgisayar yazılımları ile üçgen eşitsizliğini anlamaya yönelik çalışmalara yer verilebilir.', 'İlköğretim Matematik', 27),
+('8. Sınıf', 'Geometri ve Ölçme', 'Üçgenler', 'M.8.3.1.3.', 'Üçgenin kenar uzunlukları ile bu kenarların karşısındaki açıların ölçülerini ilişkilendirir.', 'İlköğretim Matematik', 28),
+('8. Sınıf', 'Geometri ve Ölçme', 'Üçgenler', 'M.8.3.1.4.', 'Yeterli sayıda elemanının ölçüleri verilen bir üçgeni çizer.
+a) (1) Üç kenarının uzunluğu, (2) bir kenarının uzunluğu ile iki açısının ölçüsü, (3) iki kenar uzunluğu ile bu kenarların arasındaki açının ölçüsü verilen üçgenlerin uygun araçlar kullanılarak çizilmesi sağlanır.
+b) Dinamik geometri yazılımları ile yapılacak çalışmalara yer verilebilir.', 'İlköğretim Matematik', 28),
+('8. Sınıf', 'Geometri ve Ölçme', 'Üçgenler', 'M.8.3.1.5.', 'Pisagor bağıntısını oluşturur, ilgili problemleri çözer.
+a) Pisagor bağıntısının gerçek hayat uygulamalarına yönelik çalışmalara yer verilir.
+b) Koordinat düzlemi üzerinde verilen iki nokta arasındaki uzaklığı Pisagor bağıntısını kullanarak bulma çalışmalarına yer verilir. İki nokta arasındaki uzaklık formülü verilmez.
+c) Kenar uzunlukları verilen bir üçgenin dik üçgen olup olmadığına Pisagor bağıntısını kullanarak karar vermeye yönelik çalışmalar yapılır.', 'İlköğretim Matematik', 29),
+('8. Sınıf', 'Geometri ve Ölçme', 'Eşlik ve Benzerlik', 'M.8.3.3.1.', 'Eşlik ve benzerliği ilişkilendirir, eş ve benzer şekillerin kenar ve açı ilişkilerini belirler.
+a) Düzlemsel şekilleri karşılaştırarak eş olup olmadıklarını belirlemeye yönelik etkinliklere yer verilir.
+b) Eş çokgenlerde karşılıklı kenar uzunluklarının ve açı ölçülerinin eşit, benzer çokgenlerde ise karşılık gelen açı ölçülerinin eşit fakat kenar uzunluklarının orantılı olduğu vurgulanır. Eş çokgenlerin benzer olduğu ancak benzer çokgenlerin eş olmalarının gerekmediği vurgulanır. KKK, AKA gibi üçgenlerde eşlik ve benzerlik kuralları özel olarak verilmez.
+c) Somut modellerle, kareli kâğıtla veya kâğıtları katlayarak yapılacak çalışmalara yer verilir.', 'İlköğretim Matematik', 30),
+('8. Sınıf', 'Geometri ve Ölçme', 'Eşlik ve Benzerlik', 'M.8.3.3.2.', 'Benzer çokgenlerin benzerlik oranını belirler, bir çokgene eş ve benzer çokgenler oluşturur
+a) Somut modellerle, kareli kâğıtla veya kâğıtları katlayarak yapılacak çalışmalara yer verilir.
+b) Gerektiğinde uygun bilgi ve iletişim teknolojilerinden yararlanılır.
+c) Çokgenlerde benzerlik problemlerine girilmez.', 'İlköğretim Matematik', 31),
+('8. Sınıf', 'Geometri ve Ölçme', 'Dönüşüm Geometrisi', 'M.8.3.2.1.', 'Nokta, doğru parçası ve diğer şekillerin öteleme sonucundaki görüntülerini çizer.
+a) Kareli veya noktalı kâğıt, koordinat sistemi üzerinde çalışmalar yapılır.
+b) Dinamik geometri yazılımları ile yapılacak çalışmalara da yer verilebilir.
+c) Ötelemede şekil üzerindeki her bir noktanın aynı yönde hareket ettiği ve şekil ile görüntüsünün eş olduğu fark ettirilir.', 'İlköğretim Matematik', 32),
+('8. Sınıf', 'Geometri ve Ölçme', 'Dönüşüm Geometrisi', 'M.8.3.2.2.', 'Nokta, doğru parçası ve diğer şekillerin yansıma sonucu oluşan görüntüsünü oluşturur.
+a) Kareli veya noktalı kâğıt, koordinat sistemi üzerinde çalışmalar yapılır.
+b) Dinamik geometri yazılımları ile yapılacak çalışmalara da yer verilebilir.
+c) Yansımada şekil ile görüntüsü üzerinde birbirlerine karşılık gelen noktaların simetri doğrusuna dik ve aralarındaki uzaklıkların eşit olduğu bu nedenle şekil ile görüntüsünün eş olduğu fark ettirilir.
+ç) Simetri doğrularının üzerinde olan şekillerle de çalışmalar yapılır.', 'İlköğretim Matematik', 33),
+('8. Sınıf', 'Geometri ve Ölçme', 'Dönüşüm Geometrisi', 'M.8.3.2.3.', 'Çokgenlerin öteleme ve yansımalar sonucunda ortaya çıkan görüntüsünü oluşturur.
+a) En çok iki ardışık öteleme veya yansımaya yer verilir.
+b) Desen, motif ve benzeri görsellerde öteleme veya yansıma dönüşümlerini belirlemeye yönelik çalışmalara yer verilir.
+c) Geleneksel sanatlarımızdan (çini, seramik, dokuma vb.) örnekler de dikkate alınır.', 'İlköğretim Matematik', 33),
+('8. Sınıf', 'Geometri ve Ölçme', 'Geometrik Cisimler', 'M.8.3.4.1.', 'Dik prizmaları tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer.
+a) Somut modellerle çalışmalara yer verilir.
+b) Bilgi ve iletişim teknolojilerinden yararlanılabilir.', 'İlköğretim Matematik', 34),
+('8. Sınıf', 'Geometri ve Ölçme', 'Geometrik Cisimler', 'M.8.3.4.2.', 'Dik dairesel silindirin temel elemanlarını belirler, inşa eder ve açınımını çizer.
+a) Somut modellerle çalışmalara yer verilir.
+b) Bilgi ve iletişim teknolojilerinden yararlanılabilir.', 'İlköğretim Matematik', 34),
+('8. Sınıf', 'Geometri ve Ölçme', 'Geometrik Cisimler', 'M.8.3.4.3.', 'Dik dairesel silindirin yüzey alanı bağıntısını oluşturur, ilgili problemleri çözer.
+a) Somut modellerle çalışmalara yer verilir.
+b) Bilgi ve iletişim teknolojilerinden yararlanılabilir.', 'İlköğretim Matematik', 35),
+('8. Sınıf', 'Geometri ve Ölçme', 'Geometrik Cisimler', 'M.8.3.4.4.', 'Dik dairesel silindirin hacim bağıntısını oluşturur; ilgili problemleri çözer.
+a) Somut modellerle çalışmalara yer verilir.
+b) Bilgi ve iletişim teknolojilerinden yararlanılabilir.
+c) Dik dairesel silindirin hacmini tahmin etmeye yönelik çalışmalara yer verilir.
+ç) Dik dairesel silindirin hacim bağıntısını dik prizmanın hacim bağıntısı ile ilişkilendirmeye yönelik çalışmalara yer verilir.', 'İlköğretim Matematik', 35),
+('8. Sınıf', 'Geometri ve Ölçme', 'Geometrik Cisimler', 'M.8.3.4.5.', 'Dik piramidi tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer.
+a) Somut modellerle çalışmalara yer verilir.
+b) Bilgi ve iletişim teknolojilerinden yararlanılabilir.
+c) Alan ve hacim problemlerine girilmez.', 'İlköğretim Matematik', 36),
+('8. Sınıf', 'Geometri ve Ölçme', 'Geometrik Cisimler', 'M.8.3.4.6.', 'Dik koniyi tanır, temel elemanlarını belirler, inşa eder ve açınımını çizer.
+a) Somut modellerle çalışmalara yer verilir.
+b) Bilgi ve iletişim teknolojilerinden yararlanılabilir.
+c) Alan ve hacim problemlerine girilmez.', 'İlköğretim Matematik', 36),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations” carefully.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.L2.', 'Students can bring information about the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations” together through significant details and main components while listening/watching it.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.L3.', 'Students can make meaning of/derive meaning from the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations” through significant details by listening/watching it carefully.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations”.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.P1.', 'Students can select and use the target phonological elements of the current content about “school life with people, places and rules at school; school clubs; countries; national days and celebrations” accurately, authentically, and naturally through spontaneous decision-making processes and use it in an appropriate and effective way when communicating with others.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.R1.', 'Students can get ready for the reading-comprehension process about the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations”.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.R2.', 'Students can bring information about the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.R3.', 'Students can make meaning of / derive meaning from the current content about “school life with people, places and rules at school; school clubs; countries; national days and celebrations” by reading it carefully.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “school life with people, places and rules at school; school clubs; countries; national days and celebrations” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.V1.', 'Students can select and use the target vocabulary of the current content about “school life with people, places and rules at school; school clubs; countries; national days and celebrations” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.G1.', 'Students can select and use the target grammatical elements of the current content about
+“school life with people, places and rules at school; school clubs; countries; national days and celebrations” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.W1.', 'Students can get ready for the writing-expression process about the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations”.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.W2.', 'Students can understand the model/example for the writing task about the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations”.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.W3.', 'Students can organise a content for the assigned writing task on the current content “school life with people, places and rules at school; school clubs; countries; national days and celebrations” based on the model/example provided.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “school life with people, places and rules at school; school clubs; countries; national days and celebrations”.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “school life with people, places and rules at school; school clubs; countries; national days and celebrations” to communicate with other people.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “school life with people, places and rules at school; school clubs; countries; national days and celebrations” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.S1.', 'Students can get ready for speaking-expression process about the current content on
+“school life with people, places and rules at school; school clubs; countries; national days and celebrations”.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.S2.', 'Students can use the model/example for producing verbal content about the current content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations”.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.S3.', 'Students can organise a new verbal content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations” by speaking accurately, efficiently, and authentically.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.S4.', 'Students can construct a new verbal content on “school life with people, places and rules at school; school clubs; countries; national days and celebrations” by speaking accurately, efficiently, and authentically.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.S5.', 'Students can reorganise (reconstruct) and use information about the “school life with people, places and rules at school; school clubs; countries; national days and celebrations” to communicate with other people.', 'İngilizce', 4),
+('5. Sınıf', 'School Life', 'School Life', 'ENG.5.1.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “school life with people, places and rules at school; school clubs; countries; national days and celebrations” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 4),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” carefully.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.L2.', 'Students can bring information about the current content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” together through significant details and main components while listening/watching it.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.L3.', 'Students can make meaning of/derive meaning from the current content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” through significant details by listening/watching it carefully.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time”.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.P1.', 'Students can select and use the target phonological elements of the current content about
+“classroom life with classroom rules and language; school subjects; timetables; classroom
+objects; days of the week; time” accurately, authentically, and naturally through spontaneous
+decision-making processes and use it in an appropriate and effective way when communicating
+with others.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.R1.', 'Students can get ready for the reading-comprehension process about the current content on
+“classroom life with classroom rules and language; school subjects; timetables; classroom
+objects; days of the week; time”.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.R2.', 'Students can bring information about the current content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.R3.', 'Students can make meaning of / derive meaning from the current content about “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” by reading it carefully.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.V1.', 'Students can select and use the target vocabulary of the current content about “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.G1.', 'Students can select and use the target grammatical elements of the current content about
+“classroom life with classroom rules and language; school subjects; timetables; classroom
+objects; days of the week; time” accurately, authentically, spontaneously, and naturally and
+use it appropriately and effectively when communicating with others.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.W1.', 'Students can get ready for the writing-expression process about the current content on
+“classroom life with classroom rules and language; school subjects; timetables; classroom
+objects; days of the week; time”.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.W2.', 'Students can understand the model/example for the writing task about the current content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time”.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.W3.', 'Students can organise a content for the assigned writing task on the current content
+“classroom life with classroom rules and language; school subjects; timetables; classroom
+objects; days of the week; time” based on the model/example provided.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time”.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the
+“classroom life with classroom rules and language; school subjects; timetables; classroom
+objects; days of the week; time” to communicate with other people.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.S1.', 'Students can get ready for speaking-expression process about the current content on
+“classroom life with classroom rules and language; school subjects; timetables; classroom
+objects; days of the week; time”.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.S2.', 'Students can use the model/example for producing verbal content about the current content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time”.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.S3.', 'Students can organise a new verbal content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” by speaking accurately, efficiently, and authentically.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.S4.', 'Students can construct a new verbal content on “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” by speaking accurately, efficiently, and authentically.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.S5.', 'Students can reorganise (reconstruct) and use information about the “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” to communicate with other people.', 'İngilizce', 8),
+('5. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.5.2.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “classroom life with classroom rules and language; school subjects; timetables; classroom objects; days of the week; time” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 8),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities” carefully.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.L2.', 'Students can bring information about the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities” together through significant details and main components while listening/watching it.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.L3.', 'Students can make meaning of/derive meaning from the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities” through significant details by listening/watching it carefully.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities”.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.P1.', 'Students can select and use the target phonological elements of the current content about
+“personal life with basic body parts and physical features; clothes; daily routines and activities”
+accurately, authentically, and naturally through spontaneous decision-making processes and
+use it in an appropriate and effective way when communicating with others.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.R1.', 'Students can get ready for the reading-comprehension process about the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities”.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.R2.', 'Students can bring information about the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.R3.', 'Students can make meaning of / derive meaning from the current content about “personal life with basic body parts and physical features; clothes; daily routines and activities” by reading it carefully.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “personal life with basic body parts and physical features; clothes; daily routines and activities” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.V1.', 'Students can select and use the target vocabulary of the current content about “personal life with basic body parts and physical features; clothes; daily routines and activities” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.G1.', 'Students can select and use the target grammatical elements of the current content about
+“personal life with basic body parts and physical features; clothes; daily routines and activities”
+accurately, authentically, spontaneously, and naturally and use it appropriately and effectively
+when communicating with others.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.W1.', 'Students can get ready for the writing-expression process about the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities”.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.W2.', 'Students can understand the model/example for the writing task about the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities”.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.W3.', 'Students can organise a content for the assigned writing task on the current content “personal life with basic body parts and physical features; clothes; daily routines and activities” based on the model/example provided.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “personal life with basic body parts and physical features; clothes; daily routines and activities”.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “personal life with basic body parts and physical features; clothes; daily routines and activities” to communicate with other people.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “personal life with basic body parts and physical features; clothes; daily routines and activities” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.S1.', 'Students can get ready for speaking-expression process about the current content on
+“personal life with basic body parts and physical features; clothes; daily routines and activities”.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.S2.', 'Students can use the model/example for producing verbal content about the current content on “personal life with basic body parts and physical features; clothes; daily routines and activities”.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.S3.', 'Students can organise a new verbal content on “personal life with basic body parts and physical features; clothes; daily routines and activities” by speaking accurately, efficiently, and authentically.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.S4.', 'Students can construct a new verbal content on “personal life with basic body parts and physical features; clothes; daily routines and activities” by speaking accurately, efficiently, and authentically.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.S5.', 'Students can reorganise (reconstruct) and use information about the “personal life with basic body parts and physical features; clothes; daily routines and activities” to communicate with other people.', 'İngilizce', 13),
+('5. Sınıf', 'Personal Life', 'Personal Life', 'ENG.5.3.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “personal life with basic body parts and physical features; clothes; daily routines and activities” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 13),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “family life with family members'' routines; family members'' hobbies and activities” carefully.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.L2.', 'Students can bring information about the current content on “family life with family members'' routines; family members'' hobbies and activities” together through significant details and main components while listening/watching it.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.L3.', 'Students can make meaning of/derive meaning from the current content on “family life with family members'' routines; family members'' hobbies and activities” through significant details by listening/watching it carefully.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “family life with family members'' routines; family members'' hobbies and activities”.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.P1.', 'Students can select and use the target phonological elements of the current content about
+“family life with family members'' routines; family members'' hobbies and activities” accurately,
+authentically, and naturally through spontaneous decision-making processes and use it in an
+appropriate and effective way when communicating with others.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.R1.', 'Students can get ready for the writing-comprehension process about the current content on
+“family life with family members'' routines; family members'' hobbies and activities”.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.R2.', 'Students can bring information about the current content on “family life with family members'' routines; family members'' hobbies and activities” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.R3.', 'Students can make meaning of / derive meaning from the current content about “family life with family members'' routines; family members'' hobbies and activities” by reading it carefully.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “family life with family members'' routines; family members'' hobbies and activities” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.V1.', 'Students can select and use the target vocabulary of the current content about “family life with family members'' routines; family members'' hobbies and activities” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.G1.', 'Students can select and use the target grammatical elements of the current content about
+“family life with family members'' routines; family members'' hobbies and activities” accurately,
+authentically, spontaneously, and naturally and use it appropriately and effectively when
+communicating with others.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.W1.', 'Students can get ready for the writing-expression process about the current content on
+“family life with family members'' routines; family members'' hobbies and activities”.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.W2.', 'Students can understand the model/example for the writing task about the current content on “family life with family members'' routines; family members'' hobbies and activities”.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.W3.', 'Students can organise a content for the assigned writing task on the current content “family life with family members'' routines; family members'' hobbies and activities” based on the model/example provided.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “family life with family members'' routines; family members'' hobbies and activities”.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “family life with family members'' routines; family members'' hobbies and activities” to communicate with other people.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “family life with family members'' routines; family members'' hobbies and activities” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.S1.', 'Students can get ready for speaking-expression process about the current content on “family life with family members'' routines; family members'' hobbies and activities”.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.S2.', 'Students can use the model/example for producing verbal content about the current content on “family life with family members'' routines; family members'' hobbies and activities”.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.S3.', 'Students can organise a new verbal content on “family life with family members'' routines; family members'' hobbies and activities” by speaking accurately, efficiently, and authentically.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.S4.', 'Students can construct a new verbal content on “family life with family members'' routines; family members'' hobbies and activities” by speaking accurately, efficiently, and authentically.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.S5.', 'Students can reorganise (reconstruct) and use information about the “family life with family members'' routines; family members'' hobbies and activities” to communicate with other people.', 'İngilizce', 17),
+('5. Sınıf', 'Family Life', 'Family Life', 'ENG.5.4.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “family life with family members'' routines; family members'' hobbies and activities” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 17),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” carefully.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.L2.', 'Students can bring information about the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” together through significant details and main components while listening/ watching it.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.L3.', 'Students can make meaning of/derive meaning from the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” through significant details by listening/watching it carefully.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses”.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.P1.', 'Students can select and use the target phonological elements of the current content about “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” accurately, authentically, and naturally through spontaneous decision-making processes and use it in an appropriate and effective way when communicating with others.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.R1.', 'Students can get ready for the reading-comprehension process about the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses”.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.R2.', 'Students can bring information about the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.R3.', 'Students can make meaning of / derive meaning from the current content about “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” by reading it carefully.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.V1.', 'Students can select and use the target vocabulary of the current content about “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.G1.', 'Students can select and use the target grammatical elements of the current content about “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.W1.', 'Students can get ready for the writing-expression process about the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses”.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.W2.', 'Students can understand the model/example for the writing task about the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses”.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.W3.', 'Students can organise a content for the assigned writing task on the current content “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” based on the model/example provided.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses”.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” to communicate with other people.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.S1.', 'Students can get ready for speaking-expression process about the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses”.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ;different types of houses”.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.S3.', 'Students can organise a new verbal content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” by speaking accurately, efficiently, and authentically.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.S4.', 'Students can construct a new verbal content on “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” by speaking accurately, efficiently, and authentically.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.S5.', 'Students can reorganise (reconstruct) and use information about the “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” to communicate with other people.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.5.5.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in the neighbourhood and city with places for recreation and attractions in the neighbourhood and city ; different types of houses” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 21),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city” carefully.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.L2.', 'Students can bring information about the current conte t on “life in the world with basic food types; ordering in a restaurant; food events in the city” together through significant details and main components while listening/watching it.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.L3.', 'Students can make meaning of/derive meaning from the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city” through significant details by listening/watching it carefully.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city”.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.P1.', 'Students can select and use the target phonological elements of the current content about “life in the world with basic food types; ordering in a restaurant; food events in the city” accurately, authentically, and naturally through spontaneous decision-making processes and use it in an appropriate and effective way when communicating with others.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.R1.', 'Students can get ready for the reading-comprehension process about the current content on
+“life in the world with basic food types; ordering in a restaurant; food events in the city”.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.R2.', 'Students can bring information about the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.R3.', 'Students can make meaning of / derive meaning from the current content about “life in the world with basic food types; ordering in a restaurant; food events in the city” by reading it carefully.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in the world with basic food types; ordering in a restaurant; food events in the city” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.V1.', 'Students can select and use the target vocabulary of the current content about “life in the world with basic food types; ordering in a restaurant; food events in the city” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.G1.', 'Students can select and use the target grammatical elements of the current content about
+“life in the world with basic food types; ordering in a restaurant; food events in the city”
+accurately, authentically, spontaneously, and naturally and use it appropriately and effectively
+when communicating with others.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.W1.', 'Students can get ready for the writing-expression process about the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city”.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.W2.', 'Students can understand the model/example for the writing task about the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city”.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.W3.', 'Students can organise a content for the assigned writing task on the current content “life in the world with basic food types; ordering in a restaurant; food events in the city” based on the model/example provided.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in the world with basic food types; ordering in a restaurant; food events in the city”.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “life in the world with basic food types; ordering in a restaurant; food events in the city” to communicate with other people.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in the world with basic food types; ordering in a restaurant; food events in the city” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.S1.', 'Students can get ready for speaking-expression process about the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city”.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in the world with basic food types; ordering in a restaurant; food events in the city”.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.S3.', 'Students can organise a new verbal content on “life in the world with basic food types; ordering in a restaurant; food events in the city” by speaking accurately, efficiently, and authentically.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.S4.', 'Students can construct a new verbal content on “life in the world with basic food types; ordering in a restaurant; food events in the city” by speaking accurately, efficiently, and authentically.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.S5.', 'Students can reorganise (reconstruct) and use information about the “life in the world with basic food types; ordering in a restaurant; food events in the city” to communicate with other people.', 'İngilizce', 25),
+('5. Sınıf', 'Life in the World', 'Life in the World', 'ENG.5.6.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in the world with basic food types; ordering in a restaurant; food events in the city” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 25),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats” carefully. Students can bring information about the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats” together through significant details and main components while listening/watching it.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.L2.', 'Students can bring information about the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats” together through significant details and main components while listening/watching it.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.L3.', 'Students can make meaning of/derive meaning from the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats” through significant details by listening/watching it carefully.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats”.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.P1.', 'Students can select and use the target phonological elements of the current content about
+“life in nature with types of animals in nature; wild animals in nature; their habitats” accurately,
+authentically, and naturally through spontaneous decision-making processes and use it in an
+appropriate and effective way when communicating with others.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.R1.', 'Students can get ready for the reading-comprehension process about the current content on
+“life in nature with types of animals in nature; wild animals in nature; their habitats”.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.R2.', 'Students can bring information about the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.R3.', 'Students can make meaning of / derive meaning from the current content about “life in nature with types of animals in nature; wild animals in nature; their habitats” by reading it carefully.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in nature with types of animals in nature; wild animals in nature; their habitats” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.V1.', 'Students can select and use the target vocabulary of the current content about “life in nature with types of animals in nature; wild animals in nature; their habitats” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.G1.', 'Students can select and use the target grammatical elements of the current content about
+“life in nature with types of animals in nature; wild animals in nature; their habitats” accurately,
+authentically, spontaneously, and naturally and use it appropriately and effectively when
+communicating with others.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.W1.', 'Students can get ready for the writing-expression process about the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats”.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.W2.', 'Students can understand the model/example for the writing task about the current content on
+“life in nature with types of animals in nature; wild animals in nature; their habitats”.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.W3.', 'Students can organise a content for the assigned writing task on the current content “life in nature with types of animals in nature; wild animals in nature; their habitats” based on the model/example provided.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in nature with types of animals in nature; wild animals in nature; their habitats”.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “life in nature with types of animals in nature; wild animals in nature; their habitats” to communicate with other people.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in nature with types of animals in nature; wild animals in nature; their habitats” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.S1.', 'Students can get ready for speaking-expression process about the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats”.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in nature with types of animals in nature; wild animals in nature; their habitats”.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.S3.', 'Students can organise a new verbal content on “life in nature with types of animals in nature; wild animals in nature; their habitats” by speaking accurately, efficiently, and authentically.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.S4.', 'Students can construct a new verbal content on “life in nature with types of animals in nature; wild animals in nature; their habitats” by speaking accurately, efficiently, and authentically.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.S5.', 'Students can reorganise (reconstruct) and use information about the “life in nature with types of animals in nature; wild animals in nature; their habitats” to communicate with other people.', 'İngilizce', 29),
+('5. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.5.7.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in nature with types of animals in nature; wild animals in nature; their habitats” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 29),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” carefully.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.L2.', 'Students can bring information about the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” together through significant details and main components while listening/watching it.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.L3.', 'Students can make meaning of/derive meaning from the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” through significant details by listening/watching it carefully.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays”.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.P1.', 'Students can select and use the target phonological elements of the current content about
+“life in the universe and future with planet Earth; holidays; school holidays, places, activities,
+and plans for holidays” accurately, authentically, and naturally through spontaneous decisionmaking
+processes and use it in an appropriate and effective way when communicating with
+others.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.R1.', 'Students can get ready for the reading-comprehension process about the current content on
+“life in the universe and future with planet Earth; holidays; school holidays, places, activities,
+and plans for holidays”.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.R2.', 'Students can bring information about the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.R3.', 'Students can make meaning of / derive meaning from the current content about “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” by reading it carefully.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.V1.', 'Students can select and use the target vocabulary of the current content about “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.G1.', 'Students can select and use the target grammatical elements of the current content about
+“life in the universe and future with planet Earth; holidays; school holidays, places, activities,
+and plans for holidays” accurately, authentically, spontaneously, and naturally and use it
+appropriately and effectively when communicating with others.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.W1.', 'Students can get ready for the writing-expression process about the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays”.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.W2.', 'Students can understand the model/example for the writing task about the current content on
+“life in the universe and future with planet Earth; holidays; school holidays, places, activities,
+and plans for holidays”.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.W3.', 'Students can organise a content for the assigned writing task on the current content “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” based on the model/example provided.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays”.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the
+“life in the universe and future with planet Earth; holidays; school holidays, places, activities,
+and plans for holidays” to communicate with other people.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.S1.', 'Students can get ready for speaking-expression process about the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays”.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays”.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.S3.', 'Students can organise a new verbal content on “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” by speaking accurately, efficiently, and authentically.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.S4.', 'Students can construct a new verbal content on “life in the universe and future with planet
+Earth; holidays; school holidays, places, activities, and plans for holidays” by speaking
+accurately, efficiently, and authentically.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.S5.', 'Students can reorganise (reconstruct) and use information about the “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” to communicate with other people.', 'İngilizce', 33),
+('5. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.5.8.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in the universe and future with planet Earth; holidays; school holidays, places, activities, and plans for holidays” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 33),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations” carefully.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.L2.', 'Students can bring information about the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations” together through significant details and main components while listening/watching it.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.L3.', 'Students can make meaning of/derive meaning from the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations” through significant details by listening/watching it carefully.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations”.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.P1.', 'Students can select and use the target phonological elements of the current content about
+“school life with roles, and responsibilities at school; school routines; national days and
+celebrations” accurately, authentically, and naturally through spontaneous decision-making
+processes and use it in an appropriate and effective way when communicating with others.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.R1.', 'Students can get ready for the reading-comprehension process about the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations”.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.R2.', 'Students can bring information about the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations” through skimming
+(looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.R3.', 'Students can make meaning of / derive meaning from the current content about “school life with roles, and responsibilities at school; school routines; national days and celebrations” by reading it carefully.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “school life with roles, and responsibilities at school; school routines; national days and celebrations” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.V1.', 'Students can select and use the target vocabulary of the current content about “school life with roles, and responsibilities at school; school routines; national days and celebrations” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.G1.', 'Students can select and use the target grammatical elements of the current content about
+“school life with roles, and responsibilities at school; school routines; national days and
+celebrations” accurately, authentically, spontaneously, and naturally and use it appropriately
+and effectively when communicating with others.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.W1.', 'Students can get ready for the writing-expression process about the current content on
+“school life with roles, and responsibilities at school; school routines; national days and
+celebrations”.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.W2.', 'Students can understand the model/example for the writing task about the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations”.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.W3.', 'Students can organise a content for the assigned writing task on the current content “school life with roles, and responsibilities at school; school routines; national days and celebrations” based on the model/example provided.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “school life with roles, and responsibilities at school; school routines; national days and celebrations”.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “school life with roles, and responsibilities at school; school routines; national days and celebrations” to communicate with other people.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “school life with roles, and responsibilities at school; school routines; national days and celebrations” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.S1.', 'Students can get ready for speaking-expression process about the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations”.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.S2.', 'Students can use the model/example for producing verbal content about the current content on “school life with roles, and responsibilities at school; school routines; national days and celebrations”.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.S3.', 'Students can organise a new verbal content on “school life with roles, and responsibilities at school; school routines; national days and celebrations” by speaking accurately, efficiently, and authentically.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.S4.', 'Students can construct a new verbal content on “school life with roles, and responsibilities at school; school routines; national days and celebrations” by speaking accurately, efficiently, and authentically.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.S5.', 'Students can reorganise (reconstruct) and use information about the “school life with roles, and responsibilities at school; school routines; national days and celebrations” to communicate with other people.', 'İngilizce', 4),
+('6. Sınıf', 'School Life', 'School Life', 'ENG.6.1.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “school life with roles, and responsibilities at school; school routines; national days and celebrations” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 4),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” carefully.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.L2.', 'Students can bring information about the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” together through significant details and main components while listening/ watching it.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.L3.', 'Students can make meaning of/derive meaning from the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” through significant details by listening/watching it carefully.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50”.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.P1.', 'Students can select and use the target phonological elements of the current content about
+“classroom life with daily and study routines; learning activities in the classroom; cardinal
+numbers 100-500; ordinal numbers 1-50” accurately, authentically, and naturally through
+spontaneous decision-making processes and use it in an appropriate and effective way when
+communicating with others.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.R1.', 'Students can get ready for the reading-comprehension process about the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50”.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.R2.', 'Students can bring information about the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.R3.', 'Students can make meaning of / derive meaning from the current content about “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-
+500; ordinal numbers 1-50” by reading it carefully.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.V1.', 'Students can select and use the target vocabulary of the current content about “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-
+500; ordinal numbers 1-50” accurately, authentically, spontaneously, and naturally and use it
+appropriately and effectively when communicating with others.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.G1.', 'Students can select and use the target grammatical elements of the current content about
+“classroom life with daily and study routines; learning activities in the classroom; cardinal
+numbers 100-500; ordinal numbers 1-50” accurately, authentically, spontaneously, and
+naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.W1.', 'Students can get ready for the writing-expression process about the current content on
+“classroom life with daily and study routines; learning activities in the classroom; cardinal
+numbers 100-500; ordinal numbers 1-50”.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.W2.', 'Students can understand the model/example for the writing task about the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50”.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.W3.', 'Students can organise a content for the assigned writing task on the current content
+“classroom life with daily and study routines; learning activities in the classroom; cardinal
+numbers 100-500; ordinal numbers 1-50” based on the model/example provided.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50”.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” to communicate with other people.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers
+1-50” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.S1.', 'Students can get ready for speaking-expression process about the current content on
+“classroom life with daily and study routines; learning activities in the classroom; cardinal
+numbers 100-500; ordinal numbers 1-50”.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.S2.', 'Students can use the model/example for producing verbal content about the current content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50”.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.S3.', 'Students can organise a new verbal content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” by speaking accurately, efficiently, and authentically.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.S4.', 'Students can construct a new verbal content on “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” by speaking accurately, efficiently, and authentically.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.S5.', 'Students can reorganise (reconstruct) and use information about the “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers 1-50” to communicate with other people.', 'İngilizce', 8),
+('6. Sınıf', 'Classroom Life', 'Classroom Life', 'ENG.6.2.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “classroom life with daily and study routines; learning activities in the classroom; cardinal numbers 100-500; ordinal numbers
+1-50” to communicate with other people in relation to themselves or others, both individually
+and/or with others.', 'İngilizce', 8),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “personal life with body parts, physical appearance and clothes; personality and character” carefully.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.L2.', 'Students can bring information about the current content on “personal life with body parts, physical appearance and clothes; personality and character” together through significant details and main components while listening/watching it.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.L3.', 'Students can make meaning of/derive meaning from the current content on “personal life with body parts, physical appearance and clothes; personality and character” through significant details by listening/watching it carefully.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “personal life with body parts, physical appearance and clothes; personality and character”.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.P1.', 'Students can select and use the target phonological elements of the current content about
+“personal life with body parts, physical appearance and clothes; personality and character”
+accurately, authentically, and naturally through spontaneous decision-making processes and
+use it in an appropriate and effective way when communicating with others.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.R1.', 'Students can get ready for the reading-comprehension process about the current content on
+“personal life with body parts, physical appearance and clothes; personality and character”.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.R2.', 'Students can bring information about the current content on “personal life with body parts, physical appearance and clothes; personality and character” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.R3.', 'Students can make meaning of / derive meaning from the current content about “personal life with body parts, physical appearance and clothes; personality and character” by reading it carefully.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “personal life with body parts, physical appearance and clothes; personality and character” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.V1.', 'Students can select and use the target vocabulary of the current content about “personal life with body parts, physical appearance and clothes; personality and character” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.G1.', 'Students can select and use the target grammatical elements of the current content about
+“personal life with body parts, physical appearance and clothes; personality and character”
+accurately, authentically, spontaneously, and naturally and use it appropriately and effectively
+when communicating with others.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.W1.', 'Students can get ready for the writing-expression process about the current content on
+“personal life with body parts, physical appearance and clothes; personality and character”.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.W2.', 'Students can understand the model/example for the writing task about the current content on
+“personal life with body parts, physical appearance and clothes; personality and character”.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.W3.', 'Students can organise a content for the assigned writing task on the current content
+“personal life with body parts, physical appearance and clothes; personality and character”
+based on the model/example provided.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “personal life with body parts, physical appearance and clothes; personality and character” .', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the“personal life with body parts, physical appearance and clothes; personality and character” to communicate with other people.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “personal life with body parts, physical appearance and clothes; personality and character” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.S1.', 'Students can get ready for speaking-expression process about the current content on
+“personal life with body parts, physical appearance and clothes; personality and character”.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.S2.', 'Students can use the model/example for producing verbal content about the current content on “personal life with body parts, physical appearance and clothes; personality and character”.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.S3.', 'Students can organise a new verbal content on “personal life with body parts, physical appearance and clothes; personality and character” by speaking accurately, efficiently, and authentically.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.S4.', 'Students can construct a new verbal content on “personal life with body parts, physical appearance and clothes; personality and character” by speaking accurately, efficiently, and authentically.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.S5.', 'Students can reorganise (reconstruct) and use information about the “personal life with body parts, physical appearance and clothes; personality and character” to communicate with other people.', 'İngilizce', 13),
+('6. Sınıf', 'Personal Life', 'Personal Life', 'ENG.6.3.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “personal life with body parts, physical appearance and clothes; personality and character” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 13),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” carefully.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.L2.', 'Students can bring information about the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” together through significant details and main components while listening/watching it.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.L3.', 'Students can make meaning of/derive meaning from the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” through significant details by listening/watching it carefully.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses”.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.P1.', 'Students can select and use the target phonological elements of the current content about
+“family life with family members'' jobs, working places, and job routines; different types of family
+homes and houses” accurately, authentically, and naturally through spontaneous decisionmaking
+processes and use it in an appropriate and effective way when communicating with
+others.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.R1.', 'Students can get ready for the reading-comprehension process about the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses”.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.R2.', 'Students can bring information about the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.R3.', 'Students can make meaning of / derive meaning from the current content about “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” by reading it carefully.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.V1.', 'Students can select and use the target vocabulary of the current content about “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.G1.', 'Students can select and use the target grammatical elements of the current content about
+“family life with family members'' jobs, working places, and job routines; different types of
+family homes and houses” accurately, authentically, spontaneously, and naturally and use it
+appropriately and effectively when communicating with others.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.W1.', 'Students can get ready for the writing-expression process about the current content on
+“family life with family members'' jobs, working places, and job routines; different types of
+family homes and houses”.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.W2.', 'Students can understand the model/example for the writing task about the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses”.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.W3.', 'Students can organise a content for the assigned writing task on the current content “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” based on the model/example provided.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “family life with family members'' jobs, working places, and job routines; different types of family homes and houses”.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” to communicate with other people.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.S1.', 'Students can get ready for speaking-expression process about the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses”.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.S2.', 'Students can use the model/example for producing verbal content about the current content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses”.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.S3.', 'Students can organise a new verbal content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” by speaking accurately, efficiently, and authentically.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.S4.', 'Students can construct a new verbal content on “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” by speaking accurately, efficiently, and authentically.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.S5.', 'Students can reorganise (reconstruct) and use information about the “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” to communicate with other people.', 'İngilizce', 17),
+('6. Sınıf', 'Family Life', 'Family Life', 'ENG.6.4.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “family life with family members'' jobs, working places, and job routines; different types of family homes and houses” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 17),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” carefully.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.L2.', 'Students can bring information about the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” together through significant details and main components while listening/watching it.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.L3.', 'Students can make meaning of/derive meaning from the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” through significant details by listening/watching it carefully.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city”.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.P1.', 'Students can select and use the target phonological elements of the current content about
+“life in the neighbourhood and the city with festivals and events (sports, music, arts) in the
+neighbourhood and city; transportation in the neighbourhood and the city” accurately,
+authentically, and naturally through spontaneous decision-making processes and use it in an
+appropriate and effective way when communicating with others.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.R1.', 'Students can get ready for the reading-comprehension process about the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city”.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.R2.', 'Students can bring information about the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.R3.', 'Students can make meaning of / derive meaning from the current content about “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” by reading it carefully.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.V1.', 'Students can select and use the target vocabulary of the current content about “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.G1.', 'Students can select and use the target grammatical elements of the current content about
+“life in the neighbourhood and the city with festivals and events (sports, music, arts) in the
+neighbourhood and city; transportation in the neighbourhood and the city” accurately,
+authentically, spontaneously, and naturally and use it appropriately and effectively when
+communicating with others.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.W1.', 'Students can get ready for the writing-expression process about the current content on
+“life in the neighbourhood and the city with festivals and events (sports, music, arts) in the
+neighbourhood and city; transportation in the neighbourhood and the city”.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.W2.', 'Students can understand the model/example for the writing task about the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city”.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.W3.', 'Students can organise a content for the assigned writing task on the current content “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” based on the model/example provided.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city”.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the
+“life in the neighbourhood and the city with festivals and events (sports, music, arts) in the
+neighbourhood and city; transportation in the neighbourhood and the city” to communicate
+with other people.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” in relation to themselves or others, both individually and/ or with others.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.S1.', 'Students can get ready for speaking-expression process about the current content on
+“life in the neighbourhood and the city with festivals and events (sports, music, arts) in the
+neighbourhood and city; transportation in the neighbourhood and the city”.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city”.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.S3.', 'Students can organise a new verbal content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” by speaking accurately, efficiently, and authentically.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.S4.', 'Students can construct a new verbal content on “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” by speaking accurately, efficiently, and authentically.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.S5.', 'Students can reorganise (reconstruct) and use information about the “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” to communicate with other people.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the Neighbourhood and City', 'Life in the Neighbourhood and City', 'ENG.6.5.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in the neighbourhood and the city with festivals and events (sports, music, arts) in the neighbourhood and city; transportation in the neighbourhood and the city” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 21),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” carefully.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.L2.', 'Students can bring information about the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” together through significant details and main components while listening/ watching it.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.L3.', 'Students can make meaning of/derive meaning from the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” through significant details by listening/watching it carefully.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world”.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.P1.', 'Students can select and use the target phonological elements of the current content about
+“life in the world and culture with countries, nationalities, and languages in the world; food
+types and events from different parts of the world” accurately, authentically, and naturally
+through spontaneous decision-making processes and use it in an appropriate and effective
+way when communicating with others.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.R1.', 'Students can get ready for the reading-comprehension process about the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world”.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.R2.', 'Students can bring information about the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.R3.', 'Students can make meaning of / derive meaning from the current content about “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” by reading it carefully.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.V1.', 'Students can select and use the target vocabulary of the current content about “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.G1.', 'Students can select and use the target grammatical elements of the current content about
+“life in the world and culture with countries, nationalities, and languages in the world; food
+types and events from different parts of the world” accurately, authentically, spontaneously,
+and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.W1.', 'Students can get ready for the writing-expression process about the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world”.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.W2.', 'Students can understand the model/example for the writing task about the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world”.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.W3.', 'Students can organise a content for the assigned writing task on the current content “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” based on the model/example provided.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world”.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the
+“life in the world and culture with countries, nationalities, and languages in the world; food
+types and events from different parts of the world” to communicate with other people.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.S1.', 'Students can get ready for speaking-expression process about the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world”.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world”.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.S3.', 'Students can organise a new verbal content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” by speaking accurately, efficiently, and authentically.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.S4.', 'Students can construct a new verbal content on “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” by speaking accurately, efficiently, and authentically.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.S5.', 'Students can reorganise (reconstruct) and use information about the “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” to communicate with other people.', 'İngilizce', 25),
+('6. Sınıf', 'Life in the World and Culture', 'Life in the World and Culture', 'ENG.6.6.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in the world and culture with countries, nationalities, and languages in the world; food types and events from different parts of the world” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 25),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions” carefully.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.L2.', 'Students can bring information about the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions” together through significant details and main components while listening/watching it.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.L3.', 'Students can make meaning of/derive meaning from the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions” through significant details by listening/watching it carefully.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions”.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.P1.', 'Students can select and use the target phonological elements of the current content about
+“life in nature and global problems with activities in nature; environmental problems in the
+world and solutions” accurately, authentically, and naturally through spontaneous decisionmaking
+processes and use it in an appropriate and effective way when communicating with
+others.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.R1.', 'Students can get ready for the reading-comprehension process about the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions”.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.R2.', 'Students can bring information about the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions” through skimming
+(looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.R3.', 'Students can make meaning of / derive meaning from the current content about “life in nature and global problems with activities in nature; environmental problems in the world and solutions” by reading it carefully.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in nature and global problems with activities in nature; environmental problems in the world and solutions” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.V1.', 'Students can select and use the target vocabulary of the current content about “life in nature and global problems with activities in nature; environmental problems in the world and solutions” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.G1.', 'Students can select and use the target grammatical elements of the current content about “life in nature and global problems with activities in nature; environmental problems in the world and solutions” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.W1.', 'Students can get ready for the writing-expression process about the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions”.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.W2.', 'Students can understand the model/example for the writing task about the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions”.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.W3.', 'Students can organise a content for the assigned writing task on the current content “life in nature and global problems with activities in nature; environmental problems in the world and solutions” based on the model/example provided.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in nature and global problems with activities in nature; environmental problems in the world and solutions”.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “life in nature and global problems with activities in nature; environmental problems in the world and solutions” to communicate with other people.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in nature and global problems with activities in nature; environmental problems in the world and solutions” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.S1.', 'Students can get ready for speaking-expression process about the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions”.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions”.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.S3.', 'Students can organise a new verbal content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions” by speaking accurately, efficiently, and authentically.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.S4.', 'Students can construct a new verbal content on “life in nature and global problems with activities in nature; environmental problems in the world and solutions” by speaking accurately, efficiently, and authentically.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.S5.', 'Students can reorganise (reconstruct) and use information about the “life in nature and global problems with activities in nature; environmental problems in the world and solutions” to communicate with other people.', 'İngilizce', 29),
+('6. Sınıf', 'Life in Nature', 'Life in Nature', 'ENG.6.7.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in nature and global problems with activities in nature; environmental problems in the world and solutions” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 29),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.L1.', 'Students can get ready for the listening/watching-comprehension process for the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” carefully.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.L2.', 'Students can bring information about the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” together through significant details and main components while listening/watching it.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.L3.', 'Students can make meaning of/derive meaning from the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” through significant details by listening/watching it carefully.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.L4.', 'Students can convey their knowledge, experience, thoughts, and feelings examined carefully about the whole listening/watching-comprehension process in relation to the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future”.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.P1.', 'Students can select and use the target phonological elements of the current content about
+“life in the universe and future with planets and the Earth as a planet; life on Earth in the future”
+accurately, authentically, and naturally through spontaneous decision-making processes and
+use it in an appropriate and effective way when communicating with others.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.R1.', 'Students can get ready for the reading-comprehension process about the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future”.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.R2.', 'Students can bring information about the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” through skimming (looking quickly at) the audio-visual elements and reading the content very quickly.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.R3.', 'Students can make meaning of / derive meaning from the current content about “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” by reading it carefully.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.R4.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the reading-comprehension process about the current content, “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.V1.', 'Students can select and use the target vocabulary of the current content about “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” accurately, authentically, spontaneously, and naturally and use it appropriately and effectively when communicating with others.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.G1.', 'Students can select and use the target grammatical elements of the current content about
+“life in the universe and future with planets and the Earth as a planet; life on Earth in the future”
+accurately, authentically, spontaneously, and naturally and use it appropriately and effectively
+when communicating with others.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.W1.', 'Students can get ready for the writing-expression process about the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future”.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.W2.', 'Students can understand the model/example for the writing task about the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future”.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.W3.', 'Students can organise a content for the assigned writing task on the current content “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” based on the model/example provided.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.W4.', 'Students can individually construct/form content for the assigned writing task on the current content “life in the universe and future with planets and the Earth as a planet; life on Earth in the future”.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.W5.', 'Students can reorganise (reconstruct) and use information in the new written tasks about the “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” to communicate with other people.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.W6.', 'Students can reflect on their knowledge, experiences, thoughts, and feelings related to the writing-expression process about the current content, “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” in relation to themselves or others, both individually and/or with others.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.S1.', 'Students can get ready for speaking-expression process about the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future”.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.S2.', 'Students can use the model/example for producing verbal content about the current content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future”.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.S3.', 'Students can organise a new verbal content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” by speaking accurately, efficiently, and authentically.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.S4.', 'Students can construct a new verbal content on “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” by speaking accurately, efficiently, and authentically.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.S5.', 'Students can reorganise (reconstruct) and use information about the “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” to communicate with other people.', 'İngilizce', 33),
+('6. Sınıf', 'Life in the Universe and Future', 'Life in the Universe and Future', 'ENG.6.8.S6.', 'Students can convey their knowledge, experiences, thoughts, and feelings related to the speaking-expression process about the current content, “life in the universe and future with planets and the Earth as a planet; life on Earth in the future” to communicate with other people in relation to themselves or others, both individually and/or with others.', 'İngilizce', 33),
+('7. Sınıf', 'Appearance and Personality', 'Appearance and Personality', 'E7.1.L1.', 'Students will be able to understand clear, standard speech on appearances and personalities.', 'İngilizce', 1),
+('7. Sınıf', 'Appearance and Personality', 'Appearance and Personality', 'E7.1.SI1.', 'Students will be able to talk about other people''s appearances and personalities.', 'İngilizce', 1),
+('7. Sınıf', 'Appearance and Personality', 'Appearance and Personality', 'E7.1.SP1.', 'Students will be able to report on apperances and personalities of other people.', 'İngilizce', 1),
+('7. Sınıf', 'Appearance and Personality', 'Appearance and Personality', 'E7.1.R1.', 'Students will be able to understand a simple text about appearances, personalities, and comparisons including explanations and reasons.', 'İngilizce', 1),
+('7. Sınıf', 'Appearance and Personality', 'Appearance and Personality', 'E7.1.W1.', 'Students will be able to write simple pieces to compare people.', 'İngilizce', 1),
+('7. Sınıf', 'Sports', 'Sports', 'E7.2.L1.', 'Students will be able to recognize frequency adverbs in simple oral texts.', 'İngilizce', 4),
+('7. Sınıf', 'Sports', 'Sports', 'E7.2.SI1.', 'Students will be able to ask questions related to the frequency of events.', 'İngilizce', 4),
+('7. Sınıf', 'Sports', 'Sports', 'E7.2.SP1.', 'Students will be able to talk about routines/daily activities by using frequency adverbs and giving explanations and reasons.', 'İngilizce', 4),
+('7. Sınıf', 'Sports', 'Sports', 'E7.2.R1.', 'Students will be able to understand short and simple texts on sports.', 'İngilizce', 4),
+('7. Sınıf', 'Sports', 'Sports', 'E7.2.W1.', 'Students will be able to write pieces about routines/daily activities by using frequency adverbs.', 'İngilizce', 4),
+('7. Sınıf', 'Biographies', 'Biographies', 'E7.3.L1.', 'Students will be able to recognize specific information in oral texts dealing with past events and dates.', 'İngilizce', 8),
+('7. Sınıf', 'Biographies', 'Biographies', 'E7.3.SI1.', 'Students will be able to talk about past events with definite time.', 'İngilizce', 8),
+('7. Sınıf', 'Biographies', 'Biographies', 'E7.3.SP1.', 'Students will be able to describe past events and experiences.', 'İngilizce', 8),
+('7. Sınıf', 'Biographies', 'Biographies', 'E7.3.R1.', 'Students will be able to spot specific information about names and dates in past events in written texts.', 'İngilizce', 8),
+('7. Sınıf', 'Biographies', 'Biographies', 'E7.3.W1.', 'Students will be able to write a short and simple report about past events.', 'İngilizce', 8),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.L1.', 'Students will be able to understand past and present events in oral texts.', 'İngilizce', 12),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.L2.', 'Students will be able to identify the names of wild animals in simple oral texts.', 'İngilizce', 12),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.SI1.', 'Students will be able to ask people questions about characteristics of wild animals.', 'İngilizce', 12),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.SP1.', 'Students will be able to make simple suggestions.', 'İngilizce', 12),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.SP2.', 'Students will be able to report on past and present events.', 'İngilizce', 12),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.R1.', 'Students will be able to understand past and present events in simple texts including explanations and reasons.', 'İngilizce', 12),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.R2.', 'Students will be able to spot the names of wild animals in simple texts.', 'İngilizce', 12),
+('7. Sınıf', 'Wild Animals', 'Wild Animals', 'E7.4.W1.', 'Students will be able to write pieces describing wildlife.', 'İngilizce', 12),
+('7. Sınıf', 'Television', 'Television', 'E7.5.L1.', 'Students will be able to understand simple oral texts about daily routines and preferences.', 'İngilizce', 15),
+('7. Sınıf', 'Television', 'Television', 'E7.5.SI1.', 'Students will be able to ask questions about preferences of other people.', 'İngilizce', 15),
+('7. Sınıf', 'Television', 'Television', 'E7.5.SI2.', 'Students will be able to talk about past events and personal experiences.', 'İngilizce', 15),
+('7. Sınıf', 'Television', 'Television', 'E7.5.SP1.', 'Students will be able to state their preferences.', 'İngilizce', 15),
+('7. Sınıf', 'Television', 'Television', 'E7.5.SP2.', 'Students will be able to describe past events in a simple way.', 'İngilizce', 15),
+('7. Sınıf', 'Television', 'Television', 'E7.5.R1.', 'Students will be able to understand simple texts about daily routines and preferences.', 'İngilizce', 15),
+('7. Sınıf', 'Television', 'Television', 'E7.5.R2.', 'Students will be able to understand simple texts about past events.', 'İngilizce', 15),
+('7. Sınıf', 'Television', 'Television', 'E7.5.W1.', 'Students will be able to write pieces about daily routines and preferences.', 'İngilizce', 15),
+('7. Sınıf', 'Celebrations', 'Celebrations', 'E7.6.L1.', 'Students will be able to recognize utterances related to suggestions, needs and quantity of things.', 'İngilizce', 19),
+('7. Sınıf', 'Celebrations', 'Celebrations', 'E7.6.SI1.', 'Students will be able to talk about arrangements and sequences of actions.', 'İngilizce', 19),
+('7. Sınıf', 'Celebrations', 'Celebrations', 'E7.6.SP1.', 'Students will be able to make suggestions.', 'İngilizce', 19),
+('7. Sınıf', 'Celebrations', 'Celebrations', 'E7.6.SP2.', 'Students will be able to express needs and quantity.', 'İngilizce', 19),
+('7. Sınıf', 'Celebrations', 'Celebrations', 'E7.6.R1.', 'Students will be able to understand texts about celebrations.', 'İngilizce', 19),
+('7. Sınıf', 'Celebrations', 'Celebrations', 'E7.6.W1.', 'Students will be able to write invitation cards.', 'İngilizce', 19),
+('7. Sınıf', 'Dreams', 'Dreams', 'E7.7.L1.', 'Students will be able to understand utterances about predictions and future events in simple oral texts.', 'İngilizce', 22),
+('7. Sınıf', 'Dreams', 'Dreams', 'E7.7.SI1.', 'Students will be able to talk about simple predictions.', 'İngilizce', 22),
+('7. Sınıf', 'Dreams', 'Dreams', 'E7.7.SP1.', 'Students will be able to report on simple predictions.', 'İngilizce', 22),
+('7. Sınıf', 'Dreams', 'Dreams', 'E7.7.R1.', 'Students will be able to understand short and simple texts about predictions.', 'İngilizce', 22),
+('7. Sınıf', 'Dreams', 'Dreams', 'E7.7.W1.', 'Students will be able to write pieces about predictions and future events.', 'İngilizce', 22),
+('7. Sınıf', 'Public Buildings', 'Public Buildings', 'E7.8.L1.', 'Students will be able to recognize the names of the public buildings.', 'İngilizce', 25),
+('7. Sınıf', 'Public Buildings', 'Public Buildings', 'E7.8.L2.', 'Students will be able to understand explanations with reasons.', 'İngilizce', 25),
+('7. Sınıf', 'Public Buildings', 'Public Buildings', 'E7.8.SI1.', 'Students will be able to give explanations with reasons.', 'İngilizce', 25),
+('7. Sınıf', 'Public Buildings', 'Public Buildings', 'E7.8.SP1.', 'Students will be able to report on explanations with reasons.', 'İngilizce', 25),
+('7. Sınıf', 'Public Buildings', 'Public Buildings', 'E7.8.R1.', 'Students will be able to understand simple expressions and recognize familiar words about explanations with reasons.', 'İngilizce', 25),
+('7. Sınıf', 'Public Buildings', 'Public Buildings', 'E7.8.W1.', 'Students will be able to write pieces about explanations with reasons.', 'İngilizce', 25),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.L1.', 'Students will be able to understand phrases and the highest frequency vocabulary about environment.', 'İngilizce', 28),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.L2.', 'Students will be able to follow how a simple process is described in clear oral texts.', 'İngilizce', 28),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.SI1.', 'Students will be able to talk about obligations.', 'İngilizce', 28),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.SI2.', 'Students will be able to give simple instructions for a specific process.', 'İngilizce', 28),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.SP1.', 'Students will be able to give a simple description or presentation of a process.', 'İngilizce', 28),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.R1.', 'Students will be able to identify specific information in various texts about environment.', 'İngilizce', 28),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.W1.', 'Students will be able to write short, simple messages about environment.', 'İngilizce', 28),
+('7. Sınıf', 'Environment', 'Environment', 'E7.9.W2.', 'Students will be able to write short description of a process.', 'İngilizce', 28),
+('7. Sınıf', 'Planets', 'Planets', 'E7.10.L1.', 'Students will be able to identify the discussion topic about popular science in simple oral texts.', 'İngilizce', 32),
+('7. Sınıf', 'Planets', 'Planets', 'E7.10.SI1.', 'Students will be able to make simple comparisons.', 'İngilizce', 32),
+('7. Sınıf', 'Planets', 'Planets', 'E7.10.SI2.', 'Students will be able to talk about past events.', 'İngilizce', 32),
+('7. Sınıf', 'Planets', 'Planets', 'E7.10.SP1.', 'Students will be able to report on general truths in various ways.', 'İngilizce', 32),
+('7. Sınıf', 'Planets', 'Planets', 'E7.10.R1.', 'Students will be able to identify specific information in various texts about facts and general truths.', 'İngilizce', 32),
+('7. Sınıf', 'Planets', 'Planets', 'E7.10.R2.', 'Students will be able to identify specific information about past events.', 'İngilizce', 32),
+('7. Sınıf', 'Planets', 'Planets', 'E7.10.W1.', 'Students will be able to write short and basic descriptions of facts and general truths.', 'İngilizce', 32),
+('8. Sınıf', 'Friendship', 'Friendship', 'E8.1.L1.', 'Students will be able to understand the specific information in short conversations on everyday topics, such as accepting and refusing an offer/invitation, apologizing and making simple inquiries.', 'İngilizce', 1),
+('8. Sınıf', 'Friendship', 'Friendship', 'E8.1.SI1.', 'Students will be able to interact with reasonable ease in structured situations and short conversations involving accepting and refusing an offer/invitation, apologizing and making simple inquiries.', 'İngilizce', 1),
+('8. Sınıf', 'Friendship', 'Friendship', 'E8.1.SP1.', 'Students will be able to structure a talk to make simple inquiries, give explanations and reasons.', 'İngilizce', 1),
+('8. Sınıf', 'Friendship', 'Friendship', 'E8.1.R1.', 'Students will be able to understand short and simple texts about friendship.', 'İngilizce', 1),
+('8. Sınıf', 'Friendship', 'Friendship', 'E8.1.R2.', 'Students will be able to understand short and simple invitation letters, cards and e-mails.', 'İngilizce', 1),
+('8. Sınıf', 'Friendship', 'Friendship', 'E8.1.W1.', 'Students will be able to write a short and simple letter apologizing and giving reasons for not attending a party in response to an invitation.', 'İngilizce', 1),
+('8. Sınıf', 'Teen Life', 'Teen Life', 'E8.2.L1.', 'Students will be able to understand phrases and expressions about regular activities of teenagers.', 'İngilizce', 4),
+('8. Sınıf', 'Teen Life', 'Teen Life', 'E8.2.SI1.', 'Students will be able to talk about regular activities of teenagers.', 'İngilizce', 4),
+('8. Sınıf', 'Teen Life', 'Teen Life', 'E8.2.SP1.', 'Students will be able to express what they prefer, like and dislike.', 'İngilizce', 4),
+('8. Sınıf', 'Teen Life', 'Teen Life', 'E8.2.SP2.', 'Students will be able to give a simple description of daily activities in a simple way.', 'İngilizce', 4),
+('8. Sınıf', 'Teen Life', 'Teen Life', 'E8.2.R1.', 'Students will be able to understand short and simple texts about regular activities of teenagers.', 'İngilizce', 4),
+('8. Sınıf', 'Teen Life', 'Teen Life', 'E8.2.W1.', 'Students will be able to write a short and simple paragraph about regular activities of teenagers.', 'İngilizce', 4),
+('8. Sınıf', 'In the Kitchen', 'In the Kitchen', 'E8.3.L1.', 'Students will be able to get the gist of short, clear, simple descriptions of a process.', 'İngilizce', 7),
+('8. Sınıf', 'In the Kitchen', 'In the Kitchen', 'E8.3.SI1.', 'Students will be able to ask and answer questions and exchange ideas and information on a topic related to how something is processed.', 'İngilizce', 7),
+('8. Sınıf', 'In the Kitchen', 'In the Kitchen', 'E8.3.SP1.', 'Students will be able to give a simple description about a process.', 'İngilizce', 7),
+('8. Sınıf', 'In the Kitchen', 'In the Kitchen', 'E8.3.R1.', 'Students will be able to understand the overall meaning of short texts about a process.', 'İngilizce', 7),
+('8. Sınıf', 'In the Kitchen', 'In the Kitchen', 'E8.3.R2.', 'Students will be able to guess the meaning of unknown words from the text.', 'İngilizce', 7),
+('8. Sınıf', 'In the Kitchen', 'In the Kitchen', 'E8.3.W1.', 'Students will be able to write a series of simple phrases and sentences by using linkers to describe a process.', 'İngilizce', 7),
+('8. Sınıf', 'On the Phone', 'On the Phone', 'E8.4.L1.', 'Students will be able to understand phrases and related vocabulary items.', 'İngilizce', 11),
+('8. Sınıf', 'On the Phone', 'On the Phone', 'E8.4.L2.', 'Students will be able to follow a phone conversation.', 'İngilizce', 11),
+('8. Sınıf', 'On the Phone', 'On the Phone', 'E8.4.SI1.', 'Students will be able to make a simple phone call asking and responding to questions.', 'İngilizce', 11),
+('8. Sınıf', 'On the Phone', 'On the Phone', 'E8.4.SP1.', 'Students will be able to express their decisions taken at the moment of conversation.', 'İngilizce', 11),
+('8. Sınıf', 'On the Phone', 'On the Phone', 'E8.4.R1.', 'Students will be able to understand short and simple texts with related vocabulary.', 'İngilizce', 11),
+('8. Sınıf', 'On the Phone', 'On the Phone', 'E8.4.W1.', 'Students will be able to write short and simple conversations.', 'İngilizce', 11),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.L1.', 'Students will be able to understand the gist of oral texts.', 'İngilizce', 15),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.L2.', 'Students will be able to comprehend phrases and related vocabulary items.', 'İngilizce', 15),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.SI1.', 'Students will be able to talk about their Internet habits.', 'İngilizce', 15),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.SI2.', 'Students will be able to exchange information about the Internet.', 'İngilizce', 15),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.SP1.', 'Students will be able to make excuses, and to accept and refuse offers by using a series of phrases and simple sentences.', 'İngilizce', 15),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.R1.', 'Students will be able to identify main ideas in short and simple texts about internet habits.', 'İngilizce', 15),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.R2.', 'Students will be able to find specific information about the Internet in various texts.', 'İngilizce', 15),
+('8. Sınıf', 'The Internet', 'The Internet', 'E8.5.W1.', 'Students will be able to write a basic paragraph to describe their internet habits.', 'İngilizce', 15),
+('8. Sınıf', 'Adventures', 'Adventures', 'E8.6.L1.', 'Students will be able to follow a discussion on adventures.', 'İngilizce', 19),
+('8. Sınıf', 'Adventures', 'Adventures', 'E8.6.L2.', 'Students will be able to understand the main points of simple messages.', 'İngilizce', 19),
+('8. Sınıf', 'Adventures', 'Adventures', 'E8.6.SI1.', 'Students will be able to interact with reasonable ease in short conversations.', 'İngilizce', 19),
+('8. Sınıf', 'Adventures', 'Adventures', 'E8.6.SI2.', 'Students will be able to talk about comparisons, preferences and their reasons.', 'İngilizce', 19),
+('8. Sınıf', 'Adventures', 'Adventures', 'E8.6.SP1.', 'Students will be able to make comparisons about sports and games by using simple descriptive language.', 'İngilizce', 19),
+('8. Sınıf', 'Adventures', 'Adventures', 'E8.6.R1.', 'Students will be able to understand short and simple texts to find the main points about adventures.', 'İngilizce', 19),
+('8. Sınıf', 'Adventures', 'Adventures', 'E8.6.W1.', 'Students will be able to write a short and simple paragraph comparing two objects.', 'İngilizce', 19),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.L1.', 'Students will be able to understand and extract the specific information from short and simple oral texts.', 'İngilizce', 22),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.SI1.', 'Students will be able to exchange information about tourism.', 'İngilizce', 22),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.SI2.', 'Students will be able to talk about their favorite tourist attractions by giving details.', 'İngilizce', 22),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.SP1.', 'Students will be able to express their preferences for particular tourist attractions and give reasons.', 'İngilizce', 22),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.SP2.', 'Students will be able to make simple comparisons between different tourist attractions.', 'İngilizce', 22),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.SP3.', 'Students will be able to express their experiences about places.', 'İngilizce', 22),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.R1.', 'Students will be able to find specific information from various texts about tourism.', 'İngilizce', 22),
+('8. Sınıf', 'Tourism', 'Tourism', 'E8.7.W1.', 'Students will be able to design a brochure, advertisement or a postcard about their favorite tourist attraction(s).', 'İngilizce', 22),
+('8. Sınıf', 'Science', 'Science', 'E8.9.L1.', 'Students will be able to recognize main ideas and key information in short oral texts about science.', 'İngilizce', 29),
+('8. Sınıf', 'Science', 'Science', 'E8.9.SI1.', 'Students will be able to talk about actions happening currently and in the past.', 'İngilizce', 29),
+('8. Sınıf', 'Science', 'Science', 'E8.9.SI2.', 'Students will be able to involve in simple discussions about scientific achievements.', 'İngilizce', 29),
+('8. Sınıf', 'Science', 'Science', 'E8.9.SP1.', 'Students will be able to describe actions happening currently.', 'İngilizce', 29),
+('8. Sınıf', 'Science', 'Science', 'E8.9.SP2.', 'Students will be able to present information about scientific achievements in a simple way.', 'İngilizce', 29),
+('8. Sınıf', 'Science', 'Science', 'E8.9.R1.', 'Students will be able to understand short and simple texts about actions happening currently and in the past.', 'İngilizce', 29),
+('8. Sınıf', 'Science', 'Science', 'E8.9.R2.', 'Students will be able to identify main ideas and supporting details in short texts about science.', 'İngilizce', 29),
+('8. Sınıf', 'Science', 'Science', 'E8.9.W1.', 'Students will be able to write simple descriptions of scientific achievements in a short paragraph.', 'İngilizce', 29),
+('8. Sınıf', 'Natural Forces', 'Natural Forces', 'E8.10.L1.', 'Students will be able to identify the main points of TV news about natural forces and disasters.', 'İngilizce', 33),
+('8. Sınıf', 'Natural Forces', 'Natural Forces', 'E8.10.SI1.', 'Students will be able to talk about predictions concerning future of the Earth.', 'İngilizce', 33),
+('8. Sınıf', 'Natural Forces', 'Natural Forces', 'E8.10.SI2.', 'Students will be able to negotiate reasons and results to support their predictions about natural forces and disasters.', 'İngilizce', 33),
+('8. Sınıf', 'Natural Forces', 'Natural Forces', 'E8.10.SP1.', 'Students will be able to express predictions concerning future of the Earth.', 'İngilizce', 33),
+('8. Sınıf', 'Natural Forces', 'Natural Forces', 'E8.10.SP2.', 'Students will be able to give reasons and results to support their predictions about natural forces and disasters.', 'İngilizce', 33),
+('8. Sınıf', 'Natural Forces', 'Natural Forces', 'E8.10.R1.', 'Students will be able to identify specific information in simple texts about natural forces and disasters.', 'İngilizce', 33),
+('8. Sınıf', 'Natural Forces', 'Natural Forces', 'E8.10.W1.', 'Students will be able to write a short and simple paragraph about reasons and results of natural forces and disasters.', 'İngilizce', 33);
+
+-- 5) Eski kayıtlarda sonu noktasız yeni-model kodlarını yeni biçime çek (ör. MAT.7.1.1 -> MAT.7.1.1.)
+UPDATE public.yanlis_defteri SET kazanim_kodu = kazanim_kodu || '.'
+ WHERE kazanim_kodu ~ '^[A-ZİÇŞĞÜÖ]+\.[0-9.]*[0-9]$'
+   AND EXISTS (SELECT 1 FROM public.kazanimlar k WHERE k.kazanim_kodu = yanlis_defteri.kazanim_kodu || '.');
+
+COMMIT;

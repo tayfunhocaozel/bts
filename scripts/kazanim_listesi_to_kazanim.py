@@ -283,26 +283,29 @@ def main():
                     aday, skor = yr, s
             if aday and skor >= 0.88:
                 eslesme.append((eski_kod, aday['kazanim_kodu'], aday['konu'], skor))
+    # Eşleme listesi her UPDATE'e VALUES olarak gömülür (geçici tablo Supabase SQL Editor'da
+    # komutlar arasında görünmeyebiliyor: "relation kod_esleme does not exist")
+    degerler = ('(VALUES\n    ' + ',\n    '.join(
+        f"({sql_str(e.rstrip('.'))}, {sql_str(y)}, {sql_str(k)})" for e, y, k, _ in sorted(eslesme))
+        + '\n  ) AS m(eski, yeni, yeni_konu)')
     gecmis = [
         '-- İSTEĞE BAĞLI: 20261002_kazanimlar_liste.sql SONRASINDA çalıştırın.\n',
         '-- Geçmiş ödev/ders/yanlış defteri kayıtlarındaki eski kazanım kodlarını (MAT.7.1.1 gibi)\n',
         '-- metni aynı olan yeni kodlara (M.7.1.1.) çevirir; konu adı yeni listede yoksa onu da yeni konuya çeker.\n',
-        '-- Kaynak kitaptan (kaynak_konu_id dolu) verilen ödevlerin konu metnine dokunmaz.\n\nBEGIN;\n\n',
-        'CREATE TEMP TABLE kod_esleme (eski text, yeni text, yeni_konu text) ON COMMIT DROP;\n',
-        'INSERT INTO kod_esleme VALUES\n' + ',\n'.join(
-            f"({sql_str(e.rstrip('.'))}, {sql_str(y)}, {sql_str(k)})" for e, y, k, _ in sorted(eslesme)) + ';\n\n',
+        '-- Kaynak kitaptan (kaynak_konu_id dolu) verilen ödevlerin konu metnine dokunmaz.\n',
+        '-- Tekrar çalıştırmak zararsızdır (ikinci seferde eşleşen eski kod kalmaz).\n\nBEGIN;\n\n',
         "UPDATE public.odevler o SET kazanim = m.yeni,\n"
         "  konu = CASE WHEN o.kaynak_konu_id IS NULL AND o.konu NOT IN (SELECT konu FROM public.kazanimlar WHERE konu IS NOT NULL)\n"
         "              THEN m.yeni_konu ELSE o.konu END\n"
-        "  FROM kod_esleme m WHERE rtrim(o.kazanim, '.') = m.eski;\n\n",
+        f"  FROM {degerler}\n  WHERE rtrim(o.kazanim, '.') = m.eski;\n\n",
         "UPDATE public.dersler d SET kazanim_kodu = m.yeni,\n"
         "  islenen_konu = CASE WHEN d.islenen_konu NOT IN (SELECT konu FROM public.kazanimlar WHERE konu IS NOT NULL)\n"
         "                      THEN m.yeni_konu ELSE d.islenen_konu END\n"
-        "  FROM kod_esleme m WHERE rtrim(d.kazanim_kodu, '.') = m.eski;\n\n",
+        f"  FROM {degerler}\n  WHERE rtrim(d.kazanim_kodu, '.') = m.eski;\n\n",
         "UPDATE public.yanlis_defteri y SET kazanim_kodu = m.yeni,\n"
         "  konu = CASE WHEN y.konu NOT IN (SELECT konu FROM public.kazanimlar WHERE konu IS NOT NULL)\n"
         "              THEN m.yeni_konu ELSE y.konu END\n"
-        "  FROM kod_esleme m WHERE rtrim(y.kazanim_kodu, '.') = m.eski;\n\nCOMMIT;\n",
+        f"  FROM {degerler}\n  WHERE rtrim(y.kazanim_kodu, '.') = m.eski;\n\nCOMMIT;\n",
     ]
     if eslesme:
         with open(os.path.join(MIG_DIR, '20261002_kazanimlar_liste_gecmis_kodlar.sql'), 'w', encoding='utf-8') as f:

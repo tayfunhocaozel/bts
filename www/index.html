@@ -7967,8 +7967,10 @@ async function soruTekrarEt(soruId) {
 // Öğrencinin sınıfına ait kazanım listesi — bir kez çekilip önbelleğe alınır
 async function soruBankasiKazanimlariGetir() {
   if (state._soruKazanimCache) return state._soruKazanimCache;
+  // Branş öğretmenden gelir (ogretmenBilgisiYukle); boşsa başka derslerin kazanımlarını gösterme.
+  if (!state.brans) return [];
   const sinifNo = (state.user.sinif || '').replace(/\D/g, '');
-  let q = sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi');
+  let q = sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi').eq('ders', state.brans);
   if (sinifNo) q = q.ilike('sinif', `%${sinifNo}%`);
   const { data } = await q;
   state._soruKazanimCache = (data || []).filter(k => k.kazanim_kodu);
@@ -8161,8 +8163,8 @@ async function loadRaporSoruBankasi(ogrenciId, ogr, kazData) {
   state._raporSoruKazData = (kazData && kazData.length) ? kazData : [];
   if (!state._raporSoruKazData.length) {
     const sinifNo = (ogr?.sinif || '').replace(/\D/g, '');
-    if (sinifNo) {
-      const { data: kz } = await sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi').ilike('sinif', `%${sinifNo}%`);
+    if (sinifNo && state.brans) {
+      const { data: kz } = await sb.from('kazanimlar').select('konu, kazanim_kodu, kazanim_aciklamasi').eq('ders', state.brans).ilike('sinif', `%${sinifNo}%`);
       state._raporSoruKazData = kz || [];
     }
   }
@@ -9121,7 +9123,9 @@ async function loadOgrBasari() {
 
   const [raporRes, kazRes, kaynakIler] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','TAMAMLANDI').order('verilis_tarihi', { ascending: false }),
-    sb.from('kazanimlar').select('*').ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`),
+    state.brans
+      ? sb.from('kazanimlar').select('*').eq('ders', state.brans).ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`)
+      : Promise.resolve({ data: [] }),
     kaynakIlerlemeleriGetir(state.user.ogrenci_id)
   ]);
 
@@ -9270,7 +9274,9 @@ async function loadVeliPanel() {
   const [{ data: tumOdevler }, { data: dersler }, { data: kazData }, { data: denemelerData }, adaptixPuan, { data: alinanOduller }, veliKaynakIler] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id).order('verilis_tarihi', { ascending: false }),
     _veliDersQ,
-    sb.from('kazanimlar').select('*').ilike('sinif', `%${(u.sinif||'').replace('.','')}%`),
+    state.brans
+      ? sb.from('kazanimlar').select('*').eq('ders', state.brans).ilike('sinif', `%${(u.sinif||'').replace('.','')}%`)
+      : Promise.resolve({ data: [] }),
     sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
     kalanPuanHesapla(u.ogrenci_id),
     sb.from('odul_talepleri').select('*, odul_kataloglari(baslik)').eq('ogrenci_id', u.ogrenci_id).eq('durum', 1).order('karar_tarihi', { ascending: false }),

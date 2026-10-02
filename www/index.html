@@ -294,7 +294,9 @@ tailwind.config = {
 
   /* ── Öğretmen profil: kurum logosu / profil fotoğrafı ── */
   /* Logo sabit bir kutuya oranı korunarak sığar: çok geniş logo genişliğe, çok yüksek logo yüksekliğe göre küçülür */
-  #sidebar-brand-logo.ogretmen-logo { width:auto !important; max-width:120px; height:42px !important; background:#fff; border-radius:9px; padding:3px; filter:none !important; }
+  /* Öğretmen logosu varken logo üstte kendi satırında, AdaptiX yazısı altında kalır */
+  #sidebar-brand.ogretmen-marka { flex-direction:column; align-items:flex-start; gap:9px; }
+  #sidebar-brand-logo.ogretmen-logo { width:auto !important; max-width:150px; height:42px !important; background:#fff; border-radius:9px; padding:3px; filter:none !important; }
   .avatar-foto { width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; }
   .profil-gorsel-kutu { border:1.5px dashed var(--outline-variant,#c9d4dc); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; }
   .profil-logo-onizleme { height:48px; max-width:160px; width:auto; object-fit:contain; }
@@ -398,7 +400,7 @@ tailwind.config = {
   <!-- Sidebar (Desktop) -->
   <aside id="sidebar" class="sidebar no-print" style="position:fixed;left:0;top:0;height:100vh;z-index:40;display:flex;flex-direction:column;">
     <!-- Brand -->
-    <div style="display:flex;align-items:center;gap:11px;padding:22px 20px 18px;position:relative;">
+    <div id="sidebar-brand" style="display:flex;align-items:center;gap:11px;padding:22px 20px 18px;position:relative;">
       <img id="sidebar-brand-logo" src="public/adaptix_logo.png" alt="" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25));">
       <div>
         <div style="font-family:Manrope;font-weight:800;font-size:21px;color:#fff;line-height:1;">Adapti<span style="color:#feb223;">X</span></div>
@@ -2032,10 +2034,15 @@ function markaLogosuUygula() {
   const img = document.getElementById('sidebar-brand-logo');
   if (!img) return;
   const logo = (state.rol === 'ogretmen' || state.rol === 'ogrenci') ? state.ogretmen?.logo_url : null;
-  const varsayilan = () => { img.onerror = null; img.classList.remove('ogretmen-logo'); img.alt = ''; img.src = ADAPTIX_SIDEBAR_LOGO; };
+  const kutu = document.getElementById('sidebar-brand');
+  const varsayilan = () => {
+    img.onerror = null; img.classList.remove('ogretmen-logo'); kutu?.classList.remove('ogretmen-marka');
+    img.alt = ''; img.src = ADAPTIX_SIDEBAR_LOGO;
+  };
   if (!logo) { varsayilan(); return; }
   img.onerror = varsayilan;
   img.classList.add('ogretmen-logo');
+  kutu?.classList.add('ogretmen-marka');
   img.alt = 'Kurum logosu';
   img.src = logo;
 }

@@ -7249,38 +7249,27 @@ async function raporPdfOlustur(dosyaAdi) {
   const el = document.getElementById('rapor-print-view');
   if (!el || !el.innerHTML.trim()) throw new Error('Önce rapor yüklenmeli');
 
-  // #rapor-print-view normalde display:none (sadece @media print'te görünür).
-  // html2canvas görünmeyen elemanı yakalayamadığı için ekran dışına alıp
-  // geçici olarak görünür yapıyoruz, işlem bitince eski haline döndürüyoruz.
-  const eski = { display: el.style.display, position: el.style.position, left: el.style.left, top: el.style.top, width: el.style.width, zIndex: el.style.zIndex };
-  el.style.display  = 'block';
-  el.style.position = 'fixed';
-  el.style.left     = '-10000px';
-  el.style.top      = '0';
-  el.style.width    = '210mm';
-  el.style.zIndex   = '-1';
+  // Öğretmen logosu uzak sunucudan gelir; PDF'e girmesi için yüklenmesini (en çok 5 sn) bekle.
+  await Promise.all([...el.querySelectorAll('img')].map(img => img.complete ? null :
+    new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); setTimeout(r, 5000); })));
 
-  try {
-    // Öğretmen logosu uzak sunucudan gelir; PDF'e girmesi için yüklenmesini (en çok 5 sn) bekle.
-    await Promise.all([...el.querySelectorAll('img')].map(img => img.complete ? null :
-      new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); setTimeout(r, 5000); })));
-    const blob = await html2pdf().set({
-      margin: 0,
-      filename: dosyaAdi,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'] }
-    }).from(el).outputPdf('blob');
-    return blob;
-  } finally {
-    el.style.display  = eski.display;
-    el.style.position = eski.position;
-    el.style.left     = eski.left;
-    el.style.top       = eski.top;
-    el.style.width     = eski.width;
-    el.style.zIndex    = eski.zIndex;
-  }
+  // #rapor-print-view normalde display:none (sadece @media print'te görünür).
+  // html2pdf'e görünür bir KOPYA veriyoruz; html2pdf onu kendi ekran dışı kutusuna
+  // yerleştirir. (Eskiden asıl eleman position:fixed yapılıyordu; bu stil kopyaya da
+  // geçtiği için kutunun yüksekliği 0 kalıyor ve PDF boş çıkıyordu.)
+  const kopya = el.cloneNode(true);
+  kopya.removeAttribute('id');
+  kopya.style.display = 'block';
+  kopya.style.width   = '210mm';
+
+  return html2pdf().set({
+    margin: 0,
+    filename: dosyaAdi,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'] }
+  }).from(kopya).outputPdf('blob');
 }
 
 async function raporPdfPaylas(telefon, mesaj, ogrenciAdi) {

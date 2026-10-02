@@ -2487,6 +2487,15 @@ function konuSecildi() {
           <div class="text-sm text-on-surface leading-snug">${k.kazanim_aciklamasi||''}</div>
         </div>
       </label>
+      ${altKazanimListesi(k).length ? `
+      <div class="px-4 pb-2 pl-12" id="alt-liste-${i}">
+        ${altKazanimListesi(k).map(a => `
+          <label class="flex items-start gap-2 py-1 cursor-pointer select-none text-xs leading-snug">
+            <input type="checkbox" class="alt-cb mt-0.5 flex-shrink-0" data-idx="${i}" value="${escHtml(a.kod)}" onchange="altKazanimDegisti(${i})">
+            <span class="flex-1"><b class="text-primary">${escHtml(a.kod)}</b> ${escHtml(a.metin)}
+              <span class="alt-gecmis text-tertiary font-semibold" data-kod="${escHtml(a.kod)}"></span></span>
+          </label>`).join('')}
+      </div>` : ''}
       <input type="hidden" id="td-${i}" value="tam">
       <div id="td-btns-${i}" class="flex gap-1.5 px-4 pb-3 -mt-1 opacity-40 pointer-events-none transition-all">
         <button type="button" onclick="setTD(${i},'tam')" id="td-tam-${i}"
@@ -2497,6 +2506,46 @@ function konuSecildi() {
           class="flex-1 py-1 text-xs font-semibold rounded-lg border-2 transition-all bg-surface-container text-outline border-transparent">🔵 Başlandı</button>
       </div>
     </div>`).join('');
+
+  altKazanimGecmisiYukle(filtered);
+}
+
+// kazanimlar.alt_kazanimlar (jsonb): [{kod:'M.7.2.1.A', metin:'...'}]; kolon yoksa / boşsa []
+function altKazanimListesi(k) {
+  const a = k && k.alt_kazanimlar;
+  return Array.isArray(a) ? a.filter(x => x && x.kod) : [];
+}
+
+// Alt kazanım işaretlenince üst kazanımı da işaretle; durumu kendiliğinden ayarla
+// (hepsi işaretli -> Tam, bir kısmı -> Kısmi). Öğretmen butonla sonradan değiştirebilir.
+function altKazanimDegisti(idx) {
+  const altlar = [...document.querySelectorAll(`#alt-liste-${idx} .alt-cb`)];
+  const secili = altlar.filter(c => c.checked).length;
+  const cb = document.getElementById('kaz-' + idx);
+  if (secili && !cb.checked) toggleKazanim({ preventDefault: () => {} }, 'kaz-' + idx);
+  if (!secili && cb.checked) toggleKazanim({ preventDefault: () => {} }, 'kaz-' + idx);
+  if (secili) setTD(idx, secili === altlar.length ? 'tam' : 'kismi');
+}
+
+// Seçili öğrencinin bu kazanımlarda daha önce işlediği alt kazanımları "✓ işlendi (tarih)" olarak gösterir
+async function altKazanimGecmisiYukle(kazanimlar) {
+  const ogrenciId = document.getElementById('ders-ogrenci')?.value;
+  const kodlar = (kazanimlar || []).filter(k => altKazanimListesi(k).length).map(k => k.kazanim_kodu);
+  if (!ogrenciId || !kodlar.length) return;
+  const { data, error } = await sb.from('dersler').select('*')
+    .eq('ogrenci_id', ogrenciId).in('kazanim_kodu', kodlar).order('tarih', { ascending: false });
+  if (error) { console.error('Alt kazanım geçmişi:', error.message); return; }
+  const sonTarih = {};
+  const duzenlenen = state._dersEditSession;
+  (data || []).forEach(d => {
+    // düzenlenen dersin kendi kayıtlarını "önceden işlendi" sayma
+    if (duzenlenen && d.tarih === duzenlenen.tarih && d.islenen_konu === duzenlenen.konu) return;
+    (d.alt_kazanim_kodlari || []).forEach(kod => { if (!sonTarih[kod]) sonTarih[kod] = d.tarih; });
+  });
+  document.querySelectorAll('#kazanim-checkboxlar .alt-gecmis').forEach(el => {
+    const t = sonTarih[el.dataset.kod];
+    el.textContent = t ? ` ✓ işlendi (${new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })})` : '';
+  });
 }
 
 function toggleKazanim(event, id) {
@@ -2514,6 +2563,8 @@ function toggleKazanim(event, id) {
     box.classList.remove('bg-primary', 'border-primary');
     check.classList.add('hidden');
     if (tdBtns) tdBtns.classList.add('opacity-40', 'pointer-events-none');
+    // üst kazanımın işareti kalkınca alt kazanım işaretleri de kalkar
+    document.querySelectorAll(`#alt-liste-${cb.dataset.idx} .alt-cb`).forEach(c => { c.checked = false; });
   }
 }
 
@@ -2537,8 +2588,11 @@ async function dersSave() {
   const konu       = document.getElementById('ders-konu').value;
   const sorunAlani = document.getElementById('ders-gorus').value;
   const hatirlatma = document.getElementById('ders-hatirlatma').value;
-  const secili     = [...document.querySelectorAll('#kazanim-checkboxlar input[type=checkbox]:checked')]
-    .map(c => ({ kod: c.value, td: document.getElementById('td-' + c.dataset.idx)?.value || 'tam' }));
+  const secili     = [...document.querySelectorAll('#kazanim-checkboxlar input[type=checkbox]:not(.alt-cb):checked')]
+    .map(c => ({
+      kod: c.value, td: document.getElementById('td-' + c.dataset.idx)?.value || 'tam',
+      altlar: [...document.querySelectorAll(`#alt-liste-${c.dataset.idx} .alt-cb:checked`)].map(a => a.value)
+    }));
 
   if (!ogrenciId) { showToast('⚠️ Öğrenci seçin'); return; }
   if (!konu)      { showToast('⚠️ Konu seçin'); return; }
@@ -2558,7 +2612,9 @@ async function dersSave() {
     ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id, tarih,
     islenen_konu: konu, kazanim_kodu: s.kod,
     tamamlama_durumu: s.td,
-    ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma
+    ders_gorusu: sorunAlani, sonraki_ders_hatirlatma: hatirlatma,
+    // kolon sadece alt kazanım işaretlendiyse gönderilir (alt kazanımı olmayan kazanımlarda eski kayıt biçimi aynen kalır)
+    ...(s.altlar.length ? { alt_kazanim_kodlari: s.altlar } : {})
   }));
 
   const { error } = await sb.from('dersler').insert(rows);
@@ -2587,7 +2643,7 @@ async function loadDersGecmisi() {
   el.innerHTML = '<div style="display:flex;justify-content:center;padding:24px 0;"><div class="spinner"></div></div>';
 
   const { data, error } = await sb.from('dersler')
-    .select('tarih, islenen_konu, kazanim_kodu, tamamlama_durumu, ders_gorusu')
+    .select('*')
     .eq('ogrenci_id', ogrenciId)
     .order('tarih', { ascending: false })
     .limit(60);
@@ -2604,8 +2660,12 @@ async function loadDersGecmisi() {
   data.forEach(d => {
     const k = d.tarih + '||' + (d.islenen_konu || '');
     if (!gruplar[k]) gruplar[k] = { tarih: d.tarih, konu: d.islenen_konu || '', kazanimlar: [], sorun: d.ders_gorusu || '' };
-    if (d.kazanim_kodu) gruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu || 'tam' });
+    if (d.kazanim_kodu) gruplar[k].kazanimlar.push({ kod: d.kazanim_kodu, durum: d.tamamlama_durumu || 'tam', altSayi: (d.alt_kazanim_kodlari || []).length });
   });
+
+  // alt kazanım toplamları ("3/11 alt") için o kazanımların alt kazanım sayısı
+  const altToplam = {};
+  (state._dersKazanimlar || []).forEach(k => { altToplam[k.kazanim_kodu] = altKazanimListesi(k).length; });
 
   state._dersGecmisGruplar = Object.values(gruplar);
   document.getElementById('ders-gecmis-sayac').textContent = state._dersGecmisGruplar.length;
@@ -2635,7 +2695,7 @@ async function loadDersGecmisi() {
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
           ${g.kazanimlar.map(k => `
-            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface);border:1px solid var(--line);color:var(--ink);">${k.kod}</span>
+            <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface);border:1px solid var(--line);color:var(--ink);">${k.kod}${k.altSayi ? ` · ${k.altSayi}${altToplam[k.kod] ? '/' + altToplam[k.kod] : ''} alt` : ''}</span>
             <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;${tdCss(k.durum)}">${tdLbl(k.durum)}</span>
           `).join('')}
         </div>
@@ -2663,26 +2723,34 @@ async function dersDuzenleAc(idx) {
 
   const ogrenciId = document.getElementById('ders-ogrenci').value;
   const { data: rows } = await sb.from('dersler')
-    .select('kazanim_kodu, tamamlama_durumu, ders_gorusu, sonraki_ders_hatirlatma')
+    .select('*')
     .eq('ogrenci_id', ogrenciId).eq('ogretmen_id', state.ogretmen_id).eq('tarih', g.tarih).eq('islenen_konu', g.konu);
 
   if (!rows || !rows.length) return;
+
+  // geçmiş işaretleri bu dersin kendi kayıtlarını saymasın diye düzenleme oturumu render'dan önce açılır
+  state._dersEditSession = { ogrenciId, tarih: g.tarih, konu: g.konu };
 
   // Konuyu seç ve checkboxları render et
   document.getElementById('ders-konu').value = g.konu;
   konuSecildi();
 
-  // Kazanım map: kod → td durumu
+  // Kazanım map: kod → td durumu; alt kazanım işaretleri
   const kazMap = {};
-  rows.forEach(r => { if (r.kazanim_kodu) kazMap[r.kazanim_kodu] = r.tamamlama_durumu || 'tam'; });
+  const altSecili = new Set();
+  rows.forEach(r => {
+    if (r.kazanim_kodu) kazMap[r.kazanim_kodu] = r.tamamlama_durumu || 'tam';
+    (r.alt_kazanim_kodlari || []).forEach(a => altSecili.add(a));
+  });
 
-  // Checkboxları işaretle
-  document.querySelectorAll('#kazanim-checkboxlar input[type=checkbox]').forEach(cb => {
+  // Checkboxları işaretle (sadece üst kazanım kutuları; alt kutular ayrı)
+  document.querySelectorAll('#kazanim-checkboxlar input[type=checkbox]:not(.alt-cb)').forEach(cb => {
     if (kazMap[cb.value] !== undefined && !cb.checked) {
       toggleKazanim({ preventDefault: () => {} }, 'kaz-' + cb.dataset.idx);
       setTD(cb.dataset.idx, kazMap[cb.value]);
     }
   });
+  document.querySelectorAll('#kazanim-checkboxlar .alt-cb').forEach(c => { c.checked = altSecili.has(c.value); });
 
   document.getElementById('ders-gorus').value = rows[0].ders_gorusu || '';
   document.getElementById('ders-hatirlatma').value = rows[0].sonraki_ders_hatirlatma || '';

@@ -294,6 +294,7 @@ tailwind.config = {
 
   /* ── Öğretmen profil: kurum logosu / profil fotoğrafı ── */
   /* Logo sabit bir kutuya oranı korunarak sığar: çok geniş logo genişliğe, çok yüksek logo yüksekliğe göre küçülür */
+  #sidebar-brand-logo.ogretmen-logo { width:auto !important; max-width:120px; height:42px !important; background:#fff; border-radius:9px; padding:3px; filter:none !important; }
   .avatar-foto { width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; }
   .profil-gorsel-kutu { border:1.5px dashed var(--outline-variant,#c9d4dc); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; }
   .profil-logo-onizleme { height:48px; max-width:160px; width:auto; object-fit:contain; }
@@ -398,7 +399,7 @@ tailwind.config = {
   <aside id="sidebar" class="sidebar no-print" style="position:fixed;left:0;top:0;height:100vh;z-index:40;display:flex;flex-direction:column;">
     <!-- Brand -->
     <div style="display:flex;align-items:center;gap:11px;padding:22px 20px 18px;position:relative;">
-      <img src="public/adaptix_logo.png" alt="" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25));">
+      <img id="sidebar-brand-logo" src="public/adaptix_logo.png" alt="" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25));">
       <div>
         <div style="font-family:Manrope;font-weight:800;font-size:21px;color:#fff;line-height:1;">Adapti<span style="color:#feb223;">X</span></div>
         <div style="font-size:10.5px;color:rgba(255,255,255,.75);margin-top:2px;font-weight:600;">Bireysel Takip Sistemi</div>
@@ -2007,6 +2008,7 @@ function updateUserInfo() {
   const hdrBadge  = document.getElementById('hdr-role-badge');
   if (hdrAvatar) avatarYaz(hdrAvatar, ad);
   if (hdrBadge)  { hdrBadge.textContent = rolBadge + ' paneli'; hdrBadge.className = badgeClass; }
+  markaLogosuUygula();
 }
 
 // Avatar: öğretmenin profil fotoğrafı varsa o, yoksa (ya da açılamazsa) adın baş harfi.
@@ -2023,6 +2025,20 @@ function avatarYaz(el, ad) {
   el.appendChild(img);
 }
 
+const ADAPTIX_SIDEBAR_LOGO = 'public/adaptix_logo.png';
+// Öğretmen ve öğrenci sol menüsünde öğretmenin kurum logosu; yoksa ya da açılamazsa AdaptiX logosu.
+// Öğrenci tarafında state.ogretmen, ogretmenBilgisiYukle ile (RLS: yalnız kendi öğretmeni) dolar.
+function markaLogosuUygula() {
+  const img = document.getElementById('sidebar-brand-logo');
+  if (!img) return;
+  const logo = (state.rol === 'ogretmen' || state.rol === 'ogrenci') ? state.ogretmen?.logo_url : null;
+  const varsayilan = () => { img.onerror = null; img.classList.remove('ogretmen-logo'); img.alt = ''; img.src = ADAPTIX_SIDEBAR_LOGO; };
+  if (!logo) { varsayilan(); return; }
+  img.onerror = varsayilan;
+  img.classList.add('ogretmen-logo');
+  img.alt = 'Kurum logosu';
+  img.src = logo;
+}
 
 function buildNav() {
   const pages = state.rol === 'ogretmen' ? [
@@ -3642,6 +3658,7 @@ async function ogretmenBilgisiYukle(ogretmenId) {
   if (!ogretmenId) return;
   const { data } = await sb.from('ogretmenler').select('*').eq('ogretmen_id', ogretmenId).single();
   if (data) { state.ogretmen = data; state.ogretmen_id = data.ogretmen_id; state.brans = data.brans; }
+  markaLogosuUygula();
 }
 
 // ── Öğretmen: Profilim ─────────────────────────────────────────────────────
@@ -7211,6 +7228,16 @@ async function raporWhatsappGonder() {
   raporPdfPaylas(tekTelefon, mesajUret(tekVeli), ogr.ad_soyad);
 }
 
+// Rapor üst bandındaki öğretmen logosu açılamazsa bant eski (yalnız AdaptiX) görünümüne döner.
+function raporLogoYedek(img) {
+  const kutu = img.closest('.rapor-logo-kutu');
+  if (!kutu) return;
+  kutu.style.background = 'transparent';
+  img.onerror = null;
+  img.removeAttribute('crossorigin');
+  img.src = 'public/adaptix_renk_logo.png';
+}
+
 async function raporPdfOlustur(dosyaAdi) {
   const el = document.getElementById('rapor-print-view');
   if (!el || !el.innerHTML.trim()) throw new Error('Önce rapor yüklenmeli');
@@ -7227,6 +7254,9 @@ async function raporPdfOlustur(dosyaAdi) {
   el.style.zIndex   = '-1';
 
   try {
+    // Öğretmen logosu uzak sunucudan gelir; PDF'e girmesi için yüklenmesini (en çok 5 sn) bekle.
+    await Promise.all([...el.querySelectorAll('img')].map(img => img.complete ? null :
+      new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); setTimeout(r, 5000); })));
     const blob = await html2pdf().set({
       margin: 0,
       filename: dosyaAdi,
@@ -7287,6 +7317,7 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
   if (!el) return;
 
   const raporTarihi = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const raporLogo   = state.ogretmen?.logo_url || '';
   const raporAyYil  = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
   const initials    = (ogr?.ad_soyad || '?').split(' ').map(w => w[0]||'').join('').toUpperCase().slice(0, 2);
 
@@ -7396,11 +7427,22 @@ function renderRaporPrintHTML({ ogr, dersOturumSayisi, dersSatir, derslerRaw, tu
   el.innerHTML = `
     <!-- BÖL 1: HEADER -->
     <div style="background:#005d8d;color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+      ${raporLogo ? `
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+        <div class="rapor-logo-kutu">
+          <img src="${escHtml(raporLogo).replace(/"/g, '&quot;')}" crossorigin="anonymous" alt="" onerror="raporLogoYedek(this)">
+        </div>
+        <span style="font-size:11.5pt;font-weight:800;font-family:Manrope,sans-serif;letter-spacing:0.02em;">AKADEMİK PERFORMANS RAPORU</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <span style="font-size:9pt;opacity:0.85;white-space:nowrap;">${raporTarihi}</span>
+        <img src="public/adaptix_renk_logo.png" alt="AdaptiX" style="height:20px;width:auto;object-fit:contain;">
+      </div>` : `
       <div style="display:flex;align-items:center;gap:10px;">
         <img src="public/adaptix_renk_logo.png" alt="AdaptiX" style="height:32px;width:auto;object-fit:contain;flex-shrink:0;">
         <span style="font-size:11.5pt;font-weight:800;font-family:Manrope,sans-serif;letter-spacing:0.02em;">ADAPTİX BTS | AKADEMİK PERFORMANS RAPORU</span>
       </div>
-      <div style="font-size:9pt;opacity:0.85;white-space:nowrap;">${raporTarihi}</div>
+      <div style="font-size:9pt;opacity:0.85;white-space:nowrap;">${raporTarihi}</div>`}
     </div>
 
     <!-- BÖL 2: ÖĞRENCİ BANDI -->

@@ -291,6 +291,16 @@ tailwind.config = {
   .aksesuar-kart .fiyat { font-size:11px; font-weight:600; color:var(--ink-soft,#6b7785); }
   .aksesuar-kart.sahip { border-color:#00661d; background:rgba(0,102,29,.06); }
   .aksesuar-kart.takili { border-color:#feb223; background:rgba(254,178,35,.1); }
+
+  /* ── Öğretmen profil: kurum logosu / profil fotoğrafı ── */
+  /* Logo sabit bir kutuya oranı korunarak sığar: çok geniş logo genişliğe, çok yüksek logo yüksekliğe göre küçülür */
+  .avatar-foto { width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; }
+  .profil-gorsel-kutu { border:1.5px dashed var(--outline-variant,#c9d4dc); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .profil-logo-onizleme { height:48px; max-width:160px; width:auto; object-fit:contain; }
+  .profil-foto-onizleme { width:72px; height:72px; border-radius:50%; object-fit:cover; background:#e8f4fb; display:flex; align-items:center; justify-content:center; font-family:Manrope; font-weight:800; font-size:26px; color:#005d8d; overflow:hidden; }
+  .profil-pdf-bant { background:#005d8d; color:#fff; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:8px; font-size:9.5px; font-weight:800; font-family:Manrope,sans-serif; }
+  .rapor-logo-kutu { background:#fff; border-radius:6px; padding:3px 5px; height:32px; max-width:120px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-sizing:border-box; }
+  .rapor-logo-kutu img { max-height:26px; max-width:110px; width:auto; height:auto; object-fit:contain; display:block; }
 </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen">
@@ -397,7 +407,7 @@ tailwind.config = {
     </div>
     <!-- Kullanıcı kartı -->
     <div style="margin:0 14px 16px;display:flex;align-items:center;gap:10px;padding:11px;background:rgba(255,255,255,.1);border-radius:14px;position:relative;">
-      <div id="sidebar-avatar" style="width:38px;height:38px;border-radius:11px;background:#fff;color:#005d8d;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:15px;flex:0 0 auto;">—</div>
+      <div id="sidebar-avatar" style="width:38px;height:38px;border-radius:11px;background:#fff;color:#005d8d;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:15px;flex:0 0 auto;overflow:hidden;">—</div>
       <div style="min-width:0;">
         <div id="sidebar-name" style="color:#fff;font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
         <div id="sidebar-rol-label" style="color:rgba(255,255,255,.65);font-size:11px;">—</div>
@@ -430,7 +440,7 @@ tailwind.config = {
       </div>
       <div style="display:flex;align-items:center;gap:12px;">
         <span id="hdr-role-badge" class="badge badge-blue">—</span>
-        <div id="hdr-avatar" style="width:38px;height:38px;border-radius:11px;background:#005d8d;color:#fff;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:15px;">—</div>
+        <div id="hdr-avatar" style="width:38px;height:38px;border-radius:11px;background:#005d8d;color:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:15px;">—</div>
       </div>
     </header>
 
@@ -1273,6 +1283,75 @@ tailwind.config = {
       </div>
     </div>
 
+    <!-- ── PROFİLİM (öğretmen) ──────────────────────────────── -->
+    <div id="page-profilim" class="page">
+      <div class="card-2xl" style="padding:22px 24px;max-width:640px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+          <span class="material-symbols-outlined ico-fill" style="color:var(--orange);">account_circle</span>
+          <h2 style="font-family:Manrope;font-size:15px;font-weight:700;margin:0;color:var(--ink);">Profilim</h2>
+        </div>
+        <div class="mob-stack" style="display:grid;grid-template-columns:3fr 2fr;gap:12px;">
+          <div class="profil-gorsel-kutu">
+            <label class="lbl" style="margin:0;">Kurum Logosu</label>
+            <div style="min-height:48px;display:flex;align-items:center;">
+              <img id="profil-logo-onizleme" class="profil-logo-onizleme" alt="" style="display:none;">
+              <span id="profil-logo-yok" style="font-size:12px;color:var(--ink-soft);">Logo yüklenmedi — AdaptiX logosu görünür.</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button onclick="document.getElementById('profil-logo-input').click()" class="btn btn-outline" style="font-size:12px;padding:6px 12px;">
+                <span class="material-symbols-outlined" style="font-size:16px;">upload</span> Yükle
+              </button>
+              <button id="profil-logo-kaldir" onclick="profilGorselKaldir('logo')" class="btn btn-outline" style="font-size:12px;padding:6px 12px;display:none;">
+                <span class="material-symbols-outlined" style="font-size:16px;">delete</span> Kaldır
+              </button>
+            </div>
+            <input type="file" id="profil-logo-input" accept="image/png,image/jpeg" style="display:none;" onchange="profilGorselSec('logo', this)">
+            <div style="font-size:11px;color:var(--ink-soft);">PNG/JPG · en fazla 2MB · sol menüde ve PDF raporda görünür</div>
+            <div id="profil-logo-uyari" style="display:none;font-size:11.5px;color:#9a5b00;background:rgba(254,178,35,.14);border-radius:8px;padding:6px 9px;"></div>
+            <div>
+              <div style="font-size:10.5px;color:var(--ink-soft);margin-bottom:4px;font-weight:600;">PDF raporda böyle görünür</div>
+              <div class="profil-pdf-bant">
+                <div class="rapor-logo-kutu" id="profil-pdf-logo-kutu"><img id="profil-pdf-logo" alt=""></div>
+                <span>AKADEMİK PERFORMANS RAPORU</span>
+              </div>
+            </div>
+          </div>
+          <div class="profil-gorsel-kutu" style="align-items:flex-start;">
+            <label class="lbl" style="margin:0;">Profil Fotoğrafı</label>
+            <div id="profil-foto-onizleme" class="profil-foto-onizleme">—</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button onclick="document.getElementById('profil-foto-input').click()" class="btn btn-outline" style="font-size:12px;padding:6px 12px;">
+                <span class="material-symbols-outlined" style="font-size:16px;">upload</span> Yükle
+              </button>
+              <button id="profil-foto-kaldir" onclick="profilGorselKaldir('foto')" class="btn btn-outline" style="font-size:12px;padding:6px 12px;display:none;">
+                <span class="material-symbols-outlined" style="font-size:16px;">delete</span> Kaldır
+              </button>
+            </div>
+            <input type="file" id="profil-foto-input" accept="image/png,image/jpeg" style="display:none;" onchange="profilGorselSec('foto', this)">
+            <div style="font-size:11px;color:var(--ink-soft);">PNG/JPG · en fazla 2MB</div>
+          </div>
+        </div>
+        <div><label class="lbl">Ad Soyad</label><input type="text" id="profil-ad" class="field" maxlength="100"/></div>
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><label class="lbl">Telefon</label><input type="tel" id="profil-telefon" class="field" placeholder="05XX XXX XX XX"/></div>
+          <div><label class="lbl">E-posta</label><input type="email" id="profil-email" class="field" placeholder="ogretmen@email.com"/></div>
+        </div>
+        <div>
+          <label class="lbl">Branş</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span id="profil-brans" style="font-weight:700;color:var(--ink);font-size:14px;">—</span>
+            <span style="font-size:11.5px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:3px;">
+              <span class="material-symbols-outlined" style="font-size:15px;">lock</span> Değişiklik için AdaptiX'e yazın
+            </span>
+          </div>
+        </div>
+        <div id="profil-hata" style="display:none;font-size:12.5px;color:#ba1a1a;"></div>
+        <button onclick="profilKaydet()" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span> Kaydet
+        </button>
+      </div>
+    </div>
+
     <!-- ── AdaptiX PANELİ ─────────────────────────────────────── -->
     <div id="page-adaptix" class="page">
 
@@ -1920,15 +1999,30 @@ function updateUserInfo() {
   const mobileUser = document.getElementById('mobile-user-name');
   if (sName)   sName.textContent   = ad;
   if (sSinif)  sSinif.textContent  = sinif;
-  if (sAvatar) sAvatar.textContent = ad.charAt(0).toUpperCase();
+  if (sAvatar) avatarYaz(sAvatar, ad);
   if (sRol)    sRol.textContent    = rolLabel;
   if (mobileUser) mobileUser.textContent = ad.split(' ')[0];
 
   const hdrAvatar = document.getElementById('hdr-avatar');
   const hdrBadge  = document.getElementById('hdr-role-badge');
-  if (hdrAvatar) hdrAvatar.textContent = ad.charAt(0).toUpperCase();
+  if (hdrAvatar) avatarYaz(hdrAvatar, ad);
   if (hdrBadge)  { hdrBadge.textContent = rolBadge + ' paneli'; hdrBadge.className = badgeClass; }
 }
+
+// Avatar: öğretmenin profil fotoğrafı varsa o, yoksa (ya da açılamazsa) adın baş harfi.
+function avatarYaz(el, ad) {
+  const harf = (ad || '—').charAt(0).toUpperCase();
+  const foto = state.rol === 'ogretmen' ? state.ogretmen?.foto_url : null;
+  if (!foto) { el.textContent = harf; return; }
+  el.textContent = '';
+  const img = document.createElement('img');
+  img.className = 'avatar-foto';
+  img.alt = '';
+  img.onerror = () => { el.textContent = harf; };
+  img.src = foto;
+  el.appendChild(img);
+}
+
 
 function buildNav() {
   const pages = state.rol === 'ogretmen' ? [
@@ -1945,6 +2039,7 @@ function buildNav() {
     { id: 'odul-dukkani',  icon: 'redeem', label: 'Ödül Dükkanı' },
     { id: 'puan-yonetimi', icon: 'stars',  label: 'Puan Yönetimi' },
     { id: 'pet-ayarlari',  icon: 'pets',   label: 'Pet Ayarları' },
+    { id: 'profilim',      icon: 'account_circle', label: 'Profilim' },
   ] : state.rol === 'adaptix' ? [
     { id: 'adaptix', icon: 'admin_panel_settings', label: 'Platform Yönetimi' },
   ] : state.rol === 'ogrenci' ? [
@@ -1994,6 +2089,7 @@ const PAGE_TITLES = {
   'odul-dukkani':  ['Ödül Dükkanı', 'Ödül kataloğu ve talep yönetimi'],
   'puan-yonetimi': ['Puan Yönetimi', 'Öğrenci puan geçmişi ve manuel puan'],
   'pet-ayarlari':  ['Pet Ayarları', 'Evcil hayvan süre ve puan ayarları'],
+  'profilim':      ['Profilim',     'Logo, fotoğraf ve iletişim bilgileri'],
   'ogrenci-panel':['Öğrenci Paneli','Ödevler, denemeler ve dersler'],
   'ogrenci-soru-bankasi':['Soru Bankam','Çözemediğin soruların arşivi'],
   'ogrenci-basari':['Başarım',      'Kazanım ve başarı takibin'],
@@ -2035,6 +2131,7 @@ function goPage(id) {
   if (id === 'odul-dukkani')  loadOdulDukkani();
   if (id === 'puan-yonetimi') loadPuanYonetimi();
   if (id === 'pet-ayarlari')  loadPetAyarlari();
+  if (id === 'profilim')      loadProfilim();
   if (id === 'soru-bankasi')  loadSoruBankasiOgretmen();
   const [title, sub] = PAGE_TITLES[id] || [id, ''];
   const hdrTitle = document.getElementById('hdr-title');
@@ -3545,6 +3642,146 @@ async function ogretmenBilgisiYukle(ogretmenId) {
   if (!ogretmenId) return;
   const { data } = await sb.from('ogretmenler').select('*').eq('ogretmen_id', ogretmenId).single();
   if (data) { state.ogretmen = data; state.ogretmen_id = data.ogretmen_id; state.brans = data.brans; }
+}
+
+// ── Öğretmen: Profilim ─────────────────────────────────────────────────────
+// Görseller public 'ogretmen-profil' bucket'ında <ogretmen_id>/<tur>-<zaman>.<uzantı>
+// yolunda durur; her yüklemede yeni ad (önbellek + upsert izni gerekmez), eskisi silinir.
+// Tür/boyut sınırı bucket ayarında ve ogretmenler_yazma_koruma tetikleyicisinde de var.
+const PROFIL_BUCKET   = 'ogretmen-profil';
+const PROFIL_MAX_BAYT = 2 * 1024 * 1024;
+const PROFIL_TURLER   = { 'image/png': 'png', 'image/jpeg': 'jpg' };
+
+function loadProfilim() {
+  const o = state.ogretmen || {};
+  document.getElementById('profil-ad').value      = o.ad_soyad || '';
+  document.getElementById('profil-telefon').value = o.telefon  || '';
+  document.getElementById('profil-email').value   = o.email    || '';
+  document.getElementById('profil-brans').textContent = o.brans || '—';
+  document.getElementById('profil-hata').style.display = 'none';
+  profilGorselleriGoster();
+}
+
+function profilGorselleriGoster() {
+  const o = state.ogretmen || {};
+  const logoImg = document.getElementById('profil-logo-onizleme');
+  const uyari   = document.getElementById('profil-logo-uyari');
+  const pdfKutu = document.getElementById('profil-pdf-logo-kutu');
+  const pdfImg  = document.getElementById('profil-pdf-logo');
+  uyari.style.display = 'none';
+  if (o.logo_url) {
+    // Çok geniş/yüksek logo reddedilmez; PDF'te küçük kalacağı söylenir.
+    logoImg.onload = () => {
+      const oran = logoImg.naturalWidth / (logoImg.naturalHeight || 1);
+      const mesaj = oran > 6 ? 'Logo çok geniş; PDF raporda ince ve küçük görünebilir.'
+                  : oran < 1 / 3 ? 'Logo çok yüksek; PDF raporda dar ve küçük görünebilir.' : '';
+      uyari.textContent = mesaj;
+      uyari.style.display = mesaj ? 'block' : 'none';
+    };
+    logoImg.src = o.logo_url;
+    logoImg.style.display = '';
+    pdfImg.src = o.logo_url;
+    pdfKutu.style.background = '';
+  } else {
+    logoImg.removeAttribute('src');
+    logoImg.style.display = 'none';
+    pdfImg.src = 'public/adaptix_renk_logo.png';
+    pdfKutu.style.background = 'transparent';
+  }
+  document.getElementById('profil-logo-yok').style.display    = o.logo_url ? 'none' : '';
+  document.getElementById('profil-logo-kaldir').style.display = o.logo_url ? '' : 'none';
+  avatarYazProfil();
+  document.getElementById('profil-foto-kaldir').style.display = o.foto_url ? '' : 'none';
+}
+
+function avatarYazProfil() {
+  const el = document.getElementById('profil-foto-onizleme');
+  if (el) avatarYaz(el, state.ogretmen?.ad_soyad || state.user?.ad);
+}
+
+// Dosyanın gerçekten açılabilen bir görsel olduğunu doğrular, boyutunu döner.
+function gorselBoyutuOku(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload  = () => { URL.revokeObjectURL(url); resolve({ w: img.naturalWidth, h: img.naturalHeight }); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Görsel okunamadı')); };
+    img.src = url;
+  });
+}
+
+// Public URL'den bucket içi yolu çıkarıp dosyayı siler (başarısızlık sessiz geçer).
+async function profilEskiDosyaSil(url) {
+  const isaret = '/object/public/' + PROFIL_BUCKET + '/';
+  const i = (url || '').indexOf(isaret);
+  if (i < 0) return;
+  try { await sb.storage.from(PROFIL_BUCKET).remove([decodeURIComponent(url.slice(i + isaret.length))]); } catch (e) {}
+}
+
+async function profilGorselSec(tur, input) {
+  const file = input.files && input.files[0];
+  input.value = ''; // aynı dosya yeniden seçilebilsin
+  if (!file || !state.ogretmen_id) return;
+  const ext = PROFIL_TURLER[file.type];
+  if (!ext) { showToast('❌ Yalnızca PNG veya JPG yükleyebilirsiniz'); return; }
+  if (file.size > PROFIL_MAX_BAYT) { showToast('❌ Dosya en fazla 2MB olabilir'); return; }
+  try { await gorselBoyutuOku(file); } catch (e) { showToast('❌ Görsel açılamadı'); return; }
+
+  const kolon = tur === 'logo' ? 'logo_url' : 'foto_url';
+  const yol   = `${state.ogretmen_id}/${tur}-${Date.now()}.${ext}`;
+  showToast('⏳ Yükleniyor…');
+  const { error: upErr } = await sb.storage.from(PROFIL_BUCKET).upload(yol, file, { contentType: file.type, upsert: false });
+  if (upErr) { showToast('❌ ' + upErr.message); return; }
+  const url  = sb.storage.from(PROFIL_BUCKET).getPublicUrl(yol).data.publicUrl;
+  const eski = state.ogretmen?.[kolon];
+  const { error } = await sb.from('ogretmenler').update({ [kolon]: url }).eq('ogretmen_id', state.ogretmen_id);
+  if (error) {
+    try { await sb.storage.from(PROFIL_BUCKET).remove([yol]); } catch (e) {}
+    showToast('❌ ' + error.message);
+    return;
+  }
+  state.ogretmen = { ...state.ogretmen, [kolon]: url };
+  profilEskiDosyaSil(eski);
+  profilGorselleriGoster();
+  updateUserInfo();
+  showToast(tur === 'logo' ? '✅ Logo güncellendi' : '✅ Profil fotoğrafı güncellendi');
+}
+
+async function profilGorselKaldir(tur) {
+  const kolon = tur === 'logo' ? 'logo_url' : 'foto_url';
+  const eski  = state.ogretmen?.[kolon];
+  if (!eski) return;
+  const { error } = await sb.from('ogretmenler').update({ [kolon]: null }).eq('ogretmen_id', state.ogretmen_id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  state.ogretmen = { ...state.ogretmen, [kolon]: null };
+  profilEskiDosyaSil(eski);
+  profilGorselleriGoster();
+  updateUserInfo();
+  showToast(tur === 'logo' ? '✅ Logo kaldırıldı' : '✅ Profil fotoğrafı kaldırıldı');
+}
+
+async function profilKaydet() {
+  const hataEl = document.getElementById('profil-hata');
+  const hata = msg => { hataEl.textContent = msg; hataEl.style.display = 'block'; };
+  hataEl.style.display = 'none';
+  const ad      = document.getElementById('profil-ad').value.trim();
+  const telefon = document.getElementById('profil-telefon').value.trim();
+  const email   = document.getElementById('profil-email').value.trim();
+  // Kurallar ogretmenler_yazma_koruma tetikleyicisindekilerle aynı
+  if (ad.length < 3 || ad.length > 100) return hata('Ad soyad 3-100 karakter olmalı.');
+  if (telefon && !/^\d{10,13}$/.test(telefon.replace(/\D/g, ''))) return hata('Telefon numarası geçersiz.');
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return hata('E-posta adresi geçersiz.');
+
+  const guncel = { ad_soyad: ad, telefon: telefon || null, email: email || null };
+  const { error } = await sb.from('ogretmenler').update(guncel).eq('ogretmen_id', state.ogretmen_id);
+  if (error) return hata(error.message);
+  state.ogretmen = { ...state.ogretmen, ...guncel };
+  state.user = { ...state.user, ad };
+  localStorage.setItem('adaptix_ogretmen_adi', ad);
+  _saveSession();
+  updateUserInfo();
+  avatarYazProfil();
+  showToast('✅ Profil kaydedildi');
 }
 
 // TEK ORKESTRATÖR — odevDenemeSenkronla + puan tetiklemeyi birleştirir.

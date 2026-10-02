@@ -9124,7 +9124,7 @@ async function loadOgrBasari() {
   const [raporRes, kazRes, kaynakIler] = await Promise.all([
     sb.from('odevler').select('*').eq('ogrenci_id', state.user.ogrenci_id).eq('durum','TAMAMLANDI').order('verilis_tarihi', { ascending: false }),
     state.brans
-      ? sb.from('kazanimlar').select('*').eq('ders', state.brans).ilike('sinif', `%${(state.user.sinif||'').replace('.','')}%`)
+      ? sb.from('kazanimlar').select('*').eq('ders', state.brans).ilike('sinif', `%${(state.user.sinif||'').replace(/\D/g,'')}%`)
       : Promise.resolve({ data: [] }),
     kaynakIlerlemeleriGetir(state.user.ogrenci_id)
   ]);
@@ -9275,7 +9275,7 @@ async function loadVeliPanel() {
     sb.from('odevler').select('*').eq('ogrenci_id', u.ogrenci_id).order('verilis_tarihi', { ascending: false }),
     _veliDersQ,
     state.brans
-      ? sb.from('kazanimlar').select('*').eq('ders', state.brans).ilike('sinif', `%${(u.sinif||'').replace('.','')}%`)
+      ? sb.from('kazanimlar').select('*').eq('ders', state.brans).ilike('sinif', `%${(u.sinif||'').replace(/\D/g,'')}%`)
       : Promise.resolve({ data: [] }),
     sb.from('denemeler').select('*').eq('ogrenci_id', u.ogrenci_id).order('tarih', { ascending: false }),
     kalanPuanHesapla(u.ogrenci_id),

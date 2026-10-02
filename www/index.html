@@ -1967,7 +1967,9 @@ async function initApp() {
     goPage('dashboard');
   } else if (state.rol === 'adaptix') {
     goPage('adaptix');
-    loadAdaptixDashboard();
+    // Bildirim mailindeki bağlantı (#basvurular) doğrudan Başvurular sekmesini açar
+    if (location.hash === '#basvurular') adaptixTab('basvurular');
+    else loadAdaptixDashboard();
   } else if (state.rol === 'ogrenci') {
     await ogretmenBilgisiYukle(state.user.ogretmen_id);
     goPage('ogrenci-panel');

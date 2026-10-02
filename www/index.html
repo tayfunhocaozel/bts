@@ -2841,9 +2841,10 @@ function renderOdevForm() {
     <div id="f-konu-checkbox-alani" style="display:none;"></div>
     <div id="f-konu-legacy-alani">
       <select id="f-konu" onchange="formKonuSecildi()" class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none">${konuOpts}</select>
-      <select id="f-kazanim" class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm appearance-none" style="margin-top:12px;">
-        <option value="">— Kazanım (opsiyonel) —</option>
-      </select>
+      <input type="hidden" id="f-kazanim" value="">
+      <div id="f-kazanim-liste" style="margin-top:12px;">
+        <div class="text-xs text-outline px-1">Konu seçince kazanımlar alt kazanımlarıyla listelenir (opsiyonel)</div>
+      </div>
     </div>
     <input type="text" id="f-detay" placeholder="Sayfa / Test numarası"
       class="w-full px-3 py-2.5 rounded-xl bg-surface-container-low border-none text-sm">`;
@@ -2905,20 +2906,60 @@ async function formKaynakSecildi() {
       </div>` : ''}`;
 }
 
-async function formKonuSecildi() {
+// Konu seçilince kazanımlar alt kazanımlarıyla listelenir. Ödev tek kazanıma bağlanır (radyo);
+// o kazanımın alt kazanımları tek tek işaretlenir. onSecim: önceden seçilecek kazanım kodu (tekrar ver).
+async function formKonuSecildi(onSecim) {
   const konu = document.getElementById('f-konu').value;
-  const kazanimSel = document.getElementById('f-kazanim');
+  const liste = document.getElementById('f-kazanim-liste');
+  document.getElementById('f-kazanim').value = '';
   if (!konu) {
-    kazanimSel.innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>';
+    liste.innerHTML = '<div class="text-xs text-outline px-1">Konu seçince kazanımlar alt kazanımlarıyla listelenir (opsiyonel)</div>';
     return;
   }
   const { data } = await sb.from('kazanimlar').select('*')
     .eq('ders', state.brans || 'İlköğretim Matematik')
     .eq('sinif', state._odevOgrenciSinif || '')
     .eq('konu', konu);
-  state._odevKazanimlar = data || [];
-  kazanimSel.innerHTML = '<option value="">— Kazanım (opsiyonel) —</option>' +
-    state._odevKazanimlar.map(k => `<option value="${k.kazanim_kodu||''}">${k.kazanim_kodu||''} ${(k.kazanim_aciklamasi||'').substring(0,50)}...</option>`).join('');
+  state._odevKazanimlar = (data || []).sort((a, b) => (a.sira ?? 0) - (b.sira ?? 0)
+    || String(a.kazanim_kodu).localeCompare(String(b.kazanim_kodu), 'tr', { numeric: true }));
+
+  liste.innerHTML = `
+    <div class="text-xs font-semibold text-outline uppercase tracking-wider mb-1.5">Kazanım (opsiyonel)</div>
+    <div style="max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:4px 10px;">
+      <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+        <input type="radio" name="f-kaz-radio" value="" checked onchange="odevKazanimSec(this.value)">
+        <span class="text-outline">Kazanım seçmeden (sadece konu)</span>
+      </label>
+      ${state._odevKazanimlar.map(k => `
+        <div style="border-top:1px solid var(--line);padding:6px 0;">
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;cursor:pointer;">
+            <input type="radio" name="f-kaz-radio" value="${escHtml(k.kazanim_kodu || '')}" style="margin-top:3px;" onchange="odevKazanimSec(this.value)">
+            <span style="flex:1;"><b class="text-primary">${escHtml(k.kazanim_kodu || '')}</b> ${escHtml(k.kazanim_aciklamasi || '')}</span>
+          </label>
+          ${altKazanimListesi(k).map(a => `
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;cursor:pointer;padding:3px 0 0 26px;line-height:1.35;">
+              <input type="checkbox" class="f-alt-cb" data-ust="${escHtml(k.kazanim_kodu || '')}" value="${escHtml(a.kod)}" style="margin-top:2px;" onchange="odevAltDegisti(this)">
+              <span style="flex:1;"><b class="text-primary">${escHtml(a.kod)}</b> ${escHtml(a.metin)}</span>
+            </label>`).join('')}
+        </div>`).join('')}
+    </div>`;
+
+  if (onSecim) {
+    const r = [...liste.querySelectorAll('input[name=f-kaz-radio]')].find(x => x.value === onSecim);
+    if (r) { r.checked = true; odevKazanimSec(onSecim); }
+  }
+}
+
+function odevKazanimSec(kod) {
+  document.getElementById('f-kazanim').value = kod || '';
+  // başka kazanımın alt kazanım işaretleri temizlenir (ödev tek kazanıma bağlı)
+  document.querySelectorAll('#f-kazanim-liste .f-alt-cb').forEach(c => { if (c.dataset.ust !== kod) c.checked = false; });
+}
+
+function odevAltDegisti(cb) {
+  if (!cb.checked) return;
+  const r = [...document.querySelectorAll('#f-kazanim-liste input[name=f-kaz-radio]')].find(x => x.value === cb.dataset.ust);
+  if (r && !r.checked) { r.checked = true; odevKazanimSec(cb.dataset.ust); }
 }
 
 // Taslağa ekle — kaynağın kaynak_konulari/kaynak_cevap_anahtari'ı varsa
@@ -2970,10 +3011,14 @@ function taslakEkle() {
 
     // kazanimAciklamasi'ni da sakla ki tabloda gösterelim
     const kazObj = state._odevKazanimlar.find(k => k.kazanim_kodu === kazanim);
+    const altlar = kazanim
+      ? [...document.querySelectorAll('#f-kazanim-liste .f-alt-cb:checked')].filter(c => c.dataset.ust === kazanim).map(c => c.value)
+      : [];
 
     state._odevTaslaklari.push({
       _id: Date.now() + Math.random(),
       gun, kaynak: kaynakAdi, konu, kazanim,
+      alt_kazanim_kodlari: altlar,
       kazanim_aciklamasi: kazObj?.kazanim_aciklamasi || '',
       odev_detay: detay,
       hedef_tarih: gununTarihi(gun),
@@ -2985,6 +3030,11 @@ function taslakEkle() {
   renderTaslakTablo();
   renderOdevForm();
   showToast(eklenenSayisi > 1 ? `✅ ${eklenenSayisi} kayıt tabloya eklendi` : '✅ Tabloya eklendi');
+}
+
+// ['M.7.2.1.A','M.7.2.1.C'] -> ' (A, C)'
+function altHarfleri(kodlar) {
+  return (kodlar && kodlar.length) ? ` (${kodlar.map(k => String(k).split('.').pop()).join(', ')})` : '';
 }
 
 function taslakSil(id) {
@@ -3014,7 +3064,7 @@ function renderTaslakTablo() {
     <div class="flex items-start gap-3 py-3">
       <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-primary flex-shrink-0 mt-0.5">${t.gun}${t.hedef_tarih?' · '+odevTarihGoster(t.hedef_tarih):''}</span>
       <div class="flex-1 min-w-0">
-        <div class="text-sm font-semibold text-on-surface">${t.konu}${t.kazanim?' — '+t.kazanim:''}</div>
+        <div class="text-sm font-semibold text-on-surface">${t.konu}${t.kazanim?' — '+t.kazanim:''}${altHarfleri(t.alt_kazanim_kodlari)}</div>
         <div class="text-xs text-outline mt-0.5">📚 ${t.kaynak}${t.odev_detay && t.odev_detay.trim() ? ' &nbsp;•&nbsp; 📄 '+t.odev_detay.trim() : ''}</div>
       </div>
       <button onclick="taslakSil(${t._id})" class="text-error hover:bg-error-container/30 w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 text-lg font-bold">×</button>
@@ -3041,7 +3091,9 @@ async function odevSave() {
     kaynak_konu_id: t.kaynak_konu_id || null,
     test_no: t.test_no ?? null,
     sayfa_baslangic: t.sayfa_baslangic ?? null,
-    sayfa_bitis: t.sayfa_bitis ?? null
+    sayfa_bitis: t.sayfa_bitis ?? null,
+    // kolon sadece alt kazanım işaretlendiyse gönderilir
+    ...(t.alt_kazanim_kodlari && t.alt_kazanim_kodlari.length ? { alt_kazanim_kodlari: t.alt_kazanim_kodlari } : {})
   }));
 
   const { data: eklenen, error } = await sb.from('odevler').insert(rows)
@@ -4011,7 +4063,7 @@ function renderOgrGirOdevListesi() {
           <div class="py-3">
             <div class="flex items-start justify-between gap-2 mb-2">
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Gecikti</span>':''}</div>
+                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Gecikti</span>':''}</div>
                 <div class="text-xs text-outline mt-0.5">
                   📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}
                   ${o.odev_detay && o.odev_detay.trim() ? '&nbsp;•&nbsp; 📄 '+o.odev_detay.trim() : ''}
@@ -4067,7 +4119,7 @@ function renderOgrGirOdevListesi() {
           <div class="py-3">
             <div class="flex items-start justify-between gap-2 mb-1">
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}</div>
                 <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
                 ${o.durum==='TAMAMLANDI'&&top>0?`<div class="text-xs mt-0.5 text-outline">✅${d} ❌${y} ⬜${b}/${top}</div>`:''}
               </div>
@@ -7374,9 +7426,7 @@ async function raporTekrarVer(ogrenciId, kaynak, konu, kazanim) {
   const fKaynak = document.getElementById('f-kaynak');
   const fKonu   = document.getElementById('f-konu');
   if (fKaynak && kaynak) fKaynak.value = kaynak;
-  if (fKonu && konu) { fKonu.value = konu; formKonuSecildi(); }
-  const fKazanim = document.getElementById('f-kazanim');
-  if (fKazanim && kazanim) fKazanim.value = kazanim;
+  if (fKonu && konu) { fKonu.value = konu; await formKonuSecildi(kazanim); }
   showToast('📋 Ödev formu hazırlandı — gün seçin ve tabloya ekleyin');
 }
 
@@ -8709,7 +8759,7 @@ async function loadOgrenciPanel() {
     <div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_16px_rgba(0,29,49,0.05)] overflow-hidden">
       ${[...bekleyen].sort(odevSirala).map(o => `
         <div class="px-4 py-3 border-b border-outline-variant/15 last:border-0">
-          <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
+          <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
           <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
           ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
         </div>`).join('')}
@@ -8742,7 +8792,7 @@ async function loadOgrenciPanel() {
               <div class="flex items-start gap-3 mb-3">
                 <div class="w-2.5 h-2.5 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
                 <div class="flex-1">
-                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
+                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
                   <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
                   ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
                 </div>
@@ -8828,7 +8878,7 @@ function renderOgrPanelTamamlanan() {
             <div class="px-5 py-4">
               <div class="flex items-start justify-between gap-2 mb-2">
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}</div>
+                  <div class="text-sm font-bold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}</div>
                   <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
                   ${o.odev_detay ? `<div class="text-xs mt-0.5" style="color:var(--outline);opacity:.75;">${o.odev_detay}</div>` : ''}
                 </div>
@@ -8929,7 +8979,7 @@ function renderOgrPanelTumu() {
           <div class="px-5 py-3 border-b border-outline-variant/10 last:border-0">
             <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+                <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}</div>
                 <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div>
                 ${o.durum==='TAMAMLANDI'&&top>0 ? `<div class="text-xs mt-0.5 text-outline">✅${d} ❌${y} ⬜${b} / ${top}</div>` : ''}
               </div>
@@ -9429,7 +9479,7 @@ async function loadVeliPanel() {
       ${[...bekleyen].sort(odevSirala).map(o=>`
         <div class="px-5 py-3 border-b border-outline-variant/10 last:border-0 flex items-start gap-3">
           <div class="w-2 h-2 rounded-full bg-error mt-1.5 flex-shrink-0"></div>
-          <div><div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
+          <div><div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}${odevGecikti(o)?' <span class="text-xs font-bold text-error">⚠️ Süresi geçti</span>':''}</div>
           <div class="text-xs text-outline mt-0.5">📅 ${o.gun||'—'}${o.verilis_tarihi?' · '+odevTarihGoster(o.verilis_tarihi):''} &nbsp;•&nbsp; 📚 ${o.kaynak||'—'}</div></div>
         </div>`).join('')}
     </div>` : ''}
@@ -9445,7 +9495,7 @@ async function loadVeliPanel() {
         const col=pct>=80?'#00661d':pct>=60?'#805600':'#ba1a1a';
         const bg=pct>=80?'rgba(0,130,40,0.1)':pct>=60?'rgba(254,178,35,0.2)':'rgba(186,26,26,0.1)';
         return `<div class="px-5 py-3 border-b border-outline-variant/10 last:border-0 flex items-center gap-3">
-          <div class="flex-1"><div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+          <div class="flex-1"><div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}</div>
           <div class="text-xs text-outline mt-0.5">${o.gun||''} — ${o.kaynak||''}</div></div>
           ${top>0?`<span class="text-sm font-extrabold px-2 py-0.5 rounded-full text-nowrap" style="background:${bg};color:${col}">%${pct}</span>`:''}
         </div>`;}).join('')}
@@ -9458,7 +9508,7 @@ async function loadVeliPanel() {
       </div>
       ${eksik.map(o=>`
         <div class="px-5 py-3 border-b border-outline-variant/10 last:border-0">
-          <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}</div>
+          <div class="text-sm font-semibold text-on-surface">${o.konu||'—'}${altHarfleri(o.alt_kazanim_kodlari)}</div>
           <div class="text-xs text-outline mt-0.5">${o.gun||''} — ${o.durum}</div>
         </div>`).join('')}
     </div>` : ''}

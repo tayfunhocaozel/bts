@@ -53,15 +53,18 @@ begin
     raise exception 'Telefon numarası geçersiz';
   end if;
 
-  -- Logo/foto yalnızca öğretmenin kendi depolama klasörünü gösterebilir
+  -- Logo/foto yalnızca öğretmenin kendi depolama klasörünü gösterebilir; dosya adı
+  -- yalnız güvenli karakter (adres HTML niteliğine yazıldığı için tırnak vb. giremez)
   onek := 'https://ldxeenczugcoirdrldjv.supabase.co/storage/v1/object/public/ogretmen-profil/'
           || new.ogretmen_id || '/';
   if new.logo_url is distinct from old.logo_url and new.logo_url is not null
-     and left(new.logo_url, length(onek)) <> onek then
+     and (left(new.logo_url, length(onek)) <> onek
+          or substr(new.logo_url, length(onek) + 1) !~ '^[A-Za-z0-9._-]+$') then
     raise exception 'Logo adresi geçersiz';
   end if;
   if new.foto_url is distinct from old.foto_url and new.foto_url is not null
-     and left(new.foto_url, length(onek)) <> onek then
+     and (left(new.foto_url, length(onek)) <> onek
+          or substr(new.foto_url, length(onek) + 1) !~ '^[A-Za-z0-9._-]+$') then
     raise exception 'Fotoğraf adresi geçersiz';
   end if;
   return new;

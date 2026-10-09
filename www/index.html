@@ -673,6 +673,16 @@ tailwind.config = {
             </select>
           </div>
         </div>
+        <div class="mob-stack" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;min-height:38px;">
+            <input type="checkbox" id="yeni-odeme-takibi" checked onchange="odemeTakibiAlaniGuncelle('yeni')" style="width:17px;height:17px;accent-color:var(--primary);">
+            Ödemesi takip edilsin
+          </label>
+          <div id="yeni-ucret-alani">
+            <label class="lbl">Ders Ücreti (₺) <span style="font-weight:400;">(isteğe bağlı)</span></label>
+            <input type="number" id="yeni-ders-ucreti" class="field" min="0" step="0.01" inputmode="decimal" placeholder="Örn. 500"/>
+          </div>
+        </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <label class="lbl" style="margin:0;">Veliler *</label>
@@ -2212,17 +2222,37 @@ function fillSelects() {
 async function loadDersBakiyeleri() {
   if (state.rol !== 'ogretmen') return 0;
   try {
-    const { data, error } = await sb.from('ders_odeme_bakiye')
-      .select('ogrenci_id, bakiye, odenen_ders, islenen_ders');
+    const [{ data, error }, { data: ayarlar }] = await Promise.all([
+      sb.from('ders_odeme_bakiye').select('ogrenci_id, bakiye, odenen_ders, islenen_ders'),
+      sb.from('ogrenci_odeme_ayarlari').select('ogrenci_id, odeme_takibi, ders_ucreti'),
+    ]);
     if (error) { console.error('Ders bakiyesi sorgu hatası:', error.message); return 0; }
     const map = {};
     (data || []).forEach(r => { map[r.ogrenci_id] = r; });
     state.dersBakiyeMap = map;
+    const ayarMap = {};
+    (ayarlar || []).forEach(r => { ayarMap[r.ogrenci_id] = r; });
+    state.odemeAyarMap = ayarMap;
     return (data || []).reduce((s, r) => s + (Number(r.bakiye) < 0 ? -Number(r.bakiye) : 0), 0);
   } catch (e) {
     console.error('Ders bakiyesi beklenmeyen hata:', e);
     return 0;
   }
+}
+
+// Öğrencinin ödeme (borç) takibi ayarı — yalnız öğretmen okur/yazar (ogrenci_odeme_ayarlari;
+// öğrenci/veli bu tabloya erişemez). Kayıt yoksa takip AÇIK, ücret boş sayılır.
+function odemeAyari(ogrenciId) {
+  const r = (state.odemeAyarMap || {})[ogrenciId];
+  return { odeme_takibi: r ? r.odeme_takibi !== false : true, ders_ucreti: r ? r.ders_ucreti : null };
+}
+
+async function odemeAyariKaydet(ogrenciId, odemeTakibi, dersUcreti) {
+  const { error } = await sb.from('ogrenci_odeme_ayarlari').upsert({
+    ogrenci_id: ogrenciId, ogretmen_id: state.ogretmen_id,
+    odeme_takibi: odemeTakibi, ders_ucreti: dersUcreti, updated_at: new Date().toISOString(),
+  }, { onConflict: 'ogrenci_id' });
+  return error;
 }
 
 function hesaplaDersBakiyesi(ogrenciId) {
@@ -2258,7 +2288,11 @@ async function renderOdemeBolumu(ogrenciId) {
 
   // 1) Bilgi kartı içindeki özet: rozet + Ödeme Gir butonu
   const ozetEl = document.getElementById('rapor-odeme-ozet');
-  if (ozetEl) {
+  if (ozetEl && !state.odemeAyarMap) await loadDersBakiyeleri();
+  if (!odemeAyari(ogrenciId).odeme_takibi) {
+    // Takip kapalı: borç gösterilmez, ödeme girilmez; geçmiş kayıtlar aşağıda durur
+    if (ozetEl) ozetEl.innerHTML = `<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-surface-container-high text-outline whitespace-nowrap">Ödeme takibi kapalı</span>`;
+  } else if (ozetEl) {
     if (!state.dersBakiyeMap[ogrenciId]) await loadDersBakiyeleri();
     ozetEl.innerHTML = `
       ${dersBakiyeRozetHTML(ogrenciId) || '<span class="text-xs text-outline">Bakiye —</span>'}
@@ -4716,6 +4750,11 @@ async function ogrenciDuzenle(id) {
   m.querySelector('#od-tc').value     = o.tc_no    || '';
   m.querySelector('#od-okulno').value = o.okul_no  || '';
   m.querySelector('#od-cinsiyet').value = o.cinsiyet || '';
+  if (!state.odemeAyarMap) await loadDersBakiyeleri();
+  const ayar = odemeAyari(id);
+  m.querySelector('#od-odeme-takibi').checked = ayar.odeme_takibi;
+  m.querySelector('#od-ders-ucreti').value = ayar.ders_ucreti ?? '';
+  odemeTakibiAlaniGuncelle('od');
   m.classList.remove('hidden');
   m.querySelector('#od-ad').focus();
   const container = document.getElementById('od-veli-container');
@@ -4733,6 +4772,8 @@ async function ogrenciDuzenleKaydet() {
   if (!ad) { showToast('⚠️ Ad Soyad zorunlu'); return; }
   const yeniVeliler = getVeliFormData('od-veli-container');
   if (!yeniVeliler.length) { showToast('⚠️ En az 1 veli zorunlu'); return; }
+  const dersUcreti = dersUcretiOku('od-ders-ucreti');
+  if (dersUcreti === undefined) return;
   const payload = {
     ad_soyad: ad,
     sinif:    m.querySelector('#od-sinif').value,
@@ -4742,10 +4783,13 @@ async function ogrenciDuzenleKaydet() {
     okul_no:  m.querySelector('#od-okulno').value.trim(),
     cinsiyet: m.querySelector('#od-cinsiyet').value || null,
   };
+  const odemeTakibi = m.querySelector('#od-odeme-takibi').checked;
   m.classList.add('hidden');
   showToast('Kaydediliyor...');
   const { error } = await sb.from('ogrenciler').update(payload).eq('ogrenci_id', id);
   if (error) { showToast('❌ ' + error.message); return; }
+  const aErr = await odemeAyariKaydet(id, odemeTakibi, dersUcreti);
+  if (aErr) showToast('⚠️ Ödeme takibi ayarı kaydedilemedi: ' + aErr.message);
   await sb.from('veliler').delete().eq('ogrenci_id', id);
   const { error: vErr } = await sb.from('veliler').insert(
     yeniVeliler.map(v => ({ ogrenci_id: id, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
@@ -4755,6 +4799,8 @@ async function ogrenciDuzenleKaydet() {
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
+  // Ödeme takibi açılıp kapanınca borç rozeti, toplam borç kartı ve rapor özeti değişir
+  _odemeGorunumleriYenile(id);
 }
 
 async function ogrenciSil() {
@@ -4779,6 +4825,22 @@ async function ogrenciSil() {
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
+}
+
+// "Ödemesi takip edilsin" kapalıyken ücret alanı gizlenir (girilmiş değer silinmez).
+function odemeTakibiAlaniGuncelle(onek) {
+  const acik = document.getElementById(onek + '-odeme-takibi')?.checked;
+  const alan = document.getElementById(onek + '-ucret-alani');
+  if (alan) alan.style.display = acik ? '' : 'none';
+}
+
+// Ders ücreti isteğe bağlı: boş → null. Geçersizse uyarır ve undefined döner.
+function dersUcretiOku(inputId) {
+  const ham = (document.getElementById(inputId)?.value || '').trim().replace(',', '.');
+  if (!ham) return null;
+  const n = Number(ham);
+  if (!Number.isFinite(n) || n < 0) { showToast('⚠️ Ders ücreti geçerli bir tutar olmalı'); return undefined; }
+  return Math.round(n * 100) / 100;
 }
 
 function veliSatirHTML(yakinlik, adi, tel) {
@@ -4824,6 +4886,9 @@ async function ogrenciEkle() {
   const okul   = document.getElementById('yeni-okul').value.trim();
   const okulno = document.getElementById('yeni-okulno').value;
   const cinsiyet = document.getElementById('yeni-cinsiyet').value || null;
+  const odemeTakibi = document.getElementById('yeni-odeme-takibi').checked;
+  const dersUcreti = dersUcretiOku('yeni-ders-ucreti');
+  if (dersUcreti === undefined) return;
 
   showToast('Kaydediliyor...');
 
@@ -4833,6 +4898,8 @@ async function ogrenciEkle() {
   }).select('ogrenci_id').single();
   if (error) { showToast('❌ ' + error.message); return; }
   const newId = eklenen.ogrenci_id;
+  const aErr = await odemeAyariKaydet(newId, odemeTakibi, dersUcreti);
+  if (aErr) showToast('⚠️ Ödeme takibi ayarı kaydedilemedi: ' + aErr.message);
   const { error: vErr } = await sb.from('veliler').insert(
     veliler.map(v => ({ ogrenci_id: newId, veli_adi: v.veli_adi, telefon: v.telefon, yakinlik: v.yakinlik }))
   );
@@ -4842,8 +4909,11 @@ async function ogrenciEkle() {
   state.ogrenciler = data || [];
   fillSelects();
   renderOgrenciler();
-  ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno'].forEach(id => document.getElementById(id).value = '');
+  ['yeni-ad','yeni-sube','yeni-okul','yeni-okulno','yeni-ders-ucreti'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('yeni-cinsiyet').value = '';
+  document.getElementById('yeni-odeme-takibi').checked = true;
+  odemeTakibiAlaniGuncelle('yeni');
+  loadDersBakiyeleri();
   document.getElementById('yeni-veli-container').innerHTML = veliSatirHTML('Anne', '', '');
 }
 
@@ -11892,6 +11962,16 @@ function showToast(msg) {
           <option value="kiz">Kız</option>
           <option value="erkek">Erkek</option>
         </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3 items-end">
+        <label class="flex items-center gap-2 text-sm font-semibold text-on-surface cursor-pointer" style="min-height:38px;">
+          <input id="od-odeme-takibi" type="checkbox" onchange="odemeTakibiAlaniGuncelle('od')" class="w-4 h-4" style="accent-color:var(--primary);">
+          Ödemesi takip edilsin
+        </label>
+        <div id="od-ucret-alani" class="flex flex-col gap-1">
+          <label class="text-xs font-semibold text-outline uppercase tracking-wider">Ders Ücreti (₺, isteğe bağlı)</label>
+          <input id="od-ders-ucreti" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Örn. 500" class="border border-outline-variant rounded-xl px-3 py-2 text-sm bg-surface-container focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
       </div>
       <div class="flex flex-col gap-1">
         <div class="flex items-center justify-between">

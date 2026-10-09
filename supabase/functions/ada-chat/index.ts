@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { AiOlcum, kimlikKapisi, uyelikKapisi } from "../_shared/ai-kapi.ts";
 
 // Bu fonksiyon istemciye (tarayıcıya) Anthropic Messages API ile uyumlu bir
 // arayüz sunar (content bloklu mesajlar, tool_use/tool_result, stop_reason),
@@ -7,6 +8,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // çeviri tamamen burada yapılır.
 
 const GEMINI_MODEL = "gemini-3.8-flash";
+const VARSAYILAN_MAX_TOKENS = 1500;
+const MAX_TOKENS_UST = 4096;
 const GEMINI_URL =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -138,6 +141,13 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Kimlik kapısı: auth-login JWT'si doğrulanmadan gövde okunmaz, Gemini'ye gidilmez.
+  const kapi = await kimlikKapisi(req, ["ogretmen", "adaptix"], corsHeaders);
+  if (!kapi.ok) return kapi.response;
+  const uyelik = await uyelikKapisi(kapi, corsHeaders);
+  if (!uyelik.ok) return uyelik.response;
+  const olcum = new AiOlcum(uyelik, "ada-chat:sohbet", GEMINI_MODEL);
+
   try {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
@@ -148,11 +158,17 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { system, tools, messages, max_tokens } = body;
+    const { system, tools, messages, max_tokens, amac } = body;
+    // Ölçüm etiketi: rapor notu ile Ada sohbeti ayrı izlenir (bilinmeyen amaç = sohbet)
+    if (amac === "rapor_notu") olcum.fonksiyon = "ada-chat:rapor_notu";
+
+    // İstemci max_tokens'ı en fazla MAX_TOKENS_UST kadar olabilir; büyüğü kırpılır.
+    const istenen = Math.floor(Number(max_tokens)) || VARSAYILAN_MAX_TOKENS;
+    const maxOutputTokens = Math.min(Math.max(istenen, 1), MAX_TOKENS_UST);
 
     const geminiBody: any = {
       contents: messagesToGeminiContents(messages || []),
-      generationConfig: { maxOutputTokens: max_tokens || 1500 },
+      generationConfig: { maxOutputTokens },
     };
     if (system) geminiBody.systemInstruction = { parts: [{ text: system }] };
     const geminiTools = toolsToGemini(tools);
@@ -168,6 +184,7 @@ Deno.serve(async (req) => {
     });
 
     const data = await response.json();
+    olcum.ekle(data);
 
     if (!response.ok) {
       return new Response(
@@ -185,5 +202,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: err.message || "Beklenmeyen hata" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  } finally {
+    await olcum.kaydet();
   }
 });

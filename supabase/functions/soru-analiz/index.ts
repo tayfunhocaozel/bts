@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { AiOlcum, kimlikKapisi, uyelikKapisi } from "../_shared/ai-kapi.ts";
 
 // Soru Bankası (Yanlış Defteri) — öğrencinin çözemediği sorunun fotoğrafını
 // kazanım listesiyle birlikte Gemini'ye verir; kapalı liste içinden ders / konu /
@@ -58,6 +59,13 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Kimlik kapısı: auth-login JWT'si doğrulanmadan gövde okunmaz, Gemini'ye gidilmez.
+  const kapi = await kimlikKapisi(req, ["ogrenci", "ogretmen"], corsHeaders);
+  if (!kapi.ok) return kapi.response;
+  const uyelik = await uyelikKapisi(kapi, corsHeaders);
+  if (!uyelik.ok) return uyelik.response;
+  const olcum = new AiOlcum(uyelik, "soru-analiz", GEMINI_MODEL);
+
   try {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
@@ -113,6 +121,7 @@ Deno.serve(async (req) => {
     });
 
     const responseData = await response.json();
+    olcum.ekle(responseData);
 
     if (!response.ok) {
       return new Response(
@@ -166,5 +175,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: err.message || "Beklenmeyen hata" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  } finally {
+    await olcum.kaydet();
   }
 });

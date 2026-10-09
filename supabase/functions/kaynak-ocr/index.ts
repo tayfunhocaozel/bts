@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { AiOlcum, kimlikKapisi, uyelikKapisi } from "../_shared/ai-kapi.ts";
 
 // Kamera ile kaynak ekleme akışının OCR fonksiyonu.
 //
@@ -158,6 +159,7 @@ async function geminiCagir(
   schema: unknown,
   img: Gorsel,
   sonlanmaZamani: number,
+  olcum: AiOlcum,
 ): Promise<any> {
   const body = {
     contents: [{
@@ -213,6 +215,7 @@ async function geminiCagir(
     }
 
     const responseData = await response.json();
+    olcum.ekle(responseData);
     if (!response.ok) {
       sonHata = responseData?.error?.message || "Gemini API hatası";
       const kalanBekleme = sonlanmaZamani - Date.now();
@@ -258,6 +261,7 @@ async function sayimliCagir(
   img: Gorsel,
   listeAlani: "konular" | "testler",
   sonlanmaZamani: number,
+  olcum: AiOlcum,
 ): Promise<{ liste: any[]; eksik: boolean }> {
   const listeOf = (r: any) => (Array.isArray(r?.[listeAlani]) ? r[listeAlani] : []);
   const uyumlu = (r: any) => {
@@ -265,7 +269,7 @@ async function sayimliCagir(
     return beklenen > 0 && listeOf(r).length === beklenen;
   };
 
-  const ilk = await geminiCagir(apiKey, prompt, schema, img, sonlanmaZamani);
+  const ilk = await geminiCagir(apiKey, prompt, schema, img, sonlanmaZamani, olcum);
   let secili = ilk;
 
   if (!uyumlu(ilk) && Date.now() < sonlanmaZamani) {
@@ -278,6 +282,7 @@ async function sayimliCagir(
         schema,
         img,
         sonlanmaZamani,
+        olcum,
       );
       if (listeOf(tekrar).length >= listeOf(secili).length) secili = tekrar;
     } catch {
@@ -317,6 +322,13 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Kimlik kapısı: auth-login JWT'si doğrulanmadan gövde okunmaz, Gemini'ye gidilmez.
+  const kapi = await kimlikKapisi(req, ["ogretmen", "adaptix"], corsHeaders);
+  if (!kapi.ok) return kapi.response;
+  const uyelik = await uyelikKapisi(kapi, corsHeaders);
+  if (!uyelik.ok) return uyelik.response;
+  const olcum = new AiOlcum(uyelik, "kaynak-ocr", GEMINI_MODEL);
+
   try {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
@@ -351,7 +363,7 @@ Deno.serve(async (req) => {
     let kaynakAdi = "", yayinEvi = "", sinif = "";
     if (kapakGorselleri.length) {
       try {
-        const k = await geminiCagir(apiKey, KAPAK_PROMPT, KAPAK_SCHEMA, kapakGorselleri[0], sonlanmaZamani);
+        const k = await geminiCagir(apiKey, KAPAK_PROMPT, KAPAK_SCHEMA, kapakGorselleri[0], sonlanmaZamani, olcum);
         kaynakAdi = k?.kaynak_adi || "";
         yayinEvi = k?.yayin_evi || "";
         sinif = k?.sinif || "";
@@ -367,7 +379,7 @@ Deno.serve(async (req) => {
       PARALEL_LIMIT,
       sonlanmaZamani,
       (img, i) =>
-        sayimliCagir(apiKey, ICINDEKILER_PROMPT, ICINDEKILER_SCHEMA, img, "konular", sonlanmaZamani)
+        sayimliCagir(apiKey, ICINDEKILER_PROMPT, ICINDEKILER_SCHEMA, img, "konular", sonlanmaZamani, olcum)
           .then((r) => ({ i, ...r }))
           .catch((e) => ({ i, hata: (e as Error).message })),
     );
@@ -403,7 +415,7 @@ Deno.serve(async (req) => {
         PARALEL_LIMIT,
         sonlanmaZamani,
         (img, i) =>
-          sayimliCagir(apiKey, CEVAP_PROMPT, CEVAP_SCHEMA, img, "testler", sonlanmaZamani)
+          sayimliCagir(apiKey, CEVAP_PROMPT, CEVAP_SCHEMA, img, "testler", sonlanmaZamani, olcum)
             .then((r) => ({ i, ...r }))
             .catch((e) => ({ i, hata: (e as Error).message })),
       );
@@ -468,5 +480,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     return hataYaniti((err as Error).message || "Beklenmeyen hata", 500);
+  } finally {
+    await olcum.kaydet();
   }
 });

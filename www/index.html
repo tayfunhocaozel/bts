@@ -5517,9 +5517,10 @@ async function kkmAnalizEt() {
     if (error) {
       // Edge function düzgün bir JSON hata gövdesi döndürdüyse (örn. 400 doğrulama,
       // ya da hiçbir fotoğraf işlenemediğinde 502) onu göster — en spesifik mesaj budur.
-      let msg = null;
+      const { kod } = await aiHataCoz(error);
+      let msg = aiHataMesaji(kod);
       try {
-        if (error.context && typeof error.context.json === 'function') {
+        if (!msg && error.context && typeof error.context.json === 'function') {
           const errBody = await error.context.json();
           msg = errBody?.error || null;
         }
@@ -6379,6 +6380,8 @@ async function denemeKarneSecildi(inputEl) {
       body: { belge: { mimeType, data: base64 }, brans: state.brans || '', kazanimlar }
     });
     if (error) {
+      const kodMesaji = aiHataMesaji((await aiHataCoz(error)).kod);
+      if (kodMesaji) throw new Error(kodMesaji);
       let msg = error.message || 'analiz hatası';
       try { if (error.context?.json) { const eb = await error.context.json(); msg = eb?.error || msg; } } catch (e) {}
       throw new Error(msg);
@@ -7155,13 +7158,15 @@ async function raporAiNotuOlustur(ogrenciId) {
   try {
     const { data, error } = await sb.functions.invoke('ada-chat', {
       body: {
+        amac: 'rapor_notu',  // kullanım kaydında 'ada-chat:rapor_notu' olarak ayrılır
         max_tokens: 2000,
         system: 'Sen bir öğrenci koçusun. Sana verilen öğrenci performans verilerine göre bir akademik raporun "Sorun Alanları & Gelecek Planlaması" bölümü için 3-5 cümlelik, somut ve aksiyona dönük TEK bir Türkçe paragraf yaz. KONU BAZLI BAŞARI listesini mutlaka dikkate al: en düşük başarı yüzdesine sahip 1-2 konuyu isim ve yüzdeleriyle açıkça belirt, en güçlü olduğu konuyu da kısaca öv. Sadece genel/muğlak ifadeler kullanma — somut konu adları ve sayılar geçsin. Öğretmenin veliye sunacağı resmi ama sıcak bir üslup kullan. Sadece paragrafın kendisini yaz; başlık, madde işareti veya "işte" gibi giriş ifadeleri ekleme.',
         messages: [{ role: 'user', content: raporAiVeriOzetiOlustur() }]
       }
     });
     if (error) {
-      let msg = error.message || 'Ada şu an kullanılamıyor.';
+      const { kod } = await aiHataCoz(error);
+      let msg = aiHataMesaji(kod) || error.message || 'Ada şu an kullanılamıyor.';
       try {
         if (error.context && typeof error.context.json === 'function') {
           const errBody = await error.context.json();
@@ -8447,9 +8452,12 @@ async function soruYukleVeAnaliz(dosya) {
         body: { foto: { mimeType: foto.mimeType, data: foto.base64 }, sinif: state.user.sinif || '', kazanimlar }
       });
       if (error) {
+        const { kod } = await aiHataCoz(error);
         let msg = error.message || 'analiz hatası';
         try { if (error.context?.json) { const eb = await error.context.json(); msg = eb?.error || msg; } } catch (e) {}
-        throw new Error(msg);
+        const hata = new Error(msg);
+        hata.aiKod = kod;
+        throw hata;
       }
       if (data?.error) throw new Error(data.error);
       const skor = (typeof data.ai_guven_skoru === 'number') ? data.ai_guven_skoru : null;
@@ -8461,8 +8469,12 @@ async function soruYukleVeAnaliz(dosya) {
         durum: otoOnay ? 'ogretmen_onayladi' : 'ai_tamamlandi'
       };
     } catch (e) {
+      // Fotoğraf ve kayıt zaten yüklendi; yalnız otomatik analiz atlanır
       guncelle = { durum: 'hata' };
-      showToast('⚠️ Soru eklendi ama AI analizi başarısız — öğretmenin konuyu ekleyecek');
+      const kodMesaji = aiHataMesaji(e.aiKod, true);
+      showToast(kodMesaji
+        ? `⚠️ Soru eklendi. ${kodMesaji} Konuyu öğretmenin ekleyecek.`
+        : '⚠️ Soru eklendi ama AI analizi başarısız — öğretmenin konuyu ekleyecek');
     }
 
     const { data: sonKayit } = await sb.from('yanlis_defteri').update(guncelle).eq('soru_id', soruId).select().single();
@@ -8838,7 +8850,7 @@ async function soruSeciliMetinCikar() {
   if (!confirm(`${hedef.length} sorunun metni yapay zekâ ile fotoğraftan çıkarılacak. Devam edilsin mi?`)) return;
 
   const kazanimlar = state._raporSoruKazData || [];
-  let ok = 0, hata = 0;
+  let ok = 0, hata = 0, durdur = null;
   for (let i = 0; i < hedef.length; i++) {
     const s = hedef[i];
     showToast(`Metin çıkarılıyor… ${i + 1}/${hedef.length}`);
@@ -8848,6 +8860,11 @@ async function soruSeciliMetinCikar() {
       const { data, error } = await sb.functions.invoke('soru-analiz', {
         body: { foto, sinif: ogr?.sinif || '', kazanimlar }
       });
+      if (error) {
+        // Üyelik/kota/oturum hatası tüm seçim için geçerli: kalanları denemeden dur
+        durdur = aiHataMesaji((await aiHataCoz(error)).kod);
+        if (durdur) break;
+      }
       if (error || (data && data.error) || !data || !data.soru_metni) throw new Error('metin alınamadı');
       await sb.from('yanlis_defteri').update({ soru_metni: data.soru_metni }).eq('soru_id', s.soru_id);
       const row = (state._raporSoruBankasi || []).find(x => x.soru_id === s.soru_id);
@@ -8856,6 +8873,7 @@ async function soruSeciliMetinCikar() {
     } catch (e) { hata++; }
   }
   renderSoruBankasiOgretmen();
+  if (durdur) { showToast(`⚠️ ${durdur}${ok ? ` (${ok} soru metni çıkarıldı)` : ''}`); return; }
   showToast(`✅ ${ok} soru metni çıkarıldı${hata ? ` · ${hata} başarısız` : ''}`);
 }
 
@@ -10618,6 +10636,36 @@ async function adaToolLoop(conv, response, selId) {
   adaRenderMesajlar(selId);
 }
 
+// AI edge function'larının döndürdüğü sunucu kodları (kod alanı) → kullanıcı mesajı.
+// Bilinmeyen kod için null döner; çağıran kendi genel mesajını gösterir.
+const AI_HATA_MESAJLARI = {
+  ai_uyelik_yok:  'Bu özellik AI üyeliği gerektiriyor. AI üyeliğin henüz açık değil.',
+  ai_kota_doldu:  'Bu ayki AI kullanım hakkın doldu. Hakkın yeni ayda yenilenecek.',
+  yetkisiz:       'Oturumun sona ermiş. Lütfen çıkış yapıp tekrar giriş yap.',
+  ai_kapi_hatasi: 'AI hizmeti şu an doğrulanamıyor. Lütfen biraz sonra tekrar dene.',
+};
+const AI_HATA_MESAJLARI_OGRENCI = {
+  ai_uyelik_yok:   'Öğretmeninin AI özelliği açık değil.',
+  ai_kota_doldu:   'Öğretmeninin bu ayki AI kullanım hakkı doldu.',
+  ai_gunluk_limit: 'Bugünlük analiz hakkın doldu.',
+};
+
+// functions.invoke hatasından { kod, mesaj } çıkarır. Gövde clone() ile okunur,
+// böylece çağıran aynı yanıtı ayrıca okuyabilir.
+async function aiHataCoz(error) {
+  try {
+    if (error && error.context && typeof error.context.clone === 'function') {
+      const g = await error.context.clone().json();
+      return { kod: g?.kod || null, mesaj: g?.error || null };
+    }
+  } catch (e) {}
+  return { kod: null, mesaj: null };
+}
+function aiHataMesaji(kod, ogrenciIcin) {
+  if (!kod) return null;
+  return (ogrenciIcin && AI_HATA_MESAJLARI_OGRENCI[kod]) || AI_HATA_MESAJLARI[kod] || null;
+}
+
 async function adaAPICall(conv, selId) {
   const apiMessages = conv
     .filter(m => m.role !== 'system_info')
@@ -10635,6 +10683,10 @@ async function adaAPICall(conv, selId) {
   const { data, error } = await sb.functions.invoke('ada-chat', { body });
 
   if (error) {
+    // Üyelik / kota / oturum hatası bakım değildir: kullanıcıya nedenini söyle
+    const { kod } = await aiHataCoz(error);
+    const kodMesaji = aiHataMesaji(kod);
+    if (kodMesaji) throw new Error(kodMesaji);
     try {
       if (error.context && typeof error.context.json === 'function') {
         const errBody = await error.context.json();
@@ -10940,6 +10992,56 @@ let _adaptixEditId       = null; // düzenlenen ogretmen_id
 let _adaptixNotFaturaId  = null; // not eklenen fatura_id
 let _adaptixSifreOgrId   = null; // şifre değiştirilen ogretmen_id
 
+// innerHTML'e giren her dış veri (başvuru formu, DB alanları) bundan geçer.
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Panel butonları: değerler data-* attribute'unda taşınır, inline JS'e gömülmez.
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-aact]');
+  if (!b || !b.closest('#page-adaptix')) return;
+  const id = b.dataset.id;
+  switch (b.dataset.aact) {
+    case 'ogr-detay':     adaptixOgretmenDetay(id); break;
+    case 'ogr-duzenle':   adaptixOgretmenModalAc(id); break;
+    case 'ogr-sifre': {
+      const o = _adaptixOgretmenler.find(x => x.ogretmen_id === id);
+      adaptixSifreDegistir(id, o ? o.ad_soyad : '');
+      break;
+    }
+    case 'ogr-sil':       adaptixOgretmenSil(id); break;
+    case 'ogr-durum': {
+      const o = _adaptixOgretmenler.find(x => x.ogretmen_id === id);
+      if (o) adaptixToggleDurum(id, o.durum);
+      break;
+    }
+    case 'fat-odendi':    adaptixFaturaOdendi(id); break;
+    case 'fat-geri-al':   adaptixFaturaOdemeGeriAl(id); break;
+    case 'fat-not': {
+      const f = _adaptixFaturalar.find(x => x.fatura_id === id);
+      adaptixNotModalAc(id, f ? f.notlar : '');
+      break;
+    }
+    case 'bsv-durum':     basvuruDurumGuncelle(id, b.dataset.durum); break;
+    case 'bsv-onayla':    basvuruOnayla(id); break;
+    case 'git-basvuru':   adaptixTab('basvurular'); break;
+  }
+});
+
+// Bekleyen = 'bekliyor' + onaylı ama öğretmene dönüşmemiş (provisioned=false)
+function basvuruBekleyenSayisi(liste) {
+  return (liste || []).filter(b => b.durum === 'bekliyor' || (b.durum === 'onaylandi' && !b.provisioned)).length;
+}
+function basvuruRozetGuncelle(n) {
+  const badge = document.getElementById('basvuru-badge');
+  if (!badge) return;
+  badge.textContent = n;
+  badge.style.display = n > 0 ? 'inline' : 'none';
+}
+
 // ── Sekme Geçişi ──────────────────────────────────────────────
 // AdaptiX panel yazma işlemleri — hepsi admin-ops edge function üzerinden,
 // HMAC oturum token'ı ile yetkilendirilir. Doğrudan tabloya yazım YOK.
@@ -10985,24 +11087,27 @@ async function loadAdaptixDashboard() {
   const buAy = new Date();
   const ayBas = yerelISO(new Date(buAy.getFullYear(), buAy.getMonth(), 1));
 
-  const [ogretmenRes, ogrenciRes, dersRes, faturaRes] = await Promise.all([
+  const [ogretmenRes, ogrenciRes, dersRes, faturaRes, basvuruRes] = await Promise.all([
     sb.from('ogretmenler').select('ogretmen_id, ad_soyad, durum'),
-    sb.from('ogrenciler').select('ogrenci_id'),
+    sb.from('ogrenciler').select('ogrenci_id').eq('kayit_durumu', 'AKTİF'),
     sb.from('dersler').select('kayit_id').gte('tarih', ayBas),
     sb.from('faturalar').select('fatura_id, toplam_tutar, durum'),
+    sb.from('basvurular').select('durum, provisioned'),
   ]);
 
   _adaptixOgretmenler = ogretmenRes.data || [];
   const aktif       = _adaptixOgretmenler.filter(o => o.durum === 'aktif').length;
   const toplamOgr   = (ogrenciRes.data || []).length;
+  const bekBasvuru  = basvuruBekleyenSayisi(basvuruRes.data);
+  if (!basvuruRes.error) basvuruRozetGuncelle(bekBasvuru);
   const aylikDers   = (dersRes.data || []).length;
   const faturalar   = faturaRes.data || [];
   const bekleyenler = faturalar.filter(f => f.durum !== 'odendi');
   const bekTutar    = bekleyenler.reduce((s, f) => s + (Number(f.toplam_tutar) || 0), 0);
   const tahsilTutar = faturalar.filter(f => f.durum === 'odendi').reduce((s, f) => s + (Number(f.toplam_tutar) || 0), 0);
 
-  const stat = (icon, label, val, sub, color, bg) => `
-    <div class="card-2xl" style="padding:18px 20px;background:${bg};border:1px solid ${color}22;">
+  const stat = (icon, label, val, sub, color, bg, ekStil = '', ekAttr = '') => `
+    <div class="card-2xl" ${ekAttr} style="padding:18px 20px;background:${bg};border:1px solid ${color}22;${ekStil}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <div style="width:34px;height:34px;border-radius:10px;background:${color}22;display:flex;align-items:center;justify-content:center;">
           <span class="material-symbols-outlined" style="font-size:19px;color:${color};">${icon}</span>
@@ -11013,9 +11118,17 @@ async function loadAdaptixDashboard() {
       <div style="font-size:11.5px;color:${color};opacity:.7;margin-top:4px;">${sub}</div>
     </div>`;
 
+  // Başvuru kartı: tam genişlik, tıklanınca Başvurular sekmesi; 0 ise nötr renk
+  const basvuruKart = basvuruRes.error ? '' : stat('assignment', 'Bekleyen Başvuru', bekBasvuru,
+    bekBasvuru ? 'incelemek için tıklayın →' : 'bekleyen başvuru yok',
+    bekBasvuru ? '#b45309' : '#4a6272',
+    bekBasvuru ? 'rgba(245,158,11,0.12)' : 'var(--surface-container)',
+    'grid-column:1/-1;cursor:pointer;', 'data-aact="git-basvuru"');
+
   statsEl.innerHTML =
+    basvuruKart +
     stat('school',          'Aktif Öğretmen',   aktif,                  `${_adaptixOgretmenler.length} toplam`,          '#005d8d', '#e8f4fb') +
-    stat('group',           'Toplam Öğrenci',   toplamOgr,              'tüm öğretmenler',                               '#00661d', 'rgba(0,130,40,0.08)') +
+    stat('group',           'Toplam Öğrenci',   toplamOgr,              'aktif öğrenci',                                 '#00661d', 'rgba(0,130,40,0.08)') +
     stat('menu_book',       'Bu Ay Ders',        aylikDers,              'kayıtlı seans',                                 '#805600', 'rgba(254,178,35,0.15)') +
     stat('pending_actions', 'Bekleyen Fatura',   bekleyenler.length + ' adet', '₺' + bekTutar.toLocaleString('tr-TR'), '#ba1a1a', 'rgba(186,26,26,0.08)') +
     stat('payments',        'Tahsil Edilen',     '₺' + tahsilTutar.toLocaleString('tr-TR'), 'toplam',                  '#00661d', 'rgba(0,130,40,0.08)') +
@@ -11030,8 +11143,8 @@ async function loadAdaptixDashboard() {
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${_adaptixOgretmenler.map(o => `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container);border-radius:12px;">
-              <div style="font-size:13px;font-weight:600;color:var(--ink);">${o.ad_soyad}</div>
-              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${o.durum}</span>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${esc(o.ad_soyad)}</div>
+              <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${esc(o.durum)}</span>
             </div>`).join('')}
         </div>
       </div>`;
@@ -11046,7 +11159,8 @@ async function loadAdaptixOgretmenler() {
 
   const [ogrRes, ogrenciRes, faturaRes] = await Promise.all([
     sb.from('ogretmenler').select('*').order('ad_soyad'),
-    sb.from('ogrenciler').select('ogrenci_id, ogretmen_id'),
+    // Fatura RPC'si de yalnızca AKTİF öğrencileri sayar; sayım onunla tutarlı
+    sb.from('ogrenciler').select('ogrenci_id, ogretmen_id').eq('kayit_durumu', 'AKTİF'),
     sb.from('faturalar').select('fatura_id, ogretmen_id, toplam_tutar, durum'),
   ]);
 
@@ -11080,32 +11194,32 @@ async function loadAdaptixOgretmenler() {
               return `
               <tr style="border-bottom:1px solid var(--line);">
                 <td style="padding:14px 16px;">
-                  <div style="font-size:14px;font-weight:700;color:var(--ink);">${o.ad_soyad}</div>
-                  <div style="font-size:11px;color:#666;margin-top:2px;">${o.brans||'—'}</div>
+                  <div style="font-size:14px;font-weight:700;color:var(--ink);">${esc(o.ad_soyad)}</div>
+                  <div style="font-size:11px;color:#666;margin-top:2px;">${esc(o.brans)||'—'}</div>
                   ${bekFatura ? `<div style="font-size:11px;color:#ba1a1a;margin-top:2px;">⚠ ${bekFatura} bekleyen fatura</div>` : ''}
                 </td>
                 <td style="padding:14px 16px;">
-                  <div style="font-size:12.5px;color:var(--ink-soft);">${o.email||'—'}</div>
-                  <div style="font-size:12px;color:var(--ink-soft);opacity:.8;">${o.telefon||'—'}</div>
+                  <div style="font-size:12.5px;color:var(--ink-soft);">${esc(o.email)||'—'}</div>
+                  <div style="font-size:12px;color:var(--ink-soft);opacity:.8;">${esc(o.telefon)||'—'}</div>
                 </td>
                 <td style="padding:14px 16px;text-align:center;">
                   <span style="font-size:18px;font-weight:800;color:#005d8d;">${ogrSayisi}</span>
                 </td>
                 <td style="padding:14px 16px;text-align:center;">
-                  <button onclick="adaptixToggleDurum('${o.ogretmen_id}','${o.durum}')"
+                  <button data-aact="ogr-durum" data-id="${esc(o.ogretmen_id)}"
                     style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:none;cursor:pointer;${aktif?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
                     ${aktif ? 'Aktif' : 'Pasif'}
                   </button>
                 </td>
                 <td style="padding:14px 16px;text-align:right;">
                   <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
-                    <button onclick="adaptixOgretmenDetay('${o.ogretmen_id}')"
+                    <button data-aact="ogr-detay" data-id="${esc(o.ogretmen_id)}"
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:#e8f4fb;color:#005d8d;border:none;cursor:pointer;">👁 Görüntüle</button>
-                    <button onclick="adaptixOgretmenModalAc('${o.ogretmen_id}')"
+                    <button data-aact="ogr-duzenle" data-id="${esc(o.ogretmen_id)}"
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">✏️ Düzenle</button>
-                    <button onclick="adaptixSifreDegistir('${o.ogretmen_id}','${o.ad_soyad.replace(/'/g,"\\'")}')"
+                    <button data-aact="ogr-sifre" data-id="${esc(o.ogretmen_id)}"
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:#fff8e1;color:#7a5500;border:none;cursor:pointer;">🔑 Şifre</button>
-                    ${!aktif && o.ogretmen_id !== 'b373a4e6-01b1-4131-99d4-a2deae98b1ea' ? `<button onclick="adaptixOgretmenSil('${o.ogretmen_id}')"
+                    ${!aktif && o.ogretmen_id !== 'b373a4e6-01b1-4131-99d4-a2deae98b1ea' ? `<button data-aact="ogr-sil" data-id="${esc(o.ogretmen_id)}"
                       style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:rgba(186,26,26,0.1);color:#ba1a1a;border:none;cursor:pointer;">🗑 Sil</button>` : ''}
                   </div>
                 </td>
@@ -11260,7 +11374,7 @@ async function adaptixOgretmenDetay(ogretmenId) {
   const o = _adaptixOgretmenler.find(x => x.ogretmen_id === ogretmenId) || {};
 
   const [ogrRes, dersRes, fatRes] = await Promise.all([
-    sb.from('ogrenciler').select('ogrenci_id, ad_soyad, sinif').eq('ogretmen_id', ogretmenId).order('ad_soyad'),
+    sb.from('ogrenciler').select('ogrenci_id, ad_soyad, sinif, kayit_durumu').eq('ogretmen_id', ogretmenId).order('ad_soyad'),
     sb.from('dersler').select('tarih, islenen_konu, ogrenci_id').eq('ogretmen_id', ogretmenId).order('tarih', { ascending: false }).limit(10),
     sb.from('faturalar').select('*').eq('ogretmen_id', ogretmenId).order('donem', { ascending: false }),
   ]);
@@ -11268,6 +11382,8 @@ async function adaptixOgretmenDetay(ogretmenId) {
   const ogrenciler = ogrRes.data  || [];
   const dersler    = dersRes.data || [];
   const faturalar  = fatRes.data  || [];
+  // Liste pasifleri de gösterir (ders geçmişindeki isimler için), başlıktaki sayı tablo ile aynı: aktif
+  const aktifOgrSayisi = ogrenciler.filter(og => og.kayit_durumu === 'AKTİF').length;
 
   const durumBadge = d => d==='odendi'
     ? 'background:rgba(0,130,40,0.12);color:#00661d;'
@@ -11277,20 +11393,20 @@ async function adaptixOgretmenDetay(ogretmenId) {
     <!-- Öğretmen Bilgisi -->
     <div class="card-2xl" style="padding:20px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
       <div style="width:48px;height:48px;border-radius:13px;background:#005d8d22;display:flex;align-items:center;justify-content:center;font-family:Manrope;font-weight:800;font-size:20px;color:#005d8d;flex-shrink:0;">
-        ${(o.ad_soyad||'?').charAt(0).toUpperCase()}
+        ${esc((o.ad_soyad||'?').charAt(0).toUpperCase())}
       </div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">${o.ad_soyad||'—'}</div>
-        <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">${o.email||''} ${o.telefon?'· '+o.telefon:''}</div>
+        <div style="font-family:Manrope;font-weight:800;font-size:17px;color:var(--ink);">${esc(o.ad_soyad)||'—'}</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">${esc(o.email)} ${o.telefon?'· '+esc(o.telefon):''}</div>
       </div>
-      <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${o.durum||'—'}</span>
+      <span style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;${o.durum==='aktif'?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">${esc(o.durum)||'—'}</span>
     </div>
 
     <!-- Öğrenci Listesi (accordion) -->
     <div class="card-2xl" style="padding:0;margin-bottom:16px;overflow:hidden;">
       <div onclick="const c=this.nextElementSibling;const ic=this.querySelector('.acc-ic');c.style.display=c.style.display==='none'?'block':'none';ic.textContent=c.style.display==='none'?'chevron_right':'expand_more';"
            style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;cursor:pointer;user-select:none;">
-        <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);">👥 Öğrenciler (${ogrenciler.length})</div>
+        <div style="font-family:Manrope;font-weight:700;font-size:14px;color:var(--ink);">👥 Öğrenciler (${aktifOgrSayisi} aktif${ogrenciler.length > aktifOgrSayisi ? ' / ' + ogrenciler.length + ' toplam' : ''})</div>
         <span class="material-symbols-outlined acc-ic" style="font-size:20px;color:var(--ink-soft);">chevron_right</span>
       </div>
       <div style="display:none;padding:0 22px 18px;">
@@ -11299,8 +11415,8 @@ async function adaptixOgretmenDetay(ogretmenId) {
           ${ogrenciler.map(og => `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-container);border-radius:10px;">
               <div>
-                <div style="font-size:13px;font-weight:600;color:var(--ink);">${og.ad_soyad}</div>
-                <div style="font-size:11.5px;color:var(--ink-soft);">${og.sinif||'—'}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--ink);">${esc(og.ad_soyad)}${og.kayit_durumu !== 'AKTİF' ? ' <span style="font-size:10px;font-weight:700;color:#ba1a1a;">pasif</span>' : ''}</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);">${esc(og.sinif)||'—'}</div>
               </div>
             </div>`).join('')}
         </div>`}
@@ -11322,8 +11438,8 @@ async function adaptixOgretmenDetay(ogretmenId) {
             return `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-container);border-radius:10px;">
               <div>
-                <div style="font-size:13px;font-weight:600;color:var(--ink);">${d.islenen_konu||'—'}</div>
-                <div style="font-size:11.5px;color:var(--ink-soft);">${ogr?.ad_soyad||d.ogrenci_id}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--ink);">${esc(d.islenen_konu)||'—'}</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);">${esc(ogr?.ad_soyad||d.ogrenci_id)}</div>
               </div>
               <div style="font-size:11px;color:var(--ink-soft);">${d.tarih?new Date(d.tarih).toLocaleDateString('tr-TR'):''}</div>
             </div>`;
@@ -11346,7 +11462,7 @@ async function adaptixOgretmenDetay(ogretmenId) {
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-container);border-radius:12px;">
               <div>
                 <div style="font-size:13px;font-weight:600;color:var(--ink);">${f.donem?new Date(f.donem).toLocaleDateString('tr-TR',{month:'long',year:'numeric'}):'-'}</div>
-                <div style="font-size:11.5px;color:var(--ink-soft);">${f.ogrenci_sayisi||0} öğrenci</div>
+                <div style="font-size:11.5px;color:var(--ink-soft);">${esc(f.ogrenci_sayisi||0)} öğrenci</div>
               </div>
               <div style="text-align:right;">
                 <div style="font-size:15px;font-weight:800;color:var(--ink);">₺${Number(f.toplam_tutar||0).toLocaleString('tr-TR')}</div>
@@ -11425,9 +11541,9 @@ function renderAdaptixFaturalar() {
               const ind = Number(f.indirim_orani) || 0;
               return `
               <tr style="border-bottom:1px solid var(--line);${gecikmis?'background:rgba(186,26,26,0.06);':''}">
-                <td style="padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink);">${ad}</td>
+                <td style="padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink);">${esc(ad)}</td>
                 <td style="padding:13px 16px;font-size:13px;color:var(--ink-soft);">${donem}</td>
-                <td style="padding:13px 16px;text-align:center;font-size:14px;font-weight:700;color:#005d8d;">${f.ogrenci_sayisi||0}</td>
+                <td style="padding:13px 16px;text-align:center;font-size:14px;font-weight:700;color:#005d8d;">${esc(f.ogrenci_sayisi||0)}</td>
                 <td style="padding:13px 16px;text-align:right;font-size:14px;font-weight:800;color:var(--ink);">₺${Number(f.toplam_tutar||0).toLocaleString('tr-TR')}${ind>0?`<div style="font-size:10px;font-weight:600;color:#805600;">%${Math.round(ind*100)} indirim · birim ₺${Number(f.birim_fiyat||0).toLocaleString('tr-TR')}</div>`:''}</td>
                 <td style="padding:13px 16px;text-align:center;">
                   <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:16px;${odendi?'background:rgba(0,130,40,0.12);color:#00661d;':'background:rgba(186,26,26,0.1);color:#ba1a1a;'}">
@@ -11435,13 +11551,13 @@ function renderAdaptixFaturalar() {
                   </span>
                   ${gecikmis?`<div style="font-size:10px;font-weight:700;color:#ba1a1a;margin-top:2px;">⚠ ${Math.floor(yasGun)} gündür bekliyor</div>`:''}
                   ${f.odeme_tarihi?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;">${new Date(f.odeme_tarihi).toLocaleDateString('tr-TR')}</div>`:''}
-                  ${f.notlar?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(f.notlar||'').replace(/"/g,'&quot;')}">📝 ${f.notlar}</div>`:''}
+                  ${f.notlar?`<div style="font-size:10px;color:var(--ink-soft);margin-top:2px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(f.notlar)}">📝 ${esc(f.notlar)}</div>`:''}
                 </td>
                 <td style="padding:13px 16px;text-align:right;">
                   <div style="display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;">
-                    ${!odendi?`<button onclick="adaptixFaturaOdendi('${f.fatura_id}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(0,130,40,0.12);color:#00661d;border:none;cursor:pointer;">✓ Ödendi</button>`:''}
-                    ${odendi?`<button onclick="adaptixFaturaOdemeGeriAl('${f.fatura_id}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(254,178,35,0.18);color:#805600;border:none;cursor:pointer;">↩ Geri Al</button>`:''}
-                    <button onclick="adaptixNotModalAc('${f.fatura_id}','${(f.notlar||'').replace(/'/g,"&#39;")}')" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">📝 Not</button>
+                    ${!odendi?`<button data-aact="fat-odendi" data-id="${esc(f.fatura_id)}" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(0,130,40,0.12);color:#00661d;border:none;cursor:pointer;">✓ Ödendi</button>`:''}
+                    ${odendi?`<button data-aact="fat-geri-al" data-id="${esc(f.fatura_id)}" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:rgba(254,178,35,0.18);color:#805600;border:none;cursor:pointer;">↩ Geri Al</button>`:''}
+                    <button data-aact="fat-not" data-id="${esc(f.fatura_id)}" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--surface-container);color:var(--ink);border:none;cursor:pointer;">📝 Not</button>
                   </div>
                 </td>
               </tr>`;
@@ -11534,16 +11650,10 @@ async function loadBasvurular() {
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) { el.innerHTML = `<div style="color:red;padding:16px;">Hata: ${error.message}</div>`; return; }
+  if (error) { el.innerHTML = `<div style="color:red;padding:16px;">Hata: ${esc(error.message)}</div>`; return; }
 
   const liste = data || [];
-  const bekliyor = liste.filter(b => b.durum === 'bekliyor').length;
-  const yetim    = liste.filter(b => b.durum === 'onaylandi' && !b.provisioned).length;
-  const badge = document.getElementById('basvuru-badge');
-  if (badge) {
-    badge.textContent = bekliyor + yetim;
-    badge.style.display = (bekliyor + yetim) > 0 ? 'inline' : 'none';
-  }
+  basvuruRozetGuncelle(basvuruBekleyenSayisi(liste));
 
   renderBasvurular(liste);
 }
@@ -11564,14 +11674,14 @@ function renderBasvurular(data) {
     };
     const label = { bekliyor: 'Bekliyor', goruldu: 'Görüldü', onaylandi: 'Onaylandı', reddedildi: 'Reddedildi' };
     const s = map[d] || 'background:#f3f4f6;color:#374151;';
-    return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;${s}">${label[d] || d}</span>`;
+    return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;${s}">${label[d] || esc(d)}</span>`;
   };
 
   const formatTel = tel => {
     if (!tel) return '—';
-    const digits = tel.replace(/\D/g, '');
+    const digits = String(tel).replace(/\D/g, '');
     const wa = `https://wa.me/90${digits.replace(/^0/, '')}`;
-    return `<a href="${wa}" target="_blank" style="color:#005d8d;font-weight:600;text-decoration:none;">${tel}</a>`;
+    return `<a href="${esc(wa)}" target="_blank" rel="noopener" style="color:#005d8d;font-weight:600;text-decoration:none;">${esc(tel)}</a>`;
   };
 
   const formatTarih = s => {
@@ -11592,10 +11702,10 @@ function renderBasvurular(data) {
         ${yetimler.map(b => `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:10px;padding:9px 12px;">
             <div style="min-width:0;">
-              <div style="font-size:13px;font-weight:700;color:var(--ink);">${b.ad_soyad || '—'}</div>
-              <div style="font-size:11.5px;color:var(--ink-soft);">${b.brans || '—'} · ${b.telefon || '—'}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--ink);">${esc(b.ad_soyad) || '—'}</div>
+              <div style="font-size:11.5px;color:var(--ink-soft);">${esc(b.brans) || '—'} · ${esc(b.telefon) || '—'}</div>
             </div>
-            <button onclick="basvuruOnayla('${b.id}')" style="flex-shrink:0;font-size:11.5px;font-weight:600;padding:6px 12px;border:none;border-radius:8px;background:#005d8d;color:#fff;cursor:pointer;">Öğretmen Oluştur</button>
+            <button data-aact="bsv-onayla" data-id="${esc(b.id)}" style="flex-shrink:0;font-size:11.5px;font-weight:600;padding:6px 12px;border:none;border-radius:8px;background:#005d8d;color:#fff;cursor:pointer;">Öğretmen Oluştur</button>
           </div>`).join('')}
       </div>
     </div>` : '';
@@ -11618,15 +11728,15 @@ function renderBasvurular(data) {
           ${data.map(b => `
           <tr style="border-bottom:1px solid #e8f0f6;">
             <td style="padding:10px 12px;white-space:nowrap;color:#4a6272;">${formatTarih(b.created_at)}</td>
-            <td style="padding:10px 12px;font-weight:600;">${b.ad_soyad || '—'}${b.provisioned ? ' <span style="font-size:10px;font-weight:700;color:#065f46;">✓ öğretmen</span>' : ''}</td>
-            <td style="padding:10px 12px;">${b.brans || '—'}</td>
+            <td style="padding:10px 12px;font-weight:600;">${esc(b.ad_soyad) || '—'}${b.provisioned ? ' <span style="font-size:10px;font-weight:700;color:#065f46;">✓ öğretmen</span>' : ''}</td>
+            <td style="padding:10px 12px;">${esc(b.brans) || '—'}</td>
             <td style="padding:10px 12px;white-space:nowrap;">${formatTel(b.telefon)}</td>
-            <td style="padding:10px 12px;max-width:200px;color:#4a6272;">${b.mesaj || '—'}</td>
+            <td style="padding:10px 12px;max-width:200px;color:#4a6272;">${esc(b.mesaj) || '—'}</td>
             <td style="padding:10px 12px;">${durumRozet(b.durum)}</td>
             <td style="padding:10px 12px;white-space:nowrap;">
-              ${b.durum === 'bekliyor' ? `<button onclick="basvuruDurumGuncelle('${b.id}','goruldu')" style="font-size:11px;padding:3px 8px;border:1px solid #3b82f6;border-radius:6px;color:#3b82f6;background:#fff;cursor:pointer;margin-right:4px;">Görüldü</button>` : ''}
-              ${!b.provisioned ? `<button onclick="basvuruOnayla('${b.id}')" style="font-size:11px;padding:3px 8px;border:1px solid #10b981;border-radius:6px;color:#10b981;background:#fff;cursor:pointer;margin-right:4px;">${b.durum === 'onaylandi' ? 'Öğretmen Oluştur' : 'Onayla'}</button>` : ''}
-              ${b.durum !== 'reddedildi' && !b.provisioned ? `<button onclick="basvuruDurumGuncelle('${b.id}','reddedildi')" style="font-size:11px;padding:3px 8px;border:1px solid #ef4444;border-radius:6px;color:#ef4444;background:#fff;cursor:pointer;">Reddet</button>` : ''}
+              ${b.durum === 'bekliyor' ? `<button data-aact="bsv-durum" data-durum="goruldu" data-id="${esc(b.id)}" style="font-size:11px;padding:3px 8px;border:1px solid #3b82f6;border-radius:6px;color:#3b82f6;background:#fff;cursor:pointer;margin-right:4px;">Görüldü</button>` : ''}
+              ${!b.provisioned ? `<button data-aact="bsv-onayla" data-id="${esc(b.id)}" style="font-size:11px;padding:3px 8px;border:1px solid #10b981;border-radius:6px;color:#10b981;background:#fff;cursor:pointer;margin-right:4px;">${b.durum === 'onaylandi' ? 'Öğretmen Oluştur' : 'Onayla'}</button>` : ''}
+              ${b.durum !== 'reddedildi' && !b.provisioned ? `<button data-aact="bsv-durum" data-durum="reddedildi" data-id="${esc(b.id)}" style="font-size:11px;padding:3px 8px;border:1px solid #ef4444;border-radius:6px;color:#ef4444;background:#fff;cursor:pointer;">Reddet</button>` : ''}
             </td>
           </tr>`).join('')}
         </tbody>

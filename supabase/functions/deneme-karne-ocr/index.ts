@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { AiOlcum, kimlikKapisi, uyelikKapisi } from "../_shared/ai-kapi.ts";
 
 // Deneme sonuç belgesi (karne) OCR fonksiyonu.
 //
@@ -113,6 +114,7 @@ async function geminiCagir(
   parts: any[],
   schema: unknown,
   sonlanmaZamani: number,
+  olcum: AiOlcum,
 ): Promise<any> {
   const body = {
     contents: [{ role: "user", parts }],
@@ -160,6 +162,7 @@ async function geminiCagir(
     }
 
     const responseData = await response.json();
+    olcum.ekle(responseData);
     if (!response.ok) {
       sonHata = responseData?.error?.message || "Gemini API hatası";
       const kalanBekleme = sonlanmaZamani - Date.now();
@@ -199,6 +202,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  // Kimlik kapısı: auth-login JWT'si doğrulanmadan gövde okunmaz, Gemini'ye gidilmez.
+  const kapi = await kimlikKapisi(req, ["ogretmen", "adaptix"], corsHeaders);
+  if (!kapi.ok) return kapi.response;
+  const uyelik = await uyelikKapisi(kapi, corsHeaders);
+  if (!uyelik.ok) return uyelik.response;
+  const olcum = new AiOlcum(uyelik, "deneme-karne-ocr", GEMINI_MODEL);
 
   try {
     const apiKey = Deno.env.get("GEMINI_API_KEY");
@@ -246,7 +256,7 @@ Deno.serve(async (req) => {
     const sonlanmaZamani = Date.now() + SURE_BUTCESI_MS;
     let parsed: any;
     try {
-      parsed = await geminiCagir(apiKey, parts, SCHEMA, sonlanmaZamani);
+      parsed = await geminiCagir(apiKey, parts, SCHEMA, sonlanmaZamani, olcum);
     } catch (e) {
       return new Response(
         JSON.stringify({ error: (e as Error).message || "Gemini API hatası" }),
@@ -304,5 +314,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: (err as Error).message || "Beklenmeyen hata" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+  } finally {
+    await olcum.kaydet();
   }
 });
